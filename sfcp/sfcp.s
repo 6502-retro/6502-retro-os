@@ -1,11 +1,13 @@
 ; vim: ft=asm_ca65 ts=4 sw=4 et
 .include "sfos.inc"
+.include "fcb.inc"
 .export main
 .autoimport
 
 SFOS = $800
 
 .zeropage
+debug_ptr: .word 0
 
 .code
 ; main user interface - First show a prompt.
@@ -14,6 +16,7 @@ main:
     lda #<str_banner
     ldx #>str_banner
     jsr c_printstr
+prompt:
     jsr newline
     jsr show_prompt
 
@@ -27,10 +30,26 @@ main:
     ldx #>commandline
     jsr d_setdma
 
+    jsr clear_fcb
     lda #<fcb
     ldx #>fcb
     jsr d_convertfcb
+    bcs prompt
 
+    ; check if we are dealing with a change drive command
+    ; byte N1 of the fcb will be a space
+    ldx #sfcb::N1           ; 1
+    lda fcb,x
+    cmp #' '
+    beq @changedrive
+    cmp #'Q'
+    bne prompt
+    jmp $CF4D
+@changedrive:
+    lda fcb
+    ldx #0
+    jsr d_getsetdrive
+    jmp prompt
 ; TODO: Remove this when done with debugging.
     jsr c_read
     jmp $CF4D
@@ -61,6 +80,14 @@ d_convertfcb:
     ldy #esfos::sfos_d_convertfcb
     jmp SFOS
 
+clear_fcb:
+    ldx #32
+    lda #0
+:   sta fcb-1,x
+    dex
+    bne :-
+    rts
+
 show_prompt:
     lda #$ff
     jsr d_getsetdrive
@@ -75,7 +102,28 @@ newline:
     ldx #>str_newline
     jmp c_printstr
 
-str_newline:    .byte $13, $10, $0
+; debug helper
+debug:
+    pla
+    sta debug_ptr
+    pla
+    sta debug_ptr+1
+    bra @primm3
+@primm2:
+    jsr acia_putc
+@primm3:
+    inc debug_ptr
+    bne @primm4
+    inc debug_ptr+1
+@primm4:
+    lda (debug_ptr)
+    bne @primm2
+    lda debug_ptr+1
+    pha
+    lda debug_ptr
+    pha
+    rts
+str_newline:    .byte 13, 10, 0
 str_banner:     .byte "6502-Retro! (SFOS)", $0
 
 .bss

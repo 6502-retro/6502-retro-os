@@ -107,11 +107,12 @@ sfos_d_getsetdrive:
     lda current_drive       ; return the current_drive
     bra @exit
 @L1:
+    jsr bios_conout
     cmp current_drive
     beq @exit
     ; drive is different
     cmp #7
-    bcc @out_of_range
+    bcs @out_of_range
     sta current_drive
     sta lba + 3             ; drive number is the 3rd byte of the LBA
     stz lba + 0             ; all other bytes of the LBA are reset to 0
@@ -122,7 +123,6 @@ sfos_d_getsetdrive:
     clc
     rts
 @out_of_range:
-    lda #$81
     sec
     rts
 
@@ -132,14 +132,9 @@ sfos_d_createfcb:
 ; the user_dma pointer points to the buffer containing the commandline
 ; param points to the FCB Read in the commandline and fill out the FCB
 sfos_d_convertfcb:
-    lda #10
-    jsr bios_conout
-    lda #13
-    jsr bios_conout
-
     ; clear scratch
     ldx #32
-:   stz scratch_fcb,x
+:   stz scratch_fcb-1,x
     dex
     bne :-
     ; x is zero now and will be the index into scratch
@@ -180,11 +175,9 @@ sfos_d_convertfcb:
     cpx #sfcb::T1
     beq @extension_entry
     lda (user_dma),y
-    beq @fn_space
-    cmp #'.'
+    beq @fn_space           ; we want to fill the fcb with spaces if we
+    cmp #'.'                ; hit end of cmd line
     beq @fn_space           ; if it's a dot we want to fill with spaces
-    cmp #' '
-    beq @bad_filename
     cmp #'*'
     bne @fn_check_valid     ; not a ., space or a *
     ; it's a star
@@ -249,10 +242,12 @@ sfos_d_convertfcb:
     bra @empty_cmd
 @okay:
     ldy #31
-:   lda scratch_fcb,y
+    ldx #32
+:   lda scratch_fcb-1,x
     sta (param),y
     dey
-    bpl :-
+    dex
+    bne :-
     clc
     rts
 
@@ -310,6 +305,8 @@ is_valid_filename_char:
     beq @bad                    ; only allows letters
     cmp #':'
     beq @bad
+    cmp #'A'
+    bcc @bad
     cmp #'Z' + 1
     bcs @bad
 @okay:
