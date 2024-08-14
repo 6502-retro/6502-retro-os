@@ -29,22 +29,25 @@ SFOS_SOURCES = \
 SFOS_OBJS = $(addprefix $(BUILD_DIR)/, $(SFOS_SOURCES:.s=.o))
 
 SFCP_SOURCES = \
+	       sfcp/sfcp.s
 
 SFCP_OBJS = $(addprefix $(BUILD_DIR)/, $(SFCP_SOURCES:.s=.o))
 
 all: clean $(BUILD_DIR)/rom.bin
 
-clean: 
-	rm -fr $(BUILD_DIR)
+clean:
+	rm -fr $(BUILD_DIR)/*
 
 $(BUILD_DIR)/%.o: %.s
 	@mkdir -p $$(dirname $@)
 	$(AS) $(ASFLAGS) -l $(BUILD_DIR)/$*.lst $< -o $@
 
-$(BUILD_DIR)/rom.raw:$(SFCP_OBJS) $(SFOS_OBJS) $(BIOS_OBJS)
+$(BUILD_DIR)/rom.raw: $(SFCP_OBJS) $(SFOS_OBJS) $(BIOS_OBJS)
 	@mkdir -p $$(dirname $@)
-	$(LD) -C config/rom.cfg $(SFOS_OBJS) $(BIOS_OBJS) -o $@ -m $(BUILD_DIR)/rom.map -Ln $(BUILD_DIR)/rom.sym
-	#$(RELIST) $(BUILD_DIR)/rom.map $(BUILD_DIR)/bios
+	$(LD) -C config/rom.cfg $^ -o $@ -m $(BUILD_DIR)/rom.map -Ln $(BUILD_DIR)/rom.sym
+	$(RELIST) $(BUILD_DIR)/rom.map $(BUILD_DIR)/bios
+	$(RELIST) $(BUILD_DIR)/rom.map $(BUILD_DIR)/sfos
+	$(RELIST) $(BUILD_DIR)/rom.map $(BUILD_DIR)/sfcp
 
 $(BUILD_DIR)/rom.bin: $(BUILD_DIR)/rom.raw
 	$(LOADTRIM) build/rom.raw build/rom.img $(SFM_LOAD_ADDR)

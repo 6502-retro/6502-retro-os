@@ -4,7 +4,7 @@
 
 .export bios_boot, sdcard_param
 .export bios_wboot, bios_conin, bios_conout, bios_const, bios_setdma
-.export bios_setlba, bios_sdread, bios_sdwrite 
+.export bios_setlba, bios_sdread, bios_sdwrite, bios_puts
 
 .zeropage
 
@@ -34,26 +34,24 @@ bios_boot:
     sta __SYSTEM_RUN__ -1,x
     dex
     bne @L2
+    jmp main
 
 bios_wboot:
     jsr zerobss
-    jsr zero_lba
-    
+    jmp zero_lba
+
 bios_conin:
-    jsr acia_getc
-    rts
+    jmp acia_getc
 
 bios_conout:
-    jsr acia_putc
-    rts
+    jmp acia_putc
 
 bios_const:
-    jsr acia_getc_nw
-    rts
+    jmp acia_getc_nw
 
 bios_setdma:
-    sta dma + 0
-    stx dma + 1
+    sta bdma + 0
+    stx bdma + 1
     clc
     rts
 
@@ -69,18 +67,29 @@ bios_setlba:
 
 bios_sdread:
     jsr set_sdbuf_ptr
-    jsr sdcard_read_sector
-    rts
+    jmp sdcard_read_sector
 
 bios_sdwrite:
-    jsr sdcard_write_sector
+    jmp sdcard_write_sector
+
+bios_puts:
+    sta ptr1 + 0
+    stx ptr1 + 1
+    ldy #0
+:   lda (ptr1),y
+    beq @done
+    jsr acia_putc
+    iny
+    beq @done
+    bra :-
+@done:
     rts
 
 ;---- Helper functions -------------------------------------------------------
 set_sdbuf_ptr:
-    lda dma + 0
+    lda bdma + 0
     sta ptr1 + 0
-    lda dma + 1
+    lda bdma + 1
     sta ptr1 + 1
     rts
 
@@ -92,7 +101,7 @@ zero_lba:
     rts
 
 .bss
-    dma: .word 0
+    bdma: .word 0
     sdcard_param: .res 5
 
 .segment "SYSTEM"

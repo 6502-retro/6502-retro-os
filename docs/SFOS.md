@@ -69,7 +69,7 @@ Internally this function uses c_write to display the characters.
 ## 04 c_readstr
 
 Given a pointer to a memory location this function will read user input until a
-carriage return or line feed is received.  It supports basic line editing:
+carriage return or line feed is received.  It supports basic line editing.
 
 On entry, the first byte of the input buffer pointed to by XA contains the
 maximum length of the input buffer.  The system maximum of 0x7F (128) chars.
@@ -131,7 +131,7 @@ FCB where \x20 is a space.
 - All other elements will be set to zero.
 
 In the event that a DRIVE SPECFIER (eg A: or B:) is not provided for either the
-application or the argument to the application is not given, the currently
+application or the argument to the application, the currently
 active drive will be assigned to the relevant positions in the FCB.
 
 If no filename argument is given to the command, the second half of the FCB is
@@ -185,7 +185,8 @@ Carry is set if failed and error code in A:
 
 ## 12 d_close
 
-Given a populated FCB pointed to by XA, close the file by writing the contents of the FCB back to disk.
+Given a populated FCB pointed to by XA, close the file by writing the contents
+of the FCB back to disk.
 
 Carry is set on failure and error code in A:
 
