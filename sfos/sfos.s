@@ -108,11 +108,14 @@ sfos_d_getsetdrive:
     bra @exit
 @L1:
     jsr bios_conout
+
+    cmp #1
+    bcc @out_of_range
+    cmp #(8+1)
+    bcs @out_of_range
     cmp current_drive
     beq @exit
     ; drive is different
-    cmp #7
-    bcs @out_of_range
     sta current_drive
     sta lba + 3             ; drive number is the 3rd byte of the LBA
     stz lba + 0             ; all other bytes of the LBA are reset to 0
@@ -153,8 +156,10 @@ sfos_d_parsefcb:
     jsr to_upper
     sec
     sbc #'A'-1              ; to 1 based drive
-    cmp #8                  ; we only support 8 drives on sfs
-    bcc :+                  ; carry is clear if drive is less than 8 (0-7)
+    cmp #1                  ; we only support 8 drives on sfs
+    bcs :+                  ; carry is clear if drive is less than 8 (0-7)
+    cmp #9
+    bcc :+
     dec temp+1
 :
     tax

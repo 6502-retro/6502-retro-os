@@ -8,7 +8,7 @@ SFOS = $800
 
 .zeropage
 debug_ptr: .word 0
-
+sfcpcmd: .word 0
 .code
 ; main user interface - First show a prompt.
 main:
@@ -38,25 +38,119 @@ prompt:
     inx
 :   jsr d_parsefcb          ; XA -> param is the start of the filename.
     ; XA -> Points to new command offset
-    bcs prompt
-
+    bcc :+
+    jsr debug
+    .byte 10,13,"parse error",10,13,0
+    jmp prompt
+:
     ; check if we are dealing with a change drive command
     ; byte N1 of the fcb will be a space
-    ldx #sfcb::N1
-    lda fcb,x
+    lda fcb+sfcb::N1
     cmp #' '
     beq @changedrive
     cmp #'Q'
-    bne prompt
-    jmp $CF4D
+    bne @decode_command
+    jmp $CF4D               ; return to monitor
 @changedrive:
-    lda fcb
+    lda fcb + sfcb::DD
     ldx #0
     jsr d_getsetdrive
     jmp prompt
-; TODO: Remove this when done with debugging.
-    jsr c_read
-    jmp $CF4D
+
+@decode_command:
+    jsr decode_command
+    bcs @load_transient
+
+    jsr debug
+    .byte 10,13,"SYNTAX ERROR",10,13,0
+    jmp main
+
+@load_transient:
+    jsr load_transient
+    jmp prompt
+
+decode_command:
+    ldx #0
+    ldy #0
+    stx temp + 0            ; temp + 0 holds the start position of words in the commands table.
+@L1:
+    lda commands_tbl,y
+    bmi @found_match        ; if we get to the $80 marker, without dropping, we found a match
+    beq @no_match           ; if we get to the end of the table we did not match at all
+    cmp fcb + sfcb::N1,x
+    bne @next_word
+    inx                     ; prepare to check next letter
+    iny
+    bra @L1
+@next_word:
+    ldx #0                  ; reset fcb index to 0
+    inc temp + 0            ; next word
+    lda temp + 0            ; times temp + 0 by 7
+    asl                     ; x2
+    asl                     ; x4
+    asl                     ; x8
+    sec
+    sbc temp + 0            ; subtract value to make it x 7
+    tay                     ; update pointer
+    bra @L1
+@found_match:
+    ; reached the end of work marker.
+    ; grab the function pointer, return in XA
+    iny
+    lda commands_tbl,y
+    sta sfcpcmd + 0
+    iny
+    lda commands_tbl,y
+    sta sfcpcmd + 1
+    clc
+    jmp (sfcpcmd)               ; return from command
+@no_match:
+    sec
+    rts
+
+load_transient:
+    jsr debug
+    .byte 10,13,"TRANSIENT APP",10,13,0
+
+    ; check if extension is provided.
+    lda fcb + sfcb::T1
+    cmp #' '
+    bne :++
+    ldx #2
+:   lda str_COM,x
+    sta fcb + sfcb::T1, x
+    dex
+    bpl :-
+:   lda #<(fcb + sfcb::N1)
+    ldx #>(fcb + sfcb::N1)
+    jsr c_printstr
+    rts         ; TODO: The application is responsible for jumping back to "main"
+
+dir:
+    jsr debug
+    .byte 10,13,"===> DIR",10,13,0
+    clc
+    rts
+era:
+    jsr debug
+    .byte 10,13,"===> ERA",10,13,0
+    clc
+    rts
+ren:
+    jsr debug
+    .byte 10,13,"===> REN",10,13,0
+    clc
+    rts
+type:
+    jsr debug
+    .byte 10,13,"===> TYPE",10,13,0
+    clc
+    rts
+save:
+    jsr debug
+    .byte 10,13,"===> SAVE",10,13,0
+    clc
+    rts
 
 ; ---- Helper functions ------------------------------------------------------
 s_reset:
@@ -127,12 +221,31 @@ debug:
     lda debug_ptr
     pha
     rts
-str_newline:    .byte 13, 10, 0
-str_banner:     .byte "6502-Retro! (SFOS)", $0
 
 .bss
 fcb:            .res 32
 commandline:    .res 128
+temp:           .res 2
 
 .rodata
 
+str_newline:    .byte 13, 10, 0
+str_banner:     .byte 13,10, "6502-Retro! (SFOS)",0
+str_COM:        .byte "COM"
+commands_tbl:
+    .byte "DIR ",$80
+    .lobytes dir
+    .hibytes dir
+    .byte "ERA ",$80
+    .lobytes era
+    .hibytes era
+    .byte "REN ",$80
+    .lobytes ren
+    .hibytes ren
+    .byte "TYPE",$80
+    .lobytes type
+    .hibytes type
+    .byte "SAVE",$80
+    .lobytes save
+    .hibytes save
+    .byte 0
