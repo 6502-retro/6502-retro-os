@@ -26,19 +26,23 @@ prompt:
     ldx #>commandline
     jsr c_readstr
 
-    lda #<commandline
-    ldx #>commandline
-    jsr d_setdma
-
     jsr clear_fcb
     lda #<fcb
     ldx #>fcb
-    jsr d_convertfcb
+    jsr d_setdma
+
+    ldx #>commandline       ; set XA to the second byte of the commandline
+    lda #<commandline       ; the first contains the length from readstr
+    inc                     ; if the incrementing the low byte of the address
+    bne :+                  ; results in zero then increment the high byte
+    inx
+:   jsr d_parsefcb          ; XA -> param is the start of the filename.
+    ; XA -> Points to new command offset
     bcs prompt
 
     ; check if we are dealing with a change drive command
     ; byte N1 of the fcb will be a space
-    ldx #sfcb::N1           ; 1
+    ldx #sfcb::N1
     lda fcb,x
     cmp #' '
     beq @changedrive
@@ -76,8 +80,8 @@ c_readstr:
 d_setdma:
     ldy #esfos::sfos_d_setmda
     jmp SFOS
-d_convertfcb:
-    ldy #esfos::sfos_d_convertfcb
+d_parsefcb:
+    ldy #esfos::sfos_d_parsefcb
     jmp SFOS
 
 clear_fcb:
@@ -92,7 +96,7 @@ show_prompt:
     lda #$ff
     jsr d_getsetdrive
     clc
-    adc #'A'
+    adc #'A' - 1
     jsr c_write
     lda #'>'
     jmp c_write

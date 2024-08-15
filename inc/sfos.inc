@@ -9,7 +9,7 @@
     sfos_c_status           = 5
     sfos_d_getsetdrive      = 6
     sfos_d_createfcb        = 7
-    sfos_d_convertfcb       = 8
+    sfos_d_parsefcb         = 8
     sfos_d_find             = 9
     sfos_d_make             = 10
     sfos_d_open             = 11

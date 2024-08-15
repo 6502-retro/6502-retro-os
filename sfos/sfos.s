@@ -15,7 +15,8 @@ user_dma:   .word 0
 ; reset with warm boot and log into drive A
 sfos_s_reset:
     jsr bios_wboot
-    stz current_drive
+    lda #1
+    sta current_drive
     rts
 
 ; read a char from the serial console
@@ -71,7 +72,6 @@ sfos_c_readstr:
     beq @enter
     cmp #$08
     beq @backspace
-    jsr to_upper
     sta (param),y
     jsr bios_conout
     iny
@@ -131,125 +131,131 @@ sfos_d_createfcb:
 
 ; the user_dma pointer points to the buffer containing the commandline
 ; param points to the FCB Read in the commandline and fill out the FCB
-sfos_d_convertfcb:
-    ; clear scratch
-    ldx #32
-:   stz scratch_fcb-1,x
-    dex
-    bne :-
-    ; x is zero now and will be the index into scratch
-    ; step over the dma length byte
-    clc
-    lda user_dma + 0
-    adc #1
-    sta user_dma + 0
-    lda user_dma + 1
-    adc #0
-    sta user_dma + 1
+; BORROWED FROM CPM65 By David Given (https://github.com/davidgiven/cpm65)
+sfos_d_parsefcb:
+    ; param -> commandline (filename)
+    ; dma -> FCB
+    lda #0
+    sta temp+1              ; failure flag
 
-    ; check for empty commandline
+    ; check the drive
+
     ldy #0
-    lda (user_dma),y
-    beq @empty_cmd
-    ; check if a drive was provided.
+    ldx #0
+    lda (param),y           ; drive letter?
+    beq @nodrive
     iny
-    lda (user_dma),y
+    lda (param),y
     dey
-    cmp #':'
-    bne @default_drive
-    ; a drive was provided
-    lda (user_dma),y
+    cmp #':'                ; colon?
+    bne @nodrive
+    lda (param),y
+    jsr to_upper
     sec
-    sbc #'A'
-    sta scratch_fcb, x
+    sbc #'A'-1              ; to 1 based drive
+    cmp #8                  ; we only support 8 drives on sfs
+    bcc :+                  ; carry is clear if drive is less than 8 (0-7)
+    dec temp+1
+:
+    tax
     iny
-    iny                     ; skip past drive into first letter of filename
-    bra @filename_entry
-@default_drive:             ; no drive provided, insert default into fcb
-    lda current_drive
-    sta scratch_fcb,x
-    ; y is still at the beginning of filename (no drive given)
-@filename_entry:
-    inx
-@filename:
-    cpx #sfcb::T1
-    beq @extension_entry
-    lda (user_dma),y
-    beq @fn_space           ; we want to fill the fcb with spaces if we
-    cmp #'.'                ; hit end of cmd line
-    beq @fn_space           ; if it's a dot we want to fill with spaces
-    cmp #'*'
-    bne @fn_check_valid     ; not a ., space or a *
-    ; it's a star
-    lda #'?'
-    dey                     ; replace rest of filename with ? when *
-    bra @fn_save_to_scratch
-@fn_space:
-    dey
+    iny
+@nodrive:
+    txa
+    pha                     ; drive letter pushed to stack
+
+    ; Read the filename
+
+    ldx #8
+@L1:
+    lda (param),y           ; get a character
+    jsr to_upper
+    jsr is_terminator_char
+    bcc :+                  ; if carry set
     lda #' '
-    bra @fn_save_to_scratch
-@fn_check_valid:
-    jsr is_valid_filename_char
-    bcs @bad_filename
-    ;fall through
-@fn_save_to_scratch:
-    sta scratch_fcb,x
-    iny
-    inx
-    bra @filename
-@extension_entry:           ; now process the same logic for the 2 ext chars
-    iny                     ; skip over the dot
-    lda (user_dma),y
-    cmp #'.'
-    bne @extension
-    iny                     ; if we get a dot because of wildcard, skip it.
-    ; X is already xfcb.t1
-@extension:
-    cpx #sfcb::T3 + 1        ; have we reached the end of the extension part of the fcb
-    beq @okay               ; if yes, we are done.
-    lda (user_dma),y
-    beq @ex_space
-    cmp #'.'
-    beq @ex_space
-    cmp #' '
-    beq @bad_filename
-    cmp #'*'
-    bne @ex_check_valid
+    dey
+:   cmp #'*'
+    bne :+                  ; if a star
     lda #'?'
     dey
-    bra @ex_save_to_scratch
-@ex_space:
-    dey
-    lda #' '
-    bra @ex_save_to_scratch
-@ex_check_valid:
-    jsr is_valid_filename_char
-    bcs @bad_filename
-    ; fall through
-@ex_save_to_scratch:
-    sta scratch_fcb,x
+:   pha
     iny
-    inx
-    bra @extension
-@empty_cmd:
-    sec
-    rts
-@bad_filename:
-    jsr bios_conout
-    lda #<str_badfilename
-    ldx #>str_badfilename
-    jsr bios_puts
-    bra @empty_cmd
-@okay:
-    ldy #31
-    ldx #32
-:   lda scratch_fcb-1,x
-    sta (param),y
-    dey
     dex
-    bne :-
+    bne @L1
+
+    ; skip non-dot fiename characters.
+    lda (param),y
+@L2:
+    cmp #'.'
+    beq :++
+    jsr is_terminator_char
+    bcc :+                  ; if carry set do the below.
+    lda #' '                ; filename has no extension
+    pha
+    pha
+    pha
+    bra @parse_filename_exit
+:   iny
+    lda (param),y
+    bra @L2
+    ; read the extension
+
+:   iny
+    ldx #3
+@L3:
+    lda (param),y           ; get a character
+    jsr to_upper
+    jsr is_terminator_char
+    bcc :+                  ; if carry set do the below
+    lda #' '
+    dey
+:   cmp #'*'
+    bne :+
+    lda #'?'
+    dey
+:   pha
+    iny
+    dex
+    bne @L3
+
+    ; discard remaining filename characters
+    lda (param),y
+@L4:
+    jsr is_terminator_char
+    bcs @parse_filename_exit
+    iny
+    lda (param),y
+    bne @L4
+
+@parse_filename_exit:
+    ; push the 4 zeros for L1, L2, SC, FN
+    lda #0
+    pha
+    pha
+    pha
+    pha
+
+    ; copy the generated bytes from the stack into the destination
+
+    tya
+    tax
+    ldy #15
+@L5:
+    pla
+    sta (user_dma),y
+    dey
+    bpl @L5
+    txa
     clc
-    rts
+    adc param+0
+    ldx param+1
+    bcc :+                  ; did we rollover on the adc above?
+    inx
+:   clc
+    ldy temp+1              ; was there a failure?
+    beq :+
+    sec
+:   rts
 
 sfos_d_find:
     jmp unimplimented
@@ -298,29 +304,21 @@ to_upper:
 @done:
     rts
 
-; checks if a character in A is a valid filename char
-is_valid_filename_char:
-    beq @bad
-    cmp #' '                    ; no spaces
-    beq @bad                    ; only allows letters
-    cmp #':'
-    beq @bad
-    cmp #'A'
-    bcc @bad
-    cmp #'Z' + 1
-    bcs @bad
-@okay:
+is_terminator_char:
+    stx temp+2
+    ldx #(terminators_end - terminators) - 1
+:   cmp terminators, x          ; sets carry if equal
+    beq :+
+    dex
+    bpl :-
     clc
-    rts
-@bad:
-    sec
+:   ldx temp+2
     rts
 
 .bss
     current_drive:  .byte 0
     lba:            .res 4,0
     cmdlen:         .byte 0
-    scratch_fcb:    .res 32,0
     temp:           .res 4
 
 .segment "SYSTEM"
@@ -328,10 +326,10 @@ is_valid_filename_char:
 dispatch:
     sta param + 0
     stx param + 1
-    lda sfos_jmp_tbl_lo,y
-    sta cmd + 0
     lda sfos_jmp_tbl_hi,y
     sta cmd + 1
+    lda sfos_jmp_tbl_lo,y
+    sta cmd + 0
     jmp (cmd)
 
 .rodata
@@ -345,7 +343,7 @@ sfos_jmp_tbl_lo:
     .lobytes sfos_c_status
     .lobytes sfos_d_getsetdrive
     .lobytes sfos_d_createfcb
-    .lobytes sfos_d_convertfcb
+    .lobytes sfos_d_parsefcb
     .lobytes sfos_d_find
     .lobytes sfos_d_make
     .lobytes sfos_d_open
@@ -364,7 +362,7 @@ sfos_jmp_tbl_hi:
     .hibytes sfos_c_status
     .hibytes sfos_d_getsetdrive
     .hibytes sfos_d_createfcb
-    .hibytes sfos_d_convertfcb
+    .hibytes sfos_d_parsefcb
     .hibytes sfos_d_find
     .hibytes sfos_d_make
     .hibytes sfos_d_open
@@ -378,3 +376,8 @@ sfos_jmp_tbl_hi:
 banner:             .byte "6502-Retro! (SFOS)", 13, 10, 0
 str_unimplimented:  .byte 13, 10, "!!! UNIMPLIMENTED !!!", 13, 10, 0 
 str_badfilename:    .byte 13, 10, "BAD FILENAME", 13,10,0
+str_COM: .byte "COM"
+terminators:
+    .byte " =><.:,[]/|"
+    .byte 10,13,127,9,0
+terminators_end:
