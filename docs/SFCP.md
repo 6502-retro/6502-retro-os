@@ -16,3 +16,19 @@ There are a few intrinsic functions within the SFCP and these are:
 All other features of the operating system are provided as applications that
 run in userspace.
 
+## Details
+
+The following sections describe the inner workings of how the intrinsic
+commands in sfcp work.
+
+### DIR
+
+The way DIR works is by setting the fcb to be all wildcards.  Then searching
+for a matching file.  The first file on the drive will be returned in the fcb
+so it can be displayed.  Then call sfos.find_next() function to to find the
+next matching file.  SFOS tracks where it is in the drive and loads the next
+sector from disk if required.  SFOS will also track the number of files and if
+the end is reached (255) then it returns an error conditions which sfcp can
+catch to know that the last file has been found.  Any file on the directory
+with a file attribute of 0xE5 will cause sfos to retun an end of directory
+error too.

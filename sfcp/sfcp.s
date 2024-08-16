@@ -131,6 +131,12 @@ load_transient:
 dir:
     jsr debug
     .byte 10,13,"===> DIR",10,13,0
+    ; step 1 set dma
+    ; block_count = 0
+    ; while block_count < 4:
+    ;   setdma
+    ;   readseqblock
+    ;   
     clc
     rts
 era:

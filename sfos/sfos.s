@@ -265,6 +265,9 @@ sfos_d_parsefcb:
 sfos_d_find:
     jmp unimplimented
 
+sfos_d_findnext:
+    jmp unimplimented
+
 sfos_d_make:
     jmp unimplimented
 
@@ -350,6 +353,7 @@ sfos_jmp_tbl_lo:
     .lobytes sfos_d_createfcb
     .lobytes sfos_d_parsefcb
     .lobytes sfos_d_find
+    .lobytes sfos_d_findnext
     .lobytes sfos_d_make
     .lobytes sfos_d_open
     .lobytes sfos_d_close
@@ -369,6 +373,7 @@ sfos_jmp_tbl_hi:
     .hibytes sfos_d_createfcb
     .hibytes sfos_d_parsefcb
     .hibytes sfos_d_find
+    .hibytes sfos_d_findnext
     .hibytes sfos_d_make
     .hibytes sfos_d_open
     .hibytes sfos_d_close
