@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Python script to generate and build an SFS Version 2 disk image
 #### Direnet Structure
 
@@ -106,7 +107,6 @@ def cp(image, source, destination):
     if source[1:].startswith("://"):
         source_parts = source[4:].split(".")
         drive = ord(source[0])
-        print(f"----> {hex(drive)}")
         if drive > 0x41 + 8:
             drive -= 0x20
         filename = source_parts[0]
@@ -140,7 +140,7 @@ def cp(image, source, destination):
     print(f"COPYING {source} to {destination}")
 
     sfs = SFS(image)
-    drive -= 0x41
+    drive -= 0x40
     if copy_dir == 0:
         if sfs.create(drive, sfs_filename):
             with open(local_filename, "rb") as fd:
@@ -153,10 +153,13 @@ def cp(image, source, destination):
             print(f"Couldn not save {local_filename} to {image}")
             sys.exit(2)
     else:
+        print(f"DRIVE: {drive}, FILENAME: {sfs_filename}")
         if sfs.find(drive, sfs_filename):
             with open(local_filename, "wb") as fd:
                 fd.write(sfs.read())
             print(f"Write {sfs.idx.file_size} bytes...")
+        else:
+            print("FILE NOT FOUND")
 
 
 @cli.command()
@@ -173,6 +176,29 @@ def new(image):
         fd.write(b"\0" * 0x90000 * 0x200)
     sfs = SFS(image)
     sfs.format()
+
+
+@cli.command()
+@click.option(
+    "-i", "--image", type=str, help="Path to local SDCARD image.", required=True
+)
+@click.argument("drive")
+def ls(image, drive="A"):
+    _drive = ord(drive) - 0x40
+    sfs = SFS(image)
+    while True:
+        idx = sfs.read_index(_drive)
+        if not idx:
+            break
+        if idx.file_attr == 0xE5:
+            break
+
+        fname = str(idx.fname, encoding="ascii")
+        fext = str(idx.fext, encoding="ascii")
+        filename = f"{fname}.{fext}"
+        print(f" {chr(idx.drive + 0x40)}:{filename:<11} {idx.file_size:>7} bytes")
+
+    print()
 
 
 if __name__ == "__main__":

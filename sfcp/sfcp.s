@@ -43,6 +43,8 @@ prompt:
     .byte 10,13,"parse error",10,13,0
     jmp prompt
 :
+    ; TODO: Handle parameters
+    ;
     ; check if we are dealing with a change drive command
     ; byte N1 of the fcb will be a space
     lda fcb+sfcb::N1
