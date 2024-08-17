@@ -8,10 +8,10 @@
 ;       https://github.com/Steckschwein/code/blob/master/steckos/libsrc/spi/spi_rw_byte.s
 ;       Copyright (c) 2018 Thomas Woinke, Marko Lauke, www.steckschwein.de
 ;-----------------------------------------------------------------------------
-.autoimport
 .include "io.inc"
-.globalzp ptr1
-.export sdcard_init, sdcard_read_sector, sdcard_write_sector
+.autoimport
+.globalzp bdma_ptr
+.export sector_buffer, sector_buffer_end, sector_lba, sdcard_init, sdcard_read_sector, sdcard_write_sector
 
 SD_SCK          = %00000001
 SD_CS           = %00000010
@@ -28,14 +28,24 @@ SD_MOSI         = %10000000
         sta     via_porta
 .endmacro
 
-.bss
-spi_sr:         .byte 0
-timeout_cnt:    .byte 0
-
 cmd_idx = sdcard_param
 cmd_arg = sdcard_param + 1
 cmd_crc = sdcard_param + 5
 
+
+        .bss
+sector_buffer:
+        .res 512
+sector_buffer_end:
+
+sdcard_param:
+        .res 1
+sector_lba:
+        .res 4 ; dword (part of sdcard_param) - LBA of sector to read/write
+        .res 1
+
+timeout_cnt:    .byte 0
+spi_sr:         .byte 0
         .code
 
 ;-----------------------------------------------------------------------------
@@ -270,7 +280,7 @@ sdcard_init:
         sta via_acr
         ; disable VIA interrupts
         lda #%01111111                   ; bit 7 "0", to clear all int sources
-        sta via_ier
+        ; sta via_ier
         ; Port a bits 7, 2, 1, 0 are output, rest are high impedence
         lda #%10000111
         sta via_ddra
@@ -356,6 +366,16 @@ sdcard_init:
 ; result: C=0 -> error, C=1 -> success
 ;-----------------------------------------------------------------------------
 sdcard_read_sector:
+        ;jsr bios_printlba
+        ;lda #13
+        ;jsr acia_putc
+        ;lda #10
+        ;jsr acia_putc
+        ;lda bdma_ptr + 1
+        ;jsr bios_prbyte
+        ;lda bdma_ptr + 0
+        ;jsr bios_prbyte
+
         jsr sdcmd_start
         ; Send READ_SINGLE_BLOCK command
         lda #($40 | 17)
@@ -386,14 +406,13 @@ sdcard_read_sector:
         ldx #$FF
         ldy #0
 @3:     jsr spi_read
-        sta (ptr1), y
+        sta (bdma_ptr), y
         iny
         bne @3
-
+        inc bdma_ptr + 1
         ; Y already 0 at this point
 @5:     jsr spi_read
-        inc ptr1 + 1
-        sta (ptr1), y
+        sta (bdma_ptr), y
         iny
         bne @5
 
@@ -434,17 +453,16 @@ sdcard_write_sector:
 
         ; Send 512 bytes of sector data
         ldy #0
-@1:     lda (ptr1), y
+@1:     lda sector_buffer, y            ; 4
         jsr spi_write
-        iny
-        bne @1
+        iny                             ; 2
+        bne @1                          ; 2 + 1
 
         ; Y already 0 at this point
-        inc ptr1 + 1
-@2:     lda (ptr1),y
+@2:     lda sector_buffer + 256, y      ; 4
         jsr spi_write
-        iny
-        bne @2
+        iny                             ; 2
+        bne @2                          ; 2 + 1
 
         ; Dummy CRC
         lda #0
@@ -473,3 +491,70 @@ sdcard_write_sector:
         clc
         rts
 
+;-----------------------------------------------------------------------------
+; sdcard_check_alive
+;
+; Check whether the current SD card is still present, or whether it has been
+; removed or replaced with a different card.
+;
+; Out:  c  =1: SD card is alive
+;          =0: SD card has been removed, or replaced with a different card
+;
+; The SEND_STATUS command (CMD13) sends 16 error bits:
+;  byte 0: 7  always 0
+;          6  parameter error
+;          5  address error
+;          4  erase sequence error
+;          3  com crc error
+;          2  illegal command
+;          1  erase reset
+;          0  in idle state
+;  byte 1: 7  out of range | csd overwrite
+;          6  erase param
+;          5  wp violation
+;          4  card ecc failed
+;          3  CC error
+;          2  error
+;          1  wp erase skip | lock/unlock cmd failed
+;          0  Card is locked
+; Under normal circumstances, all 16 bits should be zero.
+; This command is not legal before the SD card has been initialized.
+; Tests on several cards have shown that this gets respected in practice;
+; the test cards all returned $1F, $FF if sent before CMD0.
+; So we use CMD13 to detect whether we are still talking to the same SD
+; card, or a new card has been attached.
+;-----------------------------------------------------------------------------
+sdcard_check_alive:
+        ; save sector
+        jsr sdcmd_start
+        ldx #0
+@1:     lda sector_lba, x
+        pha
+        inx
+        cpx #4
+        bne @1
+
+        send_cmd_inline 13, 0 ; CMD13: SEND_STATUS
+        bcc @no ; card did not react -> no card
+        tax
+        bne @no ; first byte not $00 -> different card
+        jsr spi_read
+        tax
+        bne @no ; second byte not $00 -> different card
+        sec
+        bra @yes
+
+@no:    clc
+
+@yes:   ; restore sector
+        ; (this code preserves the C flag!)
+        ldx #3
+@2:     pla
+        sta sector_lba, x
+        dex
+        bpl @2
+
+        jsr sdcmd_end
+        php
+        plp
+        rts

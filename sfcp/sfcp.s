@@ -4,7 +4,9 @@
 .export main
 .autoimport
 
-SFOS = $800
+.globalzp ptr1
+
+SFOS = $C54
 
 .zeropage
 debug_ptr: .word 0
@@ -129,16 +131,36 @@ load_transient:
     rts         ; TODO: The application is responsible for jumping back to "main"
 
 dir:
+    ; set dma
+    jsr newline
+    jsr newline
+    lda #<commandline
+    ldx #>commandline
+    jsr d_setdma
+    lda fcb + sfcb::DD
+    ldx #0
+    jsr d_getsetdrive
+    jsr make_dir_fcb
+
+    lda #<fcb
+    ldx #>fcb
+    jsr d_findfirst
+    bcc :+
+    jsr bios_prbyte
     jsr debug
-    .byte 10,13,"===> DIR",10,13,0
-    ; step 1 set dma
-    ; block_count = 0
-    ; while block_count < 4:
-    ;   setdma
-    ;   readseqblock
-    ;   
-    clc
-    rts
+    .byte 10,13,"FIND FIRST ERROR",0
+    jmp prompt
+:   jsr print_fcb
+    jsr make_dir_fcb
+    lda #<fcb
+    ldx #>fcb
+    jsr d_findnext
+    bcc :-
+    jsr bios_prbyte
+    jsr debug
+    .byte 10,13,"END OF DIRECTORY",0
+    jmp prompt
+
 era:
     jsr debug
     .byte 10,13,"===> ERA",10,13,0
@@ -152,6 +174,7 @@ ren:
 type:
     jsr debug
     .byte 10,13,"===> TYPE",10,13,0
+    
     clc
     rts
 save:
@@ -185,13 +208,48 @@ d_setdma:
 d_parsefcb:
     ldy #esfos::sfos_d_parsefcb
     jmp SFOS
+d_findfirst:
+    ldy #esfos::sfos_d_findfirst
+    jmp SFOS
+d_findnext:
+    ldy #esfos::sfos_d_findnext
+    jmp SFOS
 
+
+; ---- local helper functions ------------------------------------------------
 clear_fcb:
     ldx #32
     lda #0
 :   sta fcb-1,x
     dex
     bne :-
+    rts
+
+make_dir_fcb:
+    ldx #sfcb::N1
+    lda #'?'
+:
+    sta fcb, x
+    inx
+    cpx #(sfcb::T3 + 1)
+    bne :-
+    rts
+
+print_fcb:
+    ldx #sfcb::N1
+:   lda fcb,x
+    jsr c_write
+    inx
+    cpx #(sfcb::N8+1)
+    bne :-
+    lda #' '
+    jsr c_write
+:   lda fcb,x
+    jsr c_write
+    inx
+    cpx #(sfcb::T3+1)
+    bne :-
+    jsr newline
     rts
 
 show_prompt:
@@ -231,8 +289,8 @@ debug:
     rts
 
 .bss
+commandline:    .res 512
 fcb:            .res 32
-commandline:    .res 128
 temp:           .res 2
 
 .rodata

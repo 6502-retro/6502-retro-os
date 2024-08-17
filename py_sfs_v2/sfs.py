@@ -40,7 +40,7 @@ class SFS(object):
         for i in range(INDEX_SECTOR_START, (INDEX_SECTOR_START + INDEX_SECTOR_COUNT)):
             self.fd.write(bytearray(SECTOR_SIZE))
 
-        for drive in range(1, 9):
+        for drive in range(8):
             for filenum in range(256):
                 idx_pos = (
                     (INDEX_SECTOR_START * SECTOR_SIZE)
@@ -141,7 +141,7 @@ class SFS(object):
         self.idx.file_size = len(data)
         self.idx.flush(self.fd)
 
-        seekpos_lba = (self.idx.drive * 0x10000) + (self.idx.file_num * 0x100)
+        seekpos_lba = ((self.idx.drive + 1) * 0x10000) + (self.idx.file_num * 0x100)
         self.fd.seek(seekpos_lba * SECTOR_SIZE)
         self.fd.write(data)
         return True

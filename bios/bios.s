@@ -1,14 +1,16 @@
 ; vim: ft=asm_ca65
 .autoimport
-.globalzp ptr1
+.globalzp ptr1, bdma_ptr, lba_ptr
 
-.export bios_boot, sdcard_param
-.export bios_wboot, bios_conin, bios_conout, bios_const, bios_setdma
-.export bios_setlba, bios_sdread, bios_sdwrite, bios_puts
+.export bios_boot, bios_wboot, bios_conin, bios_conout, bios_const
+.export bios_setdma, bios_setlba, bios_sdread, bios_sdwrite, bios_puts
+.export bios_prbyte, bios_printlba
 
 .zeropage
 
-ptr1:   .word 0
+ptr1:       .word 0
+bdma_ptr:   .word 0
+blba_ptr:   .word 0
 
 .code
 
@@ -50,24 +52,29 @@ bios_const:
     jmp acia_getc_nw
 
 bios_setdma:
+    sta bdma_ptr + 0
     sta bdma + 0
+    stx bdma_ptr + 1
     stx bdma + 1
     clc
     rts
 
 bios_setlba:
-    sta ptr1 + 0
-    stx ptr1 + 1
-    ldy #4
+    sta blba_ptr + 0
+    stx blba_ptr + 1
+    ldy #3
 @L1:
-    lda (ptr1),y
-    sta sdcard_param,y
+    lda (blba_ptr),y
+    sta sector_lba,y
+    dey
+    bpl @L1
     clc
     rts
 
 bios_sdread:
     jsr set_sdbuf_ptr
-    jmp sdcard_read_sector
+    jsr sdcard_read_sector
+    rts
 
 bios_sdwrite:
     jmp sdcard_write_sector
@@ -85,24 +92,69 @@ bios_puts:
 @done:
     rts
 
+bios_printlba:
+    pha
+    phx
+    phy
+
+    lda #13
+    jsr acia_putc
+    lda #10
+    jsr acia_putc
+    lda sector_lba + 3
+    jsr bios_prbyte
+    lda sector_lba + 2
+    jsr bios_prbyte
+    lda sector_lba + 1
+    jsr bios_prbyte
+    lda sector_lba + 0
+    jsr bios_prbyte
+
+    ply
+    plx
+    pla
+    rts
+
+bios_prbyte:
+    PHA             ;Save A for LSD.
+    LSR
+    LSR
+    LSR             ;MSD to LSD position.
+    LSR
+    JSR PRHEX       ;Output hex digit.
+    PLA             ;Restore A.
+PRHEX:
+    AND #$0F        ;Mask LSD for hex print.
+    ORA #$B0        ;Add "0".
+    CMP #$BA        ;Digit?
+    BCC ECHO        ;Yes, output it.
+    ADC #$06        ;Add offset for letter.
+ECHO:
+    PHA             ;*Save A
+    AND #$7F        ;*Change to "standard ASCII"
+    JSR acia_putc
+    PLA             ;*Restore A
+    RTS             ;*Done, over and out...
+
 ;---- Helper functions -------------------------------------------------------
 set_sdbuf_ptr:
-    lda bdma + 0
-    sta ptr1 + 0
     lda bdma + 1
-    sta ptr1 + 1
+    sta bdma_ptr + 1
+    ;jsr bios_prbyte
+    lda bdma + 0
+    sta bdma_ptr + 0
+    ;jsr bios_prbyte
     rts
 
 zero_lba:
-    stz sdcard_param + 0 ; sector inside file
-    stz sdcard_param + 1 ; file number
-    stz sdcard_param + 2 ; drive number
-    stz sdcard_param + 3 ; always zero
+    stz sector_lba + 0 ; sector inside file
+    stz sector_lba + 1 ; file number
+    stz sector_lba + 2 ; drive number
+    stz sector_lba + 3 ; always zero
     rts
 
 .bss
     bdma: .word 0
-    sdcard_param: .res 5
 
 .segment "SYSTEM"
 .rodata

@@ -142,7 +142,7 @@ def cp(image, source, destination):
     sfs = SFS(image)
     drive -= 0x40
     if copy_dir == 0:
-        if sfs.create(drive, sfs_filename):
+        if sfs.create(drive-1, sfs_filename):
             with open(local_filename, "rb") as fd:
                 if sfs.write(fd.read()):
                     print(f"Wrote {sfs.idx.file_size} bytes...")
@@ -184,7 +184,7 @@ def new(image):
 )
 @click.argument("drive")
 def ls(image, drive="A"):
-    _drive = ord(drive) - 0x40
+    _drive = ord(drive) - 0x41
     sfs = SFS(image)
     while True:
         idx = sfs.read_index(_drive)
@@ -196,7 +196,7 @@ def ls(image, drive="A"):
         fname = str(idx.fname, encoding="ascii")
         fext = str(idx.fext, encoding="ascii")
         filename = f"{fname}.{fext}"
-        print(f" {chr(idx.drive + 0x40)}:{filename:<11} {idx.file_size:>7} bytes")
+        print(f" {chr(idx.drive + 0x41)}:{filename:<11} {idx.file_size:>7} bytes")
 
     print()
 

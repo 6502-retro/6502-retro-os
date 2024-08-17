@@ -9,7 +9,7 @@
 cmd:        .word 0
 param:      .word 0
 user_dma:   .word 0
-
+temp:       .res 4,0
 .code
 
 ; reset with warm boot and log into drive A
@@ -17,6 +17,12 @@ sfos_s_reset:
     jsr bios_wboot
     lda #1
     sta current_drive
+    dec
+    ora #$80                ; on reset we want to set the lba to point
+    sta lba + 0             ; to the sector containing indexes for drive
+    stz lba + 1             ; A: which is 0x00_00_00_80
+    stz lba + 2
+    stz lba + 3
     rts
 
 ; read a char from the serial console
@@ -32,6 +38,7 @@ sfos_c_read:
 sfos_c_write:
     lda param + 0
 internal_c_write:
+    jsr to_upper
     jsr bios_conout
     jsr bios_const
     beq @exit
@@ -102,6 +109,7 @@ sfos_c_status:
 ; Gets or sets the current drive.  When the current drive changes, we set LBA
 sfos_d_getsetdrive:
     lda param + 0
+internal_getsetdrive:
     cmp #$FF
     bne @L1
     lda current_drive       ; return the current_drive
@@ -117,11 +125,12 @@ sfos_d_getsetdrive:
     beq @exit
     ; drive is different
     sta current_drive
-    sta lba + 3             ; drive number is the 3rd byte of the LBA
-    stz lba + 0             ; all other bytes of the LBA are reset to 0
-    stz lba + 1             ; as we have changed to another drive.
-    stz lba + 4
-    jsr bios_setlba
+    dec                     ; If A: drive then A=1, convert to 0 based drive
+    ora #$80                ; set the most significant bit
+    sta lba + 0             ; indexes begin at 0x80 for drive A
+    stz lba + 1             ; all other bytes of the LBA are reset to 0
+    stz lba + 2             ; as we have changed to another drive.
+    stz lba + 3
 @exit:
     clc
     rts
@@ -262,11 +271,118 @@ sfos_d_parsefcb:
     sec
 :   rts
 
-sfos_d_find:
-    jmp unimplimented
+; searches the currently selelcted drive for a file matching the name in the provided FCB
+; if one is found it returns it.
+sfos_d_findfirst:
+    jsr home_drive
+    bcc :+
+    lda #$01                ; TODO: CHECK ERROR CODES
+    sec
+    rts
+:   jsr read_directory_entry
+    ; fall through
 
+; Find the next matching filename from the drive specified in the FCB or the
+; current drive if the fcb drive value is 0.
+; On entry XA points to an fcb containng the filename to find.
+; any `?` chars in the filename or the extension will be skipped on char matching.
+; keep track of the following details:
+;   - sector lba
+;   - current_directory_pos
 sfos_d_findnext:
-    jmp unimplimented
+    ; check if drive matches current.  It won't if we went over the drive indexes.
+    ; might be a better way to do this XXX: Is there a better way?
+    lda current_drive
+    dec
+    cmp current_dirent + sfcb::DD
+    beq :+
+    lda #$02                ; end of directory
+    sec
+    rts
+:   lda current_dirent + sfcb::FA
+    cmp #$E5
+    bne :+
+    lda #$03
+    sec
+    rts
+:   ldy #sfcb::N1
+:   lda (param),y           ; load char from record we retreived from sector
+    cmp #'?'
+    beq :+                  ; skip comparing question marks
+    cmp current_dirent,y    ; compare with the record sent to us.
+    bne @nomatch
+:   iny
+    cpy #sfcb::T3 + 1
+    bne :--
+@matched:
+    ldy #31
+:   lda current_dirent,y
+    sta (param),y
+    dey
+    bne :-
+    jsr read_directory_entry    ; for next time (if there's a next time)
+    clc
+    rts
+@nomatch:
+    ; we have to check the next directory entry.
+    jsr read_directory_entry
+    bra sfos_d_findnext
+
+; reads the directory entry, loads the next sector from disk if needed
+read_directory_entry:
+    lda current_dirpos      ; use the current dirpos to calculate the offset
+    asl                     ; into the 512byte user_dma.
+    asl
+    asl
+    asl
+    asl                     ; x 32
+    tay
+    ldx #0                  ; index into current_dirent
+:   lda (temp),y        ; copy the directory entry into current_dirent
+    sta current_dirent,x
+    iny
+    inx
+    cpx #32
+    bne :-
+    inc current_dirpos      ; increment the current_dirpos and check for end
+    lda current_dirpos      ; the end of the current directory sector
+    cmp #8                  ; XXX: NASTY SHIT>> Only when dirpos is 8 should
+    beq :+                  ; XXX: temp + 1 be incremented.
+    bra :++
+:   inc temp + 1
+:   cmp #16
+    bne :+
+    jsr sfos_d_readseqblock ; if it was the end of the sector, load the next
+    stz current_dirpos      ; sector and reset current_dirpos.
+    lda user_dma + 0
+    sta temp + 0
+    lda user_dma + 1
+    sta temp + 1
+:   rts
+
+; Reset the dirpos and 
+home_drive:
+    lda current_drive       ; set the LBA to the begining of the drives indexes
+    dec
+    asl
+    asl
+    asl
+    asl
+    ora #$80
+    sta lba + 0
+    stz lba + 1
+    stz lba + 2
+    stz lba + 3
+    lda #0
+    sta current_filenum
+    sta current_dirpos
+    ; user_dma is already defined by the caller.
+    jsr sfos_d_readseqblock ;read first block
+    lda user_dma + 0
+    sta temp + 0
+    lda user_dma + 1
+    sta temp + 1
+    rts
 
 sfos_d_make:
     jmp unimplimented
@@ -284,8 +400,20 @@ sfos_d_setdma:
     stx user_dma + 1
     jmp bios_setdma
 
+; Writes a sector of data (512 bytes) into the previously set DMA.
+; Post updates LBA to be ready for next block to read.
 sfos_d_readseqblock:
-    jmp unimplimented
+    lda #<lba
+    ldx #>lba
+    jsr bios_setlba         ; update the bios LBA to current lba
+
+    jsr bios_sdread
+    bcs :+
+    sec
+    rts
+:   jsr increment_lba
+    clc
+    rts
 
 sfos_d_writeseqblock:
     jmp unimplimented
@@ -323,11 +451,43 @@ is_terminator_char:
 :   ldx temp+2
     rts
 
+increment_lba:
+    clc
+    lda lba + 0
+    adc #1
+    sta lba + 0
+    lda lba + 1
+    adc #0
+    sta lba + 1
+    lda lba + 2
+    adc #0
+    sta lba + 2
+    lda lba + 3
+    adc #0
+    sta lba + 3
+    lda #<lba
+    ldx #>lba
+    jsr bios_setlba
+    rts
+
+; on entry y is pointing at the start of the dirent
+copy_dma_to_current_dirent:
+    ldx #0
+:   lda (user_dma),y
+    sta current_dirent,x
+    iny
+    inx
+    cpx #32
+    bne :-
+    rts
+
 .bss
     current_drive:  .byte 0
-    lba:            .res 4,0
+    current_filenum:.byte 0
+    current_dirent: .res 32, 0
+    current_dirpos: .byte 0
+    lba:            .res 4, 0
     cmdlen:         .byte 0
-    temp:           .res 4
 
 .segment "SYSTEM"
 ; dispatch function, will be relocated on boot into SYSRAM
@@ -352,7 +512,7 @@ sfos_jmp_tbl_lo:
     .lobytes sfos_d_getsetdrive
     .lobytes sfos_d_createfcb
     .lobytes sfos_d_parsefcb
-    .lobytes sfos_d_find
+    .lobytes sfos_d_findfirst
     .lobytes sfos_d_findnext
     .lobytes sfos_d_make
     .lobytes sfos_d_open
@@ -372,7 +532,7 @@ sfos_jmp_tbl_hi:
     .hibytes sfos_d_getsetdrive
     .hibytes sfos_d_createfcb
     .hibytes sfos_d_parsefcb
-    .hibytes sfos_d_find
+    .hibytes sfos_d_findfirst
     .hibytes sfos_d_findnext
     .hibytes sfos_d_make
     .hibytes sfos_d_open

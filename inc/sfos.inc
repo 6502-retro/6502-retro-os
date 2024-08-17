@@ -1,5 +1,4 @@
 ; vim: ft=asm_ca65
-
 .enum esfos
     sfos_s_reset            = 0
     sfos_c_read             = 1
@@ -10,7 +9,7 @@
     sfos_d_getsetdrive      = 6
     sfos_d_createfcb        = 7
     sfos_d_parsefcb         = 8
-    sfos_d_find             = 9
+    sfos_d_findfirst        = 9
     sfos_d_findnext         = 10
     sfos_d_make             = 11
     sfos_d_open             = 12
