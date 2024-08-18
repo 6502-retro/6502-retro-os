@@ -6,11 +6,12 @@
 
 .globalzp ptr1
 
-SFOS = $C54
+SFOS = $200
 
 .zeropage
 debug_ptr: .word 0
 sfcpcmd: .word 0
+
 .code
 ; main user interface - First show a prompt.
 main:
@@ -18,10 +19,16 @@ main:
     lda #<str_banner
     ldx #>str_banner
     jsr c_printstr
+    lda #$ff
+    ldx #0
+    jsr d_getsetdrive
+    sta active_drive
 prompt:
+    jsr newline
     jsr newline
     jsr show_prompt
 
+    jsr clear_commandline
     lda #128
     sta commandline
     lda #<commandline
@@ -29,6 +36,7 @@ prompt:
     jsr c_readstr
 
     jsr clear_fcb
+    jsr clear_fcb2
     lda #<fcb
     ldx #>fcb
     jsr d_setdma
@@ -41,11 +49,35 @@ prompt:
 :   jsr d_parsefcb          ; XA -> param is the start of the filename.
     ; XA -> Points to new command offset
     bcc :+
-    jsr debug
-    .byte 10,13,"parse error",10,13,0
+    jsr printi
+    .byte 10,13,"parse error: fcb1",10,13,0
     jmp prompt
 :
-    ; TODO: Handle parameters
+    ; parse any parameters
+    ; XA points to start of rest of command line.
+    sta debug_ptr + 0
+    stx debug_ptr + 1
+    ldy #0
+    lda (debug_ptr),y
+    beq @check_drive        ; no parameters go on to checkdrive
+    ; else setup and parse the parameter
+    lda #<fcb2
+    ldx #>fcb2
+    jsr d_setdma
+
+    ldx debug_ptr + 1
+    lda debug_ptr + 0
+    inc                     ; skip over space
+    bne :+
+    inx
+:   jsr d_parsefcb
+    bcc @check_drive
+
+    jsr printi
+    .byte 10,13,"parse error: fcb2",10,13,0
+    jmp prompt
+
+@check_drive:
     ;
     ; check if we are dealing with a change drive command
     ; byte N1 of the fcb will be a space
@@ -58,16 +90,18 @@ prompt:
 @changedrive:
     lda fcb + sfcb::DD
     ldx #0
+    sta active_drive
     jsr d_getsetdrive
     jmp prompt
 
 @decode_command:
     jsr decode_command
-    bcs @load_transient
-
-    jsr debug
+    bcc :+
+    cmp #1
+    bne :+
+    jsr printi
     .byte 10,13,"SYNTAX ERROR",10,13,0
-    jmp main
+:   jmp prompt
 
 @load_transient:
     jsr load_transient
@@ -113,7 +147,7 @@ decode_command:
     rts
 
 load_transient:
-    jsr debug
+    jsr printi
     .byte 10,13,"TRANSIENT APP",10,13,0
 
     ; check if extension is provided.
@@ -137,18 +171,18 @@ dir:
     lda #<commandline
     ldx #>commandline
     jsr d_setdma
-    lda fcb + sfcb::DD
-    ldx #0
-    jsr d_getsetdrive
-    jsr make_dir_fcb
 
+    jsr set_user_drive
+
+    jsr make_dir_fcb
     lda #<fcb
     ldx #>fcb
     jsr d_findfirst
     bcc :+
     jsr bios_prbyte
-    jsr debug
+    jsr printi
     .byte 10,13,"FIND FIRST ERROR",0
+    jsr restore_active_drive
     jmp prompt
 :   jsr print_fcb
     jsr make_dir_fcb
@@ -157,28 +191,67 @@ dir:
     jsr d_findnext
     bcc :-
     jsr bios_prbyte
-    jsr debug
+    jsr printi
     .byte 10,13,"END OF DIRECTORY",0
+    jsr restore_active_drive
     jmp prompt
 
 era:
-    jsr debug
+    jsr printi
     .byte 10,13,"===> ERA",10,13,0
     clc
     rts
 ren:
-    jsr debug
+    jsr printi
     .byte 10,13,"===> REN",10,13,0
     clc
     rts
 type:
-    jsr debug
+    jsr printi
     .byte 10,13,"===> TYPE",10,13,0
-    
-    clc
+    jsr debug_fcb
+    jsr newline
+
+    lda #<commandline           ; buffer for disk io
+    ldx #>commandline
+    jsr d_setdma
+
+    jsr set_user_drive          ; change drive if needed
+
+    lda #<fcb2                  ; load the file fcb
+    ldx #>fcb2
+    jsr d_findfirst             ; search
+
+    pha
+    jsr newline
+    pla
+
+    cmp #$03
+    bne :+
+    jsr debug_fcb
+    jsr printi
+    .byte 10,13,"FILE NOT FOUND",10,13,0
+    jsr restore_active_drive
+    lda #$03
+    sec
     rts
+
+:   jsr newline
+    jsr debug_fcb
+
+    lda #<fcb2
+    ldx #>fcb2
+    jsr d_open
+    php
+    jsr restore_active_drive
+    plp
+    bcc @exit
+    lda #1
+@exit:
+    rts
+
 save:
-    jsr debug
+    jsr printi
     .byte 10,13,"===> SAVE",10,13,0
     clc
     rts
@@ -214,15 +287,88 @@ d_findfirst:
 d_findnext:
     ldy #esfos::sfos_d_findnext
     jmp SFOS
-
+d_open:
+    ldy #esfos::sfos_d_open
+    jmp SFOS
 
 ; ---- local helper functions ------------------------------------------------
-clear_fcb:
-    ldx #32
-    lda #0
-:   sta fcb-1,x
-    dex
+
+; restore old drive after disk activity
+restore_active_drive:
+    lda fcb2
+    bne :+
+    rts
+:   lda saved_active_drive
+    sta active_drive
+    ldx #0
+    jmp d_getsetdrive
+
+set_user_drive:
+    lda fcb2
+    bne :+
+    rts
+:   pha
+    lda active_drive
+    sta saved_active_drive
+    pla
+    sta active_drive
+    ldx #0
+    jmp d_getsetdrive
+
+debug_fcb:
+    jsr printi
+    .byte 13,10,"FCB1: ",0
+    lda fcb
+    clc
+    adc #'A'-1
+    jsr acia_putc
+    lda #':'
+    jsr acia_putc
+    ldx #1
+:   lda fcb,x
+    jsr acia_putc
+    inx
+    cpx #sfcb::T3+1
     bne :-
+
+    jsr printi
+    .byte 13,10,"FCB2: ",0
+    lda fcb2
+    clc
+    adc #'A'-1
+    jsr acia_putc
+    lda #':'
+    jsr acia_putc
+    ldx #1
+:   lda fcb2,x
+    jsr acia_putc
+    inx
+    cpx #sfcb::T3+1
+    bne :-
+    rts
+
+clear_commandline:
+    ldx #0
+    lda #0
+:   sta commandline,x
+    inx
+    bpl :-
+    rts
+
+clear_fcb:
+    ldx #31
+    lda #0
+:   sta fcb,x
+    dex
+    bpl :-
+    rts
+
+clear_fcb2:
+    ldx #31
+    lda #0
+:   sta fcb2,x
+    dex
+    bpl :-
     rts
 
 make_dir_fcb:
@@ -233,8 +379,12 @@ make_dir_fcb:
     inx
     cpx #(sfcb::T3 + 1)
     bne :-
-    rts
+    lda fcb2
+    beq :+
+    sta fcb
+:   rts
 
+; used by DIR
 print_fcb:
     ldx #sfcb::N1
 :   lda fcb,x
@@ -267,7 +417,7 @@ newline:
     jmp c_printstr
 
 ; debug helper
-debug:
+printi:
     pla
     sta debug_ptr
     pla
@@ -291,7 +441,10 @@ debug:
 .bss
 commandline:    .res 512
 fcb:            .res 32
+fcb2:           .res 32
 temp:           .res 2
+active_drive:   .byte 0
+saved_active_drive: .byte 0
 
 .rodata
 

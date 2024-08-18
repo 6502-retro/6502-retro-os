@@ -9,14 +9,14 @@
 cmd:        .word 0
 param:      .word 0
 user_dma:   .word 0
-temp:       .res 4,0
+zptemp:       .res 4,0
 .code
 
 ; reset with warm boot and log into drive A
 sfos_s_reset:
     jsr bios_wboot
     lda #1
-    sta current_drive
+    sta drive
     dec
     ora #$80                ; on reset we want to set the lba to point
     sta lba + 0             ; to the sector containing indexes for drive
@@ -112,7 +112,7 @@ sfos_d_getsetdrive:
 internal_getsetdrive:
     cmp #$FF
     bne @L1
-    lda current_drive       ; return the current_drive
+    lda drive       ; return the drive
     bra @exit
 @L1:
     jsr bios_conout
@@ -121,16 +121,10 @@ internal_getsetdrive:
     bcc @out_of_range
     cmp #(8+1)
     bcs @out_of_range
-    cmp current_drive
+    cmp drive
     beq @exit
     ; drive is different
-    sta current_drive
-    dec                     ; If A: drive then A=1, convert to 0 based drive
-    ora #$80                ; set the most significant bit
-    sta lba + 0             ; indexes begin at 0x80 for drive A
-    stz lba + 1             ; all other bytes of the LBA are reset to 0
-    stz lba + 2             ; as we have changed to another drive.
-    stz lba + 3
+    sta drive
 @exit:
     clc
     rts
@@ -141,14 +135,16 @@ internal_getsetdrive:
 sfos_d_createfcb:
     jmp unimplimented
 
-; the user_dma pointer points to the buffer containing the commandline
-; param points to the FCB Read in the commandline and fill out the FCB
+; the user_dma pointer points to the fcb memory
+; param points to the commandline
+; returns with the fcb filled out and XA pointing at the updated location
+; in the commandline.
 ; BORROWED FROM CPM65 By David Given (https://github.com/davidgiven/cpm65)
 sfos_d_parsefcb:
     ; param -> commandline (filename)
     ; dma -> FCB
     lda #0
-    sta temp+1              ; failure flag
+    sta zptemp+1              ; failure flag
 
     ; check the drive
 
@@ -165,18 +161,20 @@ sfos_d_parsefcb:
     jsr to_upper
     sec
     sbc #'A'-1              ; to 1 based drive
-    cmp #1                  ; we only support 8 drives on sfs
-    bcs :+                  ; carry is clear if drive is less than 8 (0-7)
+    cmp #1
+    bcs :+
     cmp #9
     bcc :+
-    dec temp+1
+    dec zptemp+1
 :
     tax
     iny
     iny
 @nodrive:
     txa
-    pha                     ; drive letter pushed to stack
+    bne :+
+    lda drive       ; pop in the current drive if one was not given.
+:   pha                     ; drive letter pushed to stack
 
     ; Read the filename
 
@@ -256,23 +254,24 @@ sfos_d_parsefcb:
     ldy #15
 @L5:
     pla
-    sta (user_dma),y
+    sta (user_dma),y        ; user_dma -> fcb
     dey
     bpl @L5
     txa
     clc
-    adc param+0
+    adc param+0             ; param -> commandline
     ldx param+1
     bcc :+                  ; did we rollover on the adc above?
-    inx
-:   clc
-    ldy temp+1              ; was there a failure?
+    inx                     ; XA points to first char after space
+:   clc                     ; TODO: should call skipsapces here.
+    ldy zptemp+1              ; was there a failure?
     beq :+
     sec
 :   rts
 
 ; searches the currently selelcted drive for a file matching the name in the provided FCB
 ; if one is found it returns it.
+; on entry: Param points to FCB
 sfos_d_findfirst:
     jsr home_drive
     bcc :+
@@ -282,9 +281,10 @@ sfos_d_findfirst:
 :   jsr read_directory_entry
     ; fall through
 
-; Find the next matching filename from the drive specified in the FCB or the
-; current drive if the fcb drive value is 0.
-; On entry XA points to an fcb containng the filename to find.
+; On entry, param points to an FCB.
+; On entry a directory has been read by a previous call to findnext or findfirst.
+; current_dirent contains the current directory entry being checked against the FCB
+; pointed to by the param.
 ; any `?` chars in the filename or the extension will be skipped on char matching.
 ; keep track of the following details:
 ;   - sector lba
@@ -292,7 +292,7 @@ sfos_d_findfirst:
 sfos_d_findnext:
     ; check if drive matches current.  It won't if we went over the drive indexes.
     ; might be a better way to do this XXX: Is there a better way?
-    lda current_drive
+    lda drive
     dec
     cmp current_dirent + sfcb::DD
     beq :+
@@ -306,10 +306,10 @@ sfos_d_findnext:
     sec
     rts
 :   ldy #sfcb::N1
-:   lda (param),y           ; load char from record we retreived from sector
+:   lda (param),y           ; load char from record we retreived from user
     cmp #'?'
     beq :+                  ; skip comparing question marks
-    cmp current_dirent,y    ; compare with the record sent to us.
+    cmp current_dirent,y    ; compare with the record from the sector on disk
     bne @nomatch
 :   iny
     cpy #sfcb::T3 + 1
@@ -319,8 +319,9 @@ sfos_d_findnext:
 :   lda current_dirent,y
     sta (param),y
     dey
-    bne :-
+    bpl:-
     jsr read_directory_entry    ; for next time (if there's a next time)
+    lda #$FF
     clc
     rts
 @nomatch:
@@ -338,7 +339,8 @@ read_directory_entry:
     asl                     ; x 32
     tay
     ldx #0                  ; index into current_dirent
-:   lda (temp),y        ; copy the directory entry into current_dirent
+:   lda (zptemp),y          ; copy the directory entry into current_dirent
+    jsr to_upper            ; compare apples with apples
     sta current_dirent,x
     iny
     inx
@@ -347,22 +349,22 @@ read_directory_entry:
     inc current_dirpos      ; increment the current_dirpos and check for end
     lda current_dirpos      ; the end of the current directory sector
     cmp #8                  ; XXX: NASTY SHIT>> Only when dirpos is 8 should
-    beq :+                  ; XXX: temp + 1 be incremented.
+    beq :+                  ; XXX: zptemp + 1 be incremented.
     bra :++
-:   inc temp + 1
+:   inc zptemp + 1
 :   cmp #16
     bne :+
     jsr sfos_d_readseqblock ; if it was the end of the sector, load the next
     stz current_dirpos      ; sector and reset current_dirpos.
     lda user_dma + 0
-    sta temp + 0
+    sta zptemp + 0
     lda user_dma + 1
-    sta temp + 1
+    sta zptemp + 1
 :   rts
 
-; Reset the dirpos and 
+; Reset the dirpos and ztemp ptr into user_dma
 home_drive:
-    lda current_drive       ; set the LBA to the begining of the drives indexes
+    lda drive       ; set the LBA to the begining of the drives indexes
     dec
     asl
     asl
@@ -379,15 +381,19 @@ home_drive:
     ; user_dma is already defined by the caller.
     jsr sfos_d_readseqblock ;read first block
     lda user_dma + 0
-    sta temp + 0
+    sta zptemp + 0
     lda user_dma + 1
-    sta temp + 1
+    sta zptemp + 1
     rts
 
 sfos_d_make:
     jmp unimplimented
 
 sfos_d_open:
+    ; FCB has the details we need.
+    ; Calculate the LBA from the DRIVE + FILENUM
+    ; Set the dma to the LOAD address if load address is not zero
+    ; return
     jmp unimplimented
 
 sfos_d_close:
@@ -427,8 +433,10 @@ sfos_d_writeseqbyte:
 ;---- HELPER FUNCTIONS -------------------------------------------------------
 unimplimented:
     lda #<str_unimplimented
-    lda #>str_unimplimented
-    jmp bios_puts
+    ldx #>str_unimplimented
+    jsr bios_puts
+    sec
+    rts
 
 ; converts a characater to upper case
 to_upper:
@@ -441,14 +449,14 @@ to_upper:
     rts
 
 is_terminator_char:
-    stx temp+2
+    stx zptemp+2
     ldx #(terminators_end - terminators) - 1
 :   cmp terminators, x          ; sets carry if equal
     beq :+
     dex
     bpl :-
     clc
-:   ldx temp+2
+:   ldx zptemp+2
     rts
 
 increment_lba:
@@ -482,7 +490,7 @@ copy_dma_to_current_dirent:
     rts
 
 .bss
-    current_drive:  .byte 0
+    drive:  .byte 0
     current_filenum:.byte 0
     current_dirent: .res 32, 0
     current_dirpos: .byte 0

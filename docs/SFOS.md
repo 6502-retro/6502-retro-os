@@ -27,17 +27,19 @@ cases, the error code will be given in A.
 | 03  | c_printstr      | Prints a null terminated string to the serial console
 | 04  | c_readstr       | Reads a line of input from the serial console
 | 05  | c_status        | Returns 0 or a characater from the serial console
-| 06  | d_getsetdrive   | x
-| 07  | d_createfcb     | x
-| 08  | d_convertfcb    | x
-| 09  | d_find          | x
-| 10  | d_make          | x
-| 11  | d_open          | x
-| 12  | d_close         | x
-| 13  | d_readseqblock  | x
-| 14  | d_writeseqblock | x
-| 15  | d_readseqbyte   | x
-| 16  | d_writeseqbyte  | x
+| 06  | d_getsetdrive   | Returns or changes the current drive
+| 07  | d_createfcb     | 
+| 08  | d_parsefcb      | x
+| 09  | d_findfirst     | x
+| 10  | d_findnext      | x
+| 11  | d_make          | x
+| 12  | d_open          | x
+| 13  | d_close         | x
+| 14  | d_setdma        | x
+| 15  | d_readseqblock  | x
+| 16  | d_writeseqblock | x
+| 17  | d_readseqbyte   | x
+| 18  | d_writeseqbyte  | x
 
 ## 00 s_reset
 
@@ -107,7 +109,7 @@ Given a pointer to an FCB in XA, this routine will populate the FCB with the
 drive number, all spaces for the file name and extension and zeros for the
 remaining elements.
 
-## 08 d_convertfcb
+## 08 d_parsefcb
 
 Given a pointer to an FCB in XA, this routine will attempt to convert a
 commanline input given by the previously set DMA address into an FCB.  It will
@@ -126,6 +128,9 @@ save the result into FILE.COM, the user might issue this command.
 FCB where \x20 is a space.
 - COM will be placed into the T1-T3 elements of the FCB.
 - 0x01 will be placed into the 16th element of the FCB.
+
+The arguments will be saved as follows
+
 - FILE\x20\x20\x20\x20 will be placed into the 17th to the 23rd elements of the FCB.
 - COM will be placed into the 24th to the 26th elements of the FCB.
 - All other elements will be set to zero.
@@ -145,22 +150,26 @@ matching filename and extension strings.
 
 The routine will respond with the following conditions:
 
-- Carry Clear on success and XA pointing to the start of the converted FCB.
-This is usually the same as the supplied FCB, but in cases when this routine is
-called internally, might not be.
+- Carry Clear on success.  The fcb sent is now updated with the result of the
+  parse routine.
 - Carry Set on error with the error code in A. The FCB is left in the sate it
-was in when the error occurred.
+  was in when the error occurred.
 
-## 09 - d_find
+## 09 - d_findfirst
 
 Given a populated FCB pointed to by XA, find the first occurrence of a file
 matching the name in the FCB
 
 The FCB is populated with the details of the file found and carry is clear.
 
-If the file can not be found, then carry is set.
+If the file can not be found, then carry is set and the END OF DIRECTORY error
+code is in A
 
-## 10 - d_make
+## 10 - d_findnext
+
+Lorem Ipsum,
+
+## 11 - d_make
 
 Given a pointer to an FCB in XA populated with the file name and optional drive
 number, find the next free file on the drive from the dirent table and update
@@ -173,7 +182,7 @@ code in A.
 - 0x02 disk error
 - 0x03 file exists
 
-## 11 - d_open
+## 12 - d_open
 
 Given a populated FCB pointed to by XA, open the specific file, validate the
 fields and return with carry clear if successful.
@@ -183,7 +192,7 @@ Carry is set if failed and error code in A:
 - 0x01 file not found
 - 0x02 disk error
 
-## 12 d_close
+## 13 d_close
 
 Given a populated FCB pointed to by XA, close the file by writing the contents
 of the FCB back to disk.
@@ -193,6 +202,18 @@ Carry is set on failure and error code in A:
 - 0x01 undefined error
 - 0x02 disk error
 
-## 12 d_readseqblock
+## 14 d_setdma
 
-Read a single sector of bytes (512) from the SDCARD at the previously defined LBA into memory at the DMA
+Lorem Ipsum,
+
+## 15 d_readseqblock
+
+Read a single sector of bytes (512) from the SDCARD at the previously defined
+LBA into memory at the DMA
+
+## d_writeseqblock
+
+## d_readseqbyte
+
+## d_writeseqbyte
+
