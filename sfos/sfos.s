@@ -9,7 +9,8 @@
 cmd:        .word 0
 param:      .word 0
 user_dma:   .word 0
-zptemp:       .res 4,0
+zptemp:     .res 4,0
+
 .code
 
 ; reset with warm boot and log into drive A
@@ -273,6 +274,7 @@ sfos_d_parsefcb:
 ; if one is found it returns it.
 ; on entry: Param points to FCB
 sfos_d_findfirst:
+    jsr internal_setdma
     jsr home_drive
     bcc :+
     lda #$01                ; TODO: CHECK ERROR CODES
@@ -390,10 +392,6 @@ sfos_d_make:
     jmp unimplimented
 
 sfos_d_open:
-    ; FCB has the details we need.
-    ; Calculate the LBA from the DRIVE + FILENUM
-    ; Set the dma to the LOAD address if load address is not zero
-    ; return
     jmp unimplimented
 
 sfos_d_close:
@@ -489,8 +487,17 @@ copy_dma_to_current_dirent:
     bne :-
     rts
 
+; sets the dma to the sfos_buffer
+internal_setdma:
+    lda #<sfos_buf
+    sta user_dma + 0
+    ldx #>sfos_buf
+    stz user_dma + 0
+    jmp bios_setdma
+
 .bss
-    drive:  .byte 0
+    sfos_buf:       .res 512
+    drive:          .byte 0
     current_filenum:.byte 0
     current_dirent: .res 32, 0
     current_dirpos: .byte 0

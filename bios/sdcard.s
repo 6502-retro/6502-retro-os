@@ -11,7 +11,7 @@
 .include "io.inc"
 .autoimport
 .globalzp bdma_ptr
-.export sector_buffer, sector_buffer_end, sector_lba, sdcard_init, sdcard_read_sector, sdcard_write_sector
+.export sector_lba, sdcard_init, sdcard_read_sector, sdcard_write_sector
 
 SD_SCK          = %00000001
 SD_CS           = %00000010
@@ -34,10 +34,6 @@ cmd_crc = sdcard_param + 5
 
 
         .bss
-sector_buffer:
-        .res 512
-sector_buffer_end:
-
 sdcard_param:
         .res 1
 sector_lba:
@@ -453,13 +449,13 @@ sdcard_write_sector:
 
         ; Send 512 bytes of sector data
         ldy #0
-@1:     lda sector_buffer, y            ; 4
+@1:     lda (bdma_ptr), y            ; 4
         jsr spi_write
         iny                             ; 2
         bne @1                          ; 2 + 1
-
+        inc bdma_ptr + 1
         ; Y already 0 at this point
-@2:     lda sector_buffer + 256, y      ; 4
+@2:     lda (bdma_ptr), y      ; 4
         jsr spi_write
         iny                             ; 2
         bne @2                          ; 2 + 1

@@ -149,52 +149,13 @@ decode_command:
 load_transient:
     jsr printi
     .byte 10,13,"TRANSIENT APP",10,13,0
-
-    ; check if extension is provided.
-    lda fcb + sfcb::T1
-    cmp #' '
-    bne :++
-    ldx #2
-:   lda str_COM,x
-    sta fcb + sfcb::T1, x
-    dex
-    bpl :-
-:   lda #<(fcb + sfcb::N1)
-    ldx #>(fcb + sfcb::N1)
-    jsr c_printstr
-    rts         ; TODO: The application is responsible for jumping back to "main"
+    rts
 
 dir:
-    ; set dma
-    jsr newline
-    jsr newline
-    lda #<commandline
-    ldx #>commandline
-    jsr d_setdma
-
-    jsr set_user_drive
-
-    jsr make_dir_fcb
-    lda #<fcb
-    ldx #>fcb
-    jsr d_findfirst
-    bcc :+
-    jsr bios_prbyte
     jsr printi
-    .byte 10,13,"FIND FIRST ERROR",0
-    jsr restore_active_drive
-    jmp prompt
-:   jsr print_fcb
-    jsr make_dir_fcb
-    lda #<fcb
-    ldx #>fcb
-    jsr d_findnext
-    bcc :-
-    jsr bios_prbyte
-    jsr printi
-    .byte 10,13,"END OF DIRECTORY",0
-    jsr restore_active_drive
-    jmp prompt
+    .byte 10,13,"===> DIR",10,13,0
+    clc
+    rts
 
 era:
     jsr printi
@@ -206,47 +167,10 @@ ren:
     .byte 10,13,"===> REN",10,13,0
     clc
     rts
+
 type:
     jsr printi
     .byte 10,13,"===> TYPE",10,13,0
-    jsr debug_fcb
-    jsr newline
-
-    lda #<commandline           ; buffer for disk io
-    ldx #>commandline
-    jsr d_setdma
-
-    jsr set_user_drive          ; change drive if needed
-
-    lda #<fcb2                  ; load the file fcb
-    ldx #>fcb2
-    jsr d_findfirst             ; search
-
-    pha
-    jsr newline
-    pla
-
-    cmp #$03
-    bne :+
-    jsr debug_fcb
-    jsr printi
-    .byte 10,13,"FILE NOT FOUND",10,13,0
-    jsr restore_active_drive
-    lda #$03
-    sec
-    rts
-
-:   jsr newline
-    jsr debug_fcb
-
-    lda #<fcb2
-    ldx #>fcb2
-    jsr d_open
-    php
-    jsr restore_active_drive
-    plp
-    bcc @exit
-    lda #1
 @exit:
     rts
 
