@@ -146,7 +146,18 @@ decode_command:
     rts
 
 load_transient:
-    lda #<fcb
+    ; check if FCB has extension.  if not, then add .COM
+    lda fcb+sfcb::T1
+    cmp #' '
+    bne :++
+
+    ldx #2
+:   lda str_COM,x
+    sta fcb+sfcb::T1,x
+    dex
+    bpl :-
+
+:   lda #<fcb
     ldx #>fcb
     jsr d_open
     bcc :+
