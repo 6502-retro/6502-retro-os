@@ -411,6 +411,7 @@ sdcard_read_sector:
         sta (bdma_ptr), y
         iny
         bne @5
+        dec bdma_ptr + 1
 
         ; Read CRC bytes
         jsr spi_read
@@ -460,6 +461,7 @@ sdcard_write_sector:
         iny                             ; 2
         bne @2                          ; 2 + 1
 
+        dec bdma_ptr + 1
         ; Dummy CRC
         lda #0
         jsr spi_write

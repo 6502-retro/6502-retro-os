@@ -105,6 +105,7 @@ the currently active drive, results in carry flag clear.
 
 ## 07 d_createfcb
 
+<!-- TODO: We are not using this - remove it!-->
 Given a pointer to an FCB in XA, this routine will populate the FCB with the
 drive number, all spaces for the file name and extension and zeros for the
 remaining elements.

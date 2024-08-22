@@ -3,7 +3,7 @@
 .include "sfos.inc"
 
 REBOOT  = $200
-SOFS    = REBOOT + 3
+SOFS    = REBOOT + 6
 
 main:
     ; Print hello, world and exit
@@ -11,6 +11,7 @@ main:
     ldx #>message
     ldy #esfos::sfos_c_printstr
     jsr SOFS
+
     jmp REBOOT
 
-message: .byte "Hello, World!",0
+message: .byte 10,13,"Hello, World!",10,13,0

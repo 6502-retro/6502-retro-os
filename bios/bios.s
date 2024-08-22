@@ -37,14 +37,6 @@ bios_boot:
     dex
     bne @L2
     ;
-    ; SFOS Dispatch jmp.
-    lda #$4C
-    sta $200
-    lda #<__SYSTEM_RUN__
-    sta $201
-    lda #>__SYSTEM_RUN__
-    sta $202
-
     jmp main
 
 bios_wboot:

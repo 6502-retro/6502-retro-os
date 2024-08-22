@@ -40,11 +40,11 @@ class SFS(object):
         for i in range(INDEX_SECTOR_START, (INDEX_SECTOR_START + INDEX_SECTOR_COUNT)):
             self.fd.write(bytearray(SECTOR_SIZE))
 
-        for drive in range(1,9):
+        for drive in range(1, 9):
             for filenum in range(256):
                 idx_pos = (
                     (INDEX_SECTOR_START * SECTOR_SIZE)
-                    + ((drive-1) * 16 * SECTOR_SIZE)
+                    + ((drive - 1) * 16 * SECTOR_SIZE)
                     + (filenum * INDEX_SIZE)
                 )
                 # print(hex(idx_pos), hex(int(idx_pos / 512)))
@@ -131,11 +131,10 @@ class SFS(object):
         self.idx.last_offset = len(data) % SECTOR_SIZE
         # All files have a load address in front.
         self.idx.laddr = int.from_bytes(data[0:2], byteorder="little")
-        data = data[2:]
         if self.idx.fext.upper() == "COM":
-            # bytes 2-3 are the exection address
+            # if it's a com file then set the exec address same as load address
             self.idx.exec_addr = int.from_bytes(data[0:2], byteorder="little")
-            data = data[2:]
+        data = data[2:]
         # update the length last as we are removing bytes from the input data
         # to replace inside the metadata.  Up to 4 bytes are removed.
         self.idx.file_size = len(data)

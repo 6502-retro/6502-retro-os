@@ -25,8 +25,10 @@ main:
     sta active_drive
     ldx #0
     jsr d_getsetdrive
+
 prompt:
     jsr newline
+prompt_no_newline:
     jsr show_prompt
 
     jsr clear_commandline
@@ -144,9 +146,46 @@ decode_command:
     rts
 
 load_transient:
-    jsr printi
-    .byte 10,13,"TRANSIENT APP",10,13,0
+    lda #<fcb
+    ldx #>fcb
+    jsr d_open
+    bcc :+
+    jsr newline
+    lda #'?'
+    jsr c_write
+    jmp prompt
+
+    ; now dma and the lba are set.
+    ; get the sector count from the fcb
+:   lda fcb + sfcb::SC
+    sta sfcpcmd                 ; using cmd temporarily here.
+    lda fcb + sfcb::L1
+    sta temp+0
+    lda fcb + sfcb::L2
+    sta temp+1
+@sector_loop:
+    jsr d_readseqblock
+    clc
+    lda temp+1
+    adc #2
+    sta temp+1
+    lda temp+1
+    cmp #$9E                    ; hard stop at start of IO
+    bne :+
+    lda #3
+    sec
     rts
+:   lda temp+0
+    ldx temp+1
+    jsr d_setdma
+    dec sfcpcmd
+    bne @sector_loop
+    ; now set up the command pointer
+    lda fcb + sfcb::E1
+    sta sfcpcmd+0
+    lda fcb + sfcb::E2
+    sta sfcpcmd+1
+    jmp (sfcpcmd)
 
 dir:
     jsr newline
@@ -155,25 +194,19 @@ dir:
     lda #<fcb
     ldx #>fcb
     jsr d_findfirst
-:   bcs @error
+:   bcs @exit
     jsr print_fcb
     jsr make_dir_fcb
     lda #<fcb
     ldx #>fcb
     jsr d_findnext
-    bcs @error
+    bcs @exit
     bra :-
-@error:
-    cmp #2              ; End of directory
-    beq @exit
-:   jsr bios_prbyte
-    jsr printi
-    .byte 10,13,"DIRECTORY ERROR",10,13,0
 @exit:
     jsr restore_active_drive
     lda #0
     clc
-    rts
+    jmp prompt_no_newline
 
 era:
     jsr printi
@@ -181,6 +214,7 @@ era:
     lda #1  ; syntax error for now
     clc
     rts
+
 ren:
     jsr printi
     .byte 10,13,"===> REN",10,13,0
@@ -238,6 +272,9 @@ d_findnext:
     jmp SFOS
 d_open:
     ldy #esfos::sfos_d_open
+    jmp SFOS
+d_readseqblock:
+    ldy #esfos::sfos_d_readseqblock
     jmp SFOS
 
 ; ---- local helper functions ------------------------------------------------

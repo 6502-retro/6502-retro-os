@@ -43,6 +43,12 @@ internal_c_write:
 @exit:
     rts
 
+; check if there is a character waiting in the bios.  If there is return it
+; else return 0 in A
+sfos_c_status:
+    jmp bios_const
+
+
 ; print a null terminated string pointed to by XA to the serial console.
 sfos_c_printstr:
 @L1:
@@ -166,8 +172,6 @@ internal_getsetdrive:
     lda drive       ; return the drive
     bra @exit
 @L1:
-    jsr bios_conout
-
     cmp #1
     bcc @out_of_range
     cmp #(8+1)
@@ -469,6 +473,43 @@ read_directory_entry:
     sta zptemp1+1
 :   rts
 
+; given an fcb pointed by param, find the file and set the LBA and DMA address.
+sfos_d_open:
+    ldy #sfcb::DD
+    lda (param),y
+    beq :+
+    jsr internal_getsetdrive
+:
+    jsr sfos_d_findfirst    ; sets internal dma already
+    bcs @notfound
+    ; set the dma address
+    ldy #sfcb::L1
+    lda (param),y
+    sta user_dma+0
+    pha
+    ldy #sfcb::L2
+    lda (param),y
+    sta user_dma+1
+    tax
+    pla
+    jsr bios_setdma         ; sets the bios dma for sdcard ops.
+    ; compute LBA
+    stz lba + 3
+    lda drive
+    sta lba + 2
+    ldy #sfcb::FN
+    lda (param),y
+    sta lba + 1
+    stz lba + 0
+    jsr bios_setlba         ; sets the bios lba for sdcard ops.and the lba are set.; get the sector count from the fcblda fcb + sfcb::SC
+    sta cmd                     ; using cmd temporarily here.
+@sector_loop:
+    clc
+    rts
+@notfound:
+    sec
+    rts
+
 ; ----------------------------------------------------------------------------
 ; ---- SYSTEM / DISK FUNCTIONS -----------------------------------------------
 ; ----------------------------------------------------------------------------
@@ -534,17 +575,10 @@ dispatch:
 ; ----------------------------------------------------------------------------
 ; ---- UNIMPLIMENTED FUNCTIONS -----------------------------------------------
 ; ----------------------------------------------------------------------------
-
-sfos_c_status:
-    jmp unimplimented
-
 sfos_d_createfcb:
     jmp unimplimented
 
 sfos_d_make:
-    jmp unimplimented
-
-sfos_d_open:
     jmp unimplimented
 
 sfos_d_close:
