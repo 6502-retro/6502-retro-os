@@ -189,24 +189,37 @@ load_transient:
 
 dir:
     jsr newline
+    lda #5
+    sta temp                    ; number of records per line
     jsr set_user_drive
+    jsr print_drive_colon
     jsr make_dir_fcb
     lda #<fcb
     ldx #>fcb
     jsr d_findfirst
-:   bcs @exit
+    bcs @exit
+    bra @skip_first
+@next:
+    bcs @exit
+
+    lda temp
+    cmp #1
+    beq @skip_first
+    lda #<str_sep
+    ldx #>str_sep
+    jsr c_printstr
+@skip_first:
     jsr print_fcb
     jsr make_dir_fcb
     lda #<fcb
     ldx #>fcb
     jsr d_findnext
-    bcs @exit
-    bra :-
+    bra @next
 @exit:
     jsr restore_active_drive
     lda #0
     clc
-    jmp prompt_no_newline
+    jmp prompt
 
 era:
     jsr printi
@@ -370,9 +383,34 @@ make_dir_fcb:
     sta fcb
 :   rts
 
+print_drive_colon:
+    lda #<str_tab
+    ldx #>str_tab
+    jsr c_printstr
+    lda active_drive
+    clc
+    adc #'A'-1
+    jsr c_write
+    lda #':'
+    jsr c_write
+    lda #' '
+    jsr c_write
+    rts
+
 ; used by DIR
 print_fcb:
-    ldx #sfcb::N1
+    lda fcb+sfcb::N1
+    cmp #' '
+    bne :+
+    rts
+:   dec temp
+    lda temp
+    bne :+
+    jsr newline
+    lda #4
+    sta temp
+    jsr print_drive_colon
+:   ldx #sfcb::N1
 :   lda fcb,x
     jsr c_write
     inx
@@ -385,8 +423,7 @@ print_fcb:
     inx
     cpx #(sfcb::T3+1)
     bne :-
-    jsr newline
-    rts
+:   rts
 
 show_prompt:
     lda #$ff
@@ -437,6 +474,8 @@ saved_active_drive: .byte 0
 str_newline:    .byte 13, 10, 0
 str_banner:     .byte 13,10, "6502-Retro! (SFCP)",0
 str_COM:        .byte "COM"
+str_tab:        .byte "    ",0
+str_sep:        .byte " : ",0
 commands_tbl:
     .byte "DIR ",$80
     .lobytes dir
