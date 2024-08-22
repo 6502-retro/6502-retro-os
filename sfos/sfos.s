@@ -391,7 +391,6 @@ sfos_d_findnext:
     ; check if drive matches current.  It won't if we went over the drive indexes.
     ; might be a better way to do this XXX: Is there a better way?
     lda drive
-    dec
     cmp current_dirent + sfcb::DD
     beq :+
     lda #$02                ; end of directory
@@ -405,8 +404,12 @@ sfos_d_findnext:
     cmp (param),y
     beq @matched
     ; next, is the filenum of this deleted file more than maxdrv
-
-    lda #$03
+    jsr get_drvtbl_idx
+    tax
+    lda drvtbl + drvalloc::maxdrv,x
+    cmp current_dirent + sfcb::FN
+    bcs :+
+    lda #2
     sec
     rts
 :   ldy #sfcb::N1

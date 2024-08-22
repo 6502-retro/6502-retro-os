@@ -22,11 +22,10 @@ main:
     ldx #>str_banner
     jsr c_printstr
     lda #1
+    sta active_drive
     ldx #0
     jsr d_getsetdrive
-    sta active_drive
 prompt:
-    jsr newline
     jsr newline
     jsr show_prompt
 
@@ -150,9 +149,29 @@ load_transient:
     rts
 
 dir:
+    jsr newline
+    jsr set_user_drive
+    jsr make_dir_fcb
+    lda #<fcb
+    ldx #>fcb
+    jsr d_findfirst
+:   bcs @error
+    jsr print_fcb
+    jsr make_dir_fcb
+    lda #<fcb
+    ldx #>fcb
+    jsr d_findnext
+    bcs @error
+    bra :-
+@error:
+    cmp #2              ; End of directory
+    beq @exit
+:   jsr bios_prbyte
     jsr printi
-    .byte 10,13,"===> DIR",10,13,0
-    lda #1  ; syntax error for now
+    .byte 10,13,"DIRECTORY ERROR",10,13,0
+@exit:
+    jsr restore_active_drive
+    lda #0
     clc
     rts
 
@@ -369,11 +388,11 @@ printi:
     rts
 
 .bss
-commandline:    .res 512
-fcb:            .res 32
-fcb2:           .res 32
-temp:           .res 2
-active_drive:   .byte 0
+commandline:        .res 512
+fcb:                .res 32
+fcb2:               .res 32
+temp:               .res 2
+active_drive:       .byte 0
 saved_active_drive: .byte 0
 
 .rodata
