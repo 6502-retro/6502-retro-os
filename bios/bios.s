@@ -45,7 +45,6 @@ bios_boot:
     lda #>__SYSTEM_RUN__
     sta $202
 
-
     jmp main
 
 bios_wboot:

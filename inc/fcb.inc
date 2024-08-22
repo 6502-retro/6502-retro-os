@@ -26,3 +26,9 @@
         S2  ;filesize high
 .endenum
 
+.struct drvalloc
+    is_logged_in    .byte   ; boolean flag to indicate if a drive is logged in
+    maxdrv          .byte   ; the count of used dirents for the drive
+.endstruct
+
+

@@ -6,11 +6,13 @@
 
 .globalzp ptr1
 
-SFOS = $200
+BOOT    = $200
+WBOOT   = BOOT + 3
+SFOS    = BOOT + 6
 
 .zeropage
-debug_ptr: .word 0
-sfcpcmd: .word 0
+debug_ptr:  .word 0
+sfcpcmd:    .word 0
 
 .code
 ; main user interface - First show a prompt.
@@ -19,7 +21,7 @@ main:
     lda #<str_banner
     ldx #>str_banner
     jsr c_printstr
-    lda #$ff
+    lda #1
     ldx #0
     jsr d_getsetdrive
     sta active_drive
@@ -78,15 +80,12 @@ prompt:
     jmp prompt
 
 @check_drive:
-    ;
     ; check if we are dealing with a change drive command
     ; byte N1 of the fcb will be a space
     lda fcb+sfcb::N1
     cmp #' '
     beq @changedrive
-    cmp #'Q'
-    bne @decode_command
-    jmp $CF4D               ; return to monitor
+    bra @decode_command
 @changedrive:
     lda fcb + sfcb::DD
     ldx #0
@@ -96,13 +95,12 @@ prompt:
 
 @decode_command:
     jsr decode_command
-    bcc :+
+    bcs @load_transient
     cmp #1
     bne :+
     jsr printi
     .byte 10,13,"SYNTAX ERROR",10,13,0
 :   jmp prompt
-
 @load_transient:
     jsr load_transient
     jmp prompt
@@ -154,31 +152,39 @@ load_transient:
 dir:
     jsr printi
     .byte 10,13,"===> DIR",10,13,0
+    lda #1  ; syntax error for now
     clc
     rts
 
 era:
     jsr printi
     .byte 10,13,"===> ERA",10,13,0
+    lda #1  ; syntax error for now
     clc
     rts
 ren:
     jsr printi
     .byte 10,13,"===> REN",10,13,0
+    lda #1  ; syntax error for now
     clc
     rts
 
 type:
     jsr printi
     .byte 10,13,"===> TYPE",10,13,0
+    lda #1  ; syntax error for now
 @exit:
     rts
 
 save:
     jsr printi
     .byte 10,13,"===> SAVE",10,13,0
+    lda #1  ; syntax error for now
     clc
     rts
+
+quit:
+    jmp $CF4D
 
 ; ---- Helper functions ------------------------------------------------------
 s_reset:
@@ -373,7 +379,7 @@ saved_active_drive: .byte 0
 .rodata
 
 str_newline:    .byte 13, 10, 0
-str_banner:     .byte 13,10, "6502-Retro! (SFOS)",0
+str_banner:     .byte 13,10, "6502-Retro! (SFCP)",0
 str_COM:        .byte "COM"
 commands_tbl:
     .byte "DIR ",$80
@@ -382,6 +388,9 @@ commands_tbl:
     .byte "ERA ",$80
     .lobytes era
     .hibytes era
+    .byte "QUIT",$80
+    .lobytes quit
+    .hibytes quit
     .byte "REN ",$80
     .lobytes ren
     .hibytes ren

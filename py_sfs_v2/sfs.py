@@ -40,11 +40,11 @@ class SFS(object):
         for i in range(INDEX_SECTOR_START, (INDEX_SECTOR_START + INDEX_SECTOR_COUNT)):
             self.fd.write(bytearray(SECTOR_SIZE))
 
-        for drive in range(8):
+        for drive in range(1,9):
             for filenum in range(256):
                 idx_pos = (
                     (INDEX_SECTOR_START * SECTOR_SIZE)
-                    + (drive * 16 * SECTOR_SIZE)
+                    + ((drive-1) * 16 * SECTOR_SIZE)
                     + (filenum * INDEX_SIZE)
                 )
                 # print(hex(idx_pos), hex(int(idx_pos / 512)))
@@ -60,7 +60,7 @@ class SFS(object):
 
         if self.idx_first_flag:
             self.idx_first_flag = False
-            self.idx_lba = INDEX_SECTOR_START + (drive * 16)
+            self.idx_lba = INDEX_SECTOR_START + ((drive) * 16)
             self.idx_file_num = 0
         else:
             self.idx_file_num += 1
@@ -132,7 +132,7 @@ class SFS(object):
         # All files have a load address in front.
         self.idx.laddr = int.from_bytes(data[0:2], byteorder="little")
         data = data[2:]
-        if self.idx.fext.upper() == "EXE":
+        if self.idx.fext.upper() == "COM":
             # bytes 2-3 are the exection address
             self.idx.exec_addr = int.from_bytes(data[0:2], byteorder="little")
             data = data[2:]
@@ -141,7 +141,7 @@ class SFS(object):
         self.idx.file_size = len(data)
         self.idx.flush(self.fd)
 
-        seekpos_lba = ((self.idx.drive + 1) * 0x10000) + (self.idx.file_num * 0x100)
+        seekpos_lba = ((self.idx.drive) * 0x10000) + (self.idx.file_num * 0x100)
         self.fd.seek(seekpos_lba * SECTOR_SIZE)
         self.fd.write(data)
         return True

@@ -76,7 +76,7 @@ class Index(object):
         )
 
     def flush(self, fd):
-        seekpos = (INDEX_SECTOR_START + (self.drive * 16)) * SECTOR_SIZE + (
+        seekpos = (INDEX_SECTOR_START + ((self.drive -1) * 16)) * SECTOR_SIZE + (
             self.file_num * INDEX_SIZE
         )
         fd.seek(seekpos)

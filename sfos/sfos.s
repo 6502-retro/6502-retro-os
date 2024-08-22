@@ -9,22 +9,16 @@
 cmd:        .word 0
 param:      .word 0
 user_dma:   .word 0
-zptemp:     .res 4,0
+zptemp0:    .word 0
+zptemp1:    .word 0
+zptemp2:    .word 0
 
 .code
 
 ; reset with warm boot and log into drive A
 sfos_s_reset:
-    jsr bios_wboot
-    lda #1
-    sta drive
-    dec
-    ora #$80                ; on reset we want to set the lba to point
-    sta lba + 0             ; to the sector containing indexes for drive
-    stz lba + 1             ; A: which is 0x00_00_00_80
-    stz lba + 2
-    stz lba + 3
-    rts
+    jmp bios_wboot
+
 
 ; read a char from the serial console
 ; echo it too
@@ -104,8 +98,64 @@ sfos_c_readstr:
     jsr bios_conout
     bra @L1
 
-sfos_c_status:
-    jmp unimplimented
+; ----------------------------------------------------------------------------
+; ---- DRIVE ACTIVITIES ------------------------------------------------------
+; ----------------------------------------------------------------------------
+get_drvtbl_idx:
+    lda drive
+    dec
+    asl
+    rts
+
+get_drvmax:
+    jsr get_drvtbl_idx
+    tax
+    lda drvtbl + drvalloc::maxdrv
+    rts
+
+login_drive:
+    jsr get_drvtbl_idx
+    tax
+    stx cmd                 ; using cmd temporarily for this
+    lda drvtbl + drvalloc::is_logged_in,x
+    bne @exit
+
+    lda #<str_scanning
+    ldx #>str_scanning
+    jsr bios_puts
+    jsr compute_drive_index_lba
+@sector_lp:
+    jsr internal_setdma
+    jsr sfos_d_readseqblock     ; read 1 index block
+    lda user_dma+0
+    sta zptemp0+0
+    lda user_dma+1
+    sta zptemp0+1
+@dirent_loop:
+    ldy #sfcb::FA
+    lda (zptemp0),y
+    cmp #$E5
+    beq @next_dirent
+    ldx cmd
+    inc drvtbl + drvalloc::maxdrv,x
+@next_dirent:
+    clc
+    lda zptemp0+0
+    adc #32
+    sta zptemp0+0
+    lda zptemp0+1
+    adc #0
+    sta zptemp0+1
+    cmp #>sfos_buf + 2
+    bne @dirent_loop
+    lda lba+0
+    and #$0F
+    bne @sector_lp
+    ldx cmd
+    lda #1
+    sta drvtbl + drvalloc::is_logged_in,x
+@exit:
+    rts
 
 ; Gets or sets the current drive.  When the current drive changes, we set LBA
 sfos_d_getsetdrive:
@@ -126,6 +176,7 @@ internal_getsetdrive:
     beq @exit
     ; drive is different
     sta drive
+    jsr login_drive
 @exit:
     clc
     rts
@@ -133,8 +184,38 @@ internal_getsetdrive:
     sec
     rts
 
-sfos_d_createfcb:
-    jmp unimplimented
+compute_drive_index_lba:
+    lda drive       ; set the LBA to the begining of the drives indexes
+    dec
+    asl
+    asl
+    asl
+    asl
+    ora #$80
+    sta lba+0
+    stz lba+1
+    stz lba+2
+    stz lba+3
+    rts
+
+; Reset the dirpos and ztemp ptr into user_dma
+home_drive:
+    jsr compute_drive_index_lba
+    lda #0
+    sta current_filenum
+    sta current_dirpos
+    ; user_dma is already defined by the caller.
+    jsr sfos_d_readseqblock ;read first block
+    lda user_dma+0
+    sta zptemp1+0
+    lda user_dma+1
+    sta zptemp1+1
+    rts
+
+
+; ----------------------------------------------------------------------------
+; ---- FCB ACTIVITIES --------------------------------------------------------
+; ----------------------------------------------------------------------------
 
 ; the user_dma pointer points to the fcb memory
 ; param points to the commandline
@@ -145,7 +226,7 @@ sfos_d_parsefcb:
     ; param -> commandline (filename)
     ; dma -> FCB
     lda #0
-    sta zptemp+1              ; failure flag
+    sta zptemp0             ; failure flag
 
     ; check the drive
 
@@ -166,7 +247,7 @@ sfos_d_parsefcb:
     bcs :+
     cmp #9
     bcc :+
-    dec zptemp+1
+    dec zptemp0
 :
     tax
     iny
@@ -265,10 +346,25 @@ sfos_d_parsefcb:
     bcc :+                  ; did we rollover on the adc above?
     inx                     ; XA points to first char after space
 :   clc                     ; TODO: should call skipsapces here.
-    ldy zptemp+1              ; was there a failure?
+    ldy zptemp0             ; was there a failure?
     beq :+
     sec
 :   rts
+
+is_terminator_char:
+    stx zptemp2
+    ldx #(terminators_end - terminators) - 1
+:   cmp terminators, x          ; sets carry if equal
+    beq :+
+    dex
+    bpl :-
+    clc
+:   ldx zptemp2
+    rts
+
+; ----------------------------------------------------------------------------
+; ---- DIRECTORY ACTIVITIES --------------------------------------------------
+; ----------------------------------------------------------------------------
 
 ; searches the currently selelcted drive for a file matching the name in the provided FCB
 ; if one is found it returns it.
@@ -304,6 +400,12 @@ sfos_d_findnext:
 :   lda current_dirent + sfcb::FA
     cmp #$E5
     bne :+
+    ; first, is the caller looking for deleted files?
+    ldy #sfcb::DD
+    cmp (param),y
+    beq @matched
+    ; next, is the filenum of this deleted file more than maxdrv
+
     lda #$03
     sec
     rts
@@ -341,7 +443,7 @@ read_directory_entry:
     asl                     ; x 32
     tay
     ldx #0                  ; index into current_dirent
-:   lda (zptemp),y          ; copy the directory entry into current_dirent
+:   lda (zptemp1),y          ; copy the directory entry into current_dirent
     jsr to_upper            ; compare apples with apples
     sta current_dirent,x
     iny
@@ -351,51 +453,22 @@ read_directory_entry:
     inc current_dirpos      ; increment the current_dirpos and check for end
     lda current_dirpos      ; the end of the current directory sector
     cmp #8                  ; XXX: NASTY SHIT>> Only when dirpos is 8 should
-    beq :+                  ; XXX: zptemp + 1 be incremented.
+    beq :+                  ; XXX: zptemp1+ 1 be incremented.
     bra :++
-:   inc zptemp + 1
+:   inc zptemp1+1
 :   cmp #16
     bne :+
     jsr sfos_d_readseqblock ; if it was the end of the sector, load the next
     stz current_dirpos      ; sector and reset current_dirpos.
-    lda user_dma + 0
-    sta zptemp + 0
-    lda user_dma + 1
-    sta zptemp + 1
+    lda user_dma+0
+    sta zptemp1+0
+    lda user_dma+1
+    sta zptemp1+1
 :   rts
 
-; Reset the dirpos and ztemp ptr into user_dma
-home_drive:
-    lda drive       ; set the LBA to the begining of the drives indexes
-    dec
-    asl
-    asl
-    asl
-    asl
-    ora #$80
-    sta lba + 0
-    stz lba + 1
-    stz lba + 2
-    stz lba + 3
-    lda #0
-    sta current_filenum
-    sta current_dirpos
-    ; user_dma is already defined by the caller.
-    jsr sfos_d_readseqblock ;read first block
-    lda user_dma + 0
-    sta zptemp + 0
-    lda user_dma + 1
-    sta zptemp + 1
-    rts
-
-sfos_d_make:
-    jmp unimplimented
-
-sfos_d_open:
-    jmp unimplimented
-
-sfos_d_close:
-    jmp unimplimented
+; ----------------------------------------------------------------------------
+; ---- SYSTEM / DISK FUNCTIONS -----------------------------------------------
+; ----------------------------------------------------------------------------
 
 sfos_d_setdma:
     lda param + 0
@@ -419,44 +492,6 @@ sfos_d_readseqblock:
     clc
     rts
 
-sfos_d_writeseqblock:
-    jmp unimplimented
-
-sfos_d_readseqbyte:
-    jmp unimplimented
-
-sfos_d_writeseqbyte:
-    jmp unimplimented
-
-;---- HELPER FUNCTIONS -------------------------------------------------------
-unimplimented:
-    lda #<str_unimplimented
-    ldx #>str_unimplimented
-    jsr bios_puts
-    sec
-    rts
-
-; converts a characater to upper case
-to_upper:
-    cmp #'a'
-    bcc @done
-    cmp #'z' + 1
-    bcs @done
-    and #$DF
-@done:
-    rts
-
-is_terminator_char:
-    stx zptemp+2
-    ldx #(terminators_end - terminators) - 1
-:   cmp terminators, x          ; sets carry if equal
-    beq :+
-    dex
-    bpl :-
-    clc
-:   ldx zptemp+2
-    rts
-
 increment_lba:
     clc
     lda lba + 0
@@ -476,36 +511,14 @@ increment_lba:
     jsr bios_setlba
     rts
 
-; on entry y is pointing at the start of the dirent
-copy_dma_to_current_dirent:
-    ldx #0
-:   lda (user_dma),y
-    sta current_dirent,x
-    iny
-    inx
-    cpx #32
-    bne :-
-    rts
-
-; sets the dma to the sfos_buffer
+; sets the dma to the sfos_buf
 internal_setdma:
     lda #<sfos_buf
     sta user_dma + 0
     ldx #>sfos_buf
-    stz user_dma + 0
+    stx user_dma + 1
     jmp bios_setdma
 
-.bss
-    sfos_buf:       .res 512
-    drive:          .byte 0
-    current_filenum:.byte 0
-    current_dirent: .res 32, 0
-    current_dirpos: .byte 0
-    lba:            .res 4, 0
-    cmdlen:         .byte 0
-
-.segment "SYSTEM"
-; dispatch function, will be relocated on boot into SYSRAM
 dispatch:
     sta param + 0
     stx param + 1
@@ -514,6 +527,74 @@ dispatch:
     lda sfos_jmp_tbl_lo,y
     sta cmd + 0
     jmp (cmd)
+
+; ----------------------------------------------------------------------------
+; ---- UNIMPLIMENTED FUNCTIONS -----------------------------------------------
+; ----------------------------------------------------------------------------
+
+sfos_c_status:
+    jmp unimplimented
+
+sfos_d_createfcb:
+    jmp unimplimented
+
+sfos_d_make:
+    jmp unimplimented
+
+sfos_d_open:
+    jmp unimplimented
+
+sfos_d_close:
+    jmp unimplimented
+
+sfos_d_writeseqblock:
+    jmp unimplimented
+
+sfos_d_readseqbyte:
+    jmp unimplimented
+
+sfos_d_writeseqbyte:
+    jmp unimplimented
+
+
+; ----------------------------------------------------------------------------
+; ---- HELPER FUNCTIONS ------------------------------------------------------
+; ----------------------------------------------------------------------------
+
+unimplimented:
+    lda #<str_unimplimented
+    ldx #>str_unimplimented
+    jsr bios_puts
+    sec
+    rts
+
+; converts a characater to upper case
+to_upper:
+    cmp #'a'
+    bcc @done
+    cmp #'z' + 1
+    bcs @done
+    and #$DF
+@done:
+    rts
+
+.bss
+.align $100
+    sfos_buf:       .res 512
+    drive:          .byte 0
+    current_filenum:.byte 0
+    current_dirent: .res 32, 0
+    current_dirpos: .byte 0
+    drvtbl:         .res 16
+    lba:            .res 4, 0
+    cmdlen:         .byte 0
+
+.segment "SYSTEM"
+; dispatch function, will be relocated on boot into SYSRAM
+jmptables:
+    jmp bios_boot
+    jmp bios_wboot
+    jmp dispatch
 
 .rodata
 
@@ -561,8 +642,9 @@ sfos_jmp_tbl_hi:
 banner:             .byte "6502-Retro! (SFOS)", 13, 10, 0
 str_unimplimented:  .byte 13, 10, "!!! UNIMPLIMENTED !!!", 13, 10, 0 
 str_badfilename:    .byte 13, 10, "BAD FILENAME", 13,10,0
-str_COM: .byte "COM"
+str_COM:            .byte "COM"
+str_scanning:       .byte 10,13,"Scanning drive...",10,13,0
 terminators:
-    .byte " =><.:,[]/|"
-    .byte 10,13,127,9,0
+                    .byte " =><.:,[]/|"
+                    .byte 10,13,127,9,0
 terminators_end:
