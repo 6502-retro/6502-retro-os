@@ -453,7 +453,7 @@ read_directory_entry:
     tay
     ldx #0                  ; index into current_dirent
 :   lda (zptemp1),y          ; copy the directory entry into current_dirent
-    jsr to_upper            ; compare apples with apples
+    ;jsr to_upper            ;XXX: BROKEN!!!!! compare apples with apples
     sta current_dirent,x
     iny
     inx

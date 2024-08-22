@@ -258,6 +258,7 @@ type:
     ldx #>fcb2
     jsr d_findfirst
     bcs @notfound
+
     lda #<fcb2
     ldx #>fcb2
     jsr d_open
