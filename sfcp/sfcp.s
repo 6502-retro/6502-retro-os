@@ -23,6 +23,7 @@ main:
     jsr c_printstr
     lda #1
     sta active_drive
+    sta saved_active_drive
     ldx #0
     jsr d_getsetdrive
 
@@ -196,6 +197,8 @@ load_transient:
     sta sfcpcmd+0
     lda fcb + sfcb::E2
     sta sfcpcmd+1
+
+call:
     jmp (sfcpcmd)
 
 dir:
@@ -247,10 +250,81 @@ ren:
     rts
 
 type:
-    jsr printi
-    .byte 10,13,"===> TYPE",10,13,0
-    lda #1  ; syntax error for now
+    jsr set_user_drive
+    jsr newline
+    lda fcb2+sfcb::DD
+    beq @error
+    lda #<fcb2
+    ldx #>fcb2
+    jsr d_findfirst
+    bcs @notfound
+    lda #<fcb2
+    ldx #>fcb2
+    jsr d_open
+    bcs @notopen
+    ; file is found - set up lba
+    ; rather than assume the dma for a non exec file, we just set our own
+    ; use the sfos_buf here.
+@sector_loop:
+    lda #<sfos_buf
+    ldx #>sfos_buf
+    jsr d_setdma
+
+    jsr d_readseqblock
+
+    lda #<sfos_buf
+    sta debug_ptr + 0
+    lda #>sfos_buf
+    sta debug_ptr + 1
+@byte_loop:
+    lda (debug_ptr)
+    pha
+    jsr c_write
+    pla
+    cmp #$0a
+    bne :+
+    lda #$0d
+    jsr c_write
+:
+    ; decrement the remaining size
+    lda fcb2 + sfcb::S0
+    bne @dec_ones
+    lda fcb2 + sfcb::S1
+    bne @dec_tens
+    lda fcb2 + sfcb::S2
+    beq @exit
+@dec_hundreds:
+    dec fcb2 + sfcb::S2
+@dec_tens:
+    dec fcb2 + sfcb::S1
+@dec_ones:
+    dec fcb2 + sfcb::S0
+    ;
+    ; move pointer along
+    clc 
+    lda debug_ptr+0
+    adc #1
+    sta debug_ptr+0
+    lda debug_ptr+1
+    adc #0
+    sta debug_ptr+1
+    cmp #>sfos_buf + 2
+    bne @byte_loop
+
+    bra @sector_loop
+@notfound:
+    lda #'/'
+    bra @error
+@notopen:
+    lda #'?'
+@error:
+    jsr c_write
+    jsr restore_active_drive
+    sec
+    rts
 @exit:
+    jsr restore_active_drive
+    clc
     rts
 
 save:

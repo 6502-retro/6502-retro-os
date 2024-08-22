@@ -3,6 +3,7 @@
 .include "sfos.inc"
 
 REBOOT  = $200
+WBOOT   = REBOOT + 3
 SOFS    = REBOOT + 6
 
 main:

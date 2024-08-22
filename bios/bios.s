@@ -78,7 +78,9 @@ bios_sdread:
     rts
 
 bios_sdwrite:
-    jmp sdcard_write_sector
+    jsr set_sdbuf_ptr
+    jsr sdcard_write_sector
+    rts
 
 bios_puts:
     sta ptr1 + 0
