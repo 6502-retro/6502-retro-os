@@ -266,6 +266,105 @@ era:
     clc
     rts
 
+free:
+    jsr printi
+    .byte 10,13,"MEMORY Assignments"
+    .byte 10,13,"ZEROPAGE: ",0 
+
+    lda #<__ZEROPAGE_LOAD__
+    jsr bios_prbyte
+    lda #'-'
+    jsr c_write
+    lda #<__ZEROPAGE_SIZE__
+    clc
+    adc #<__ZEROPAGE_LOAD__
+    jsr bios_prbyte
+    lda #' '
+    jsr c_write
+    lda #<__ZEROPAGE_SIZE__
+    ldx #>__ZEROPAGE_SIZE__
+    jsr print_word
+
+
+    jsr printi
+    .byte 10,13,"SYSTEM:   ",0
+    lda #<__SYSTEM_RUN__
+    ldx #>__SYSTEM_RUN__
+    jsr print_word
+    lda #'-'
+    jsr c_write
+    lda #<__SYSTEM_SIZE__
+    sta temp+0
+    lda #>__SYSTEM_SIZE__
+    sta temp+1
+    clc
+    lda temp+0
+    adc #<__SYSTEM_RUN__
+    sta temp+0
+    lda temp+1
+    adc #>__SYSTEM_RUN__
+    sta temp+1
+    lda temp+0
+    ldx temp+1
+    jsr print_word
+    lda #' '
+    jsr c_write
+    lda #<__SYSTEM_SIZE__
+    ldx #>__SYSTEM_SIZE__
+    jsr print_word
+
+    jsr printi
+    .byte 10,13,"BSS:      ",0
+    lda #<__BSS_LOAD__
+    ldx #>__BSS_LOAD__
+    jsr print_word
+    lda #'-'
+    jsr c_write
+    lda #<__BSS_SIZE__
+    sta temp+0
+    lda #>__BSS_SIZE__
+    sta temp+1
+    clc
+    lda temp+0
+    adc #<__BSS_LOAD__
+    sta temp+0
+    lda temp+1
+    adc #>__BSS_LOAD__
+    sta temp+1
+    lda temp+0
+    ldx temp+1
+    jsr print_word
+    lda #' '
+    jsr c_write
+    lda #<__BSS_SIZE__
+    ldx #>__BSS_SIZE__
+    jsr print_word
+
+    jsr printi
+    .byte 10,13,"TPA:      ",0
+    lda #<TPA
+    ldx #>TPA
+    jsr print_word
+    lda #'-'
+    jsr c_write
+    lda #<$9E00
+    ldx #>$9E00
+    jsr print_word
+    lda #' '
+    jsr c_write
+    sec
+    lda #<$9E00
+    sbc #<TPA
+    sta temp+0
+    lda #>$9E00
+    sbc #>TPA
+    sta temp+1
+    lda temp+0
+    ldx temp+1
+    jsr print_word
+
+    jmp prompt
+
 ren:
     jsr printi
     .byte 10,13,"===> REN",10,13,0
@@ -481,6 +580,7 @@ save:
 quit:
     jmp $CF4D
 
+;
 ; ---- Helper functions ------------------------------------------------------
 s_reset:
     ldy #esfos::sfos_s_reset
@@ -527,6 +627,7 @@ d_writeseqblock:
 d_make:
     ldy #esfos::sfos_d_make
     jmp SFOS
+
 
 ; ---- local helper functions ------------------------------------------------
 
@@ -745,6 +846,14 @@ printi:
     pha
     rts
 
+print_word:
+    pha
+    txa
+    jsr bios_prbyte
+    pla
+    jsr bios_prbyte
+    rts
+
 .bss
 commandline:        .res 128
 fcb:                .res 32
@@ -768,6 +877,9 @@ commands_tbl:
     .byte "ERA ",$80
     .lobytes era
     .hibytes era
+    .byte "FREE",$80
+    .lobytes free
+    .hibytes free
     .byte "QUIT",$80
     .lobytes quit
     .hibytes quit
