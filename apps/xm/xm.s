@@ -3,7 +3,8 @@
 .include "sfos.inc"
 
 REBOOT  = $200
-SOFS    = REBOOT + 3
+WBOOT   = REBOOT + 3
+SOFS    = REBOOT + 6
 
 .zeropage
 
@@ -27,5 +28,5 @@ printstr:
 
 .rodata
 
-message: .byte "XModem Recieve",10,13,0
+message: .byte 10,13,"XModem Recieve",10,13,0
 

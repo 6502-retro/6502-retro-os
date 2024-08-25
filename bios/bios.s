@@ -100,10 +100,6 @@ bios_printlba:
     phx
     phy
 
-    lda #13
-    jsr acia_putc
-    lda #10
-    jsr acia_putc
     lda sector_lba + 3
     jsr bios_prbyte
     lda sector_lba + 2

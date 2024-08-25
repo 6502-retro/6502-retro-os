@@ -75,6 +75,7 @@ prompt_no_newline:
     bne :+
     inx
 :   jsr d_parsefcb
+    ; XA points to command tail
     bcc @check_drive
 
     jsr printi
@@ -82,6 +83,11 @@ prompt_no_newline:
     jmp prompt
 
 @check_drive:
+    inc                     ; skip over space
+    bne :+
+    inx
+:   sta cmdoffset+0
+    stx cmdoffset+1
     ; check if we are dealing with a change drive command
     ; byte N1 of the fcb will be a space
     lda fcb+sfcb::N1
@@ -207,6 +213,7 @@ dir:
     sta temp                    ; number of records per line
     jsr set_user_drive
     jsr print_drive_colon
+    jsr clear_fcb
     jsr make_dir_fcb
     lda #<fcb
     ldx #>fcb
@@ -224,6 +231,7 @@ dir:
     jsr c_printstr
 @skip_first:
     jsr print_fcb
+    jsr clear_fcb
     jsr make_dir_fcb
     lda #<fcb
     ldx #>fcb
@@ -236,9 +244,23 @@ dir:
     jmp prompt
 
 era:
+    jsr set_user_drive
+    lda #<fcb2
+    ldx #>fcb2
+    jsr d_findfirst
+    bcc :+
     jsr printi
-    .byte 10,13,"===> ERA",10,13,0
-    lda #1  ; syntax error for now
+    .byte 10,13,"FILE NOT FOUND",10,13,0
+    sec
+    rts
+:
+    lda #$E5
+    sta fcb2 + sfcb::FA
+    lda #<fcb2
+    ldx #>fcb2
+    jsr d_close
+    jsr restore_active_drive
+    lda #0
     clc
     rts
 
@@ -325,14 +347,133 @@ type:
     rts
 @exit:
     jsr restore_active_drive
+    lda #0          ; make sure that we don't trigger a syntax error.
     clc
     rts
 
 save:
+    ; copy fcb2 filename into fcb
+    jsr clear_fcb
+    ldx #sfcb::N1
+:   lda fcb2,x
+    sta fcb,x
+    inx
+    cpx #sfcb::T3+1
+    bne :-
+
+    jsr newline
+    lda #<fcb
+    ldx #>fcb
+    jsr d_make
+
+    bcc :+
     jsr printi
-    .byte 10,13,"===> SAVE",10,13,0
-    lda #1  ; syntax error for now
+    .byte 10,13,"MAKE FAILED",10,13,0
+    lda #1
     clc
+    rts
+:
+    ; copy fcb2 filename into fcb
+    ldx #sfcb::N1
+:   lda fcb2,x
+    sta fcb,x
+    inx
+    cpx #sfcb::T3+1
+    bne :-
+
+    ; convert command tail which is the number of pages to save to a byte
+    jsr parse_number
+    bcc :+
+    jsr printi
+    .byte 10,13,"NOT A NUMBER",10,13,0
+    lda #1
+    clc
+    rts             ; parse fail
+:
+    ; temp+0 has the number of pages to save
+    lda #<TPA
+    ldx #>TPA
+    stx temp+3
+    jsr d_setdma
+
+    stz lba+3
+    lda fcb + sfcb::DD
+    sta lba+2
+    lda fcb + sfcb::FN
+    sta lba+1
+    stz lba+0
+
+    stz temp+2      ; number of sectors written
+@lp:
+    lda temp+0
+    beq @exit       ; have we hit zero pages?
+
+    lda #'.'
+    jsr c_write
+
+    jsr d_writeseqblock
+    bcs @error
+    inc temp+2
+
+    dec temp+0      ; save two pages per writeblock
+    lda temp+0
+    beq :+          ; make sure we don't dec page count below zero
+    dec temp+0
+:
+    clc             ; advance the dma
+    lda temp+3
+    adc #2
+    sta temp+3
+    jsr d_setdma
+
+    bra @lp         ; write next 2 pages
+@error:
+    jsr printi
+    .byte 10,13,"ERROR WRITING DATA TO DISK",10,13,0
+    lda #1
+    clc
+    rts
+@exit:
+    ; update FCB with number of sectors written
+    lda temp+2
+    sta fcb+sfcb::SC
+    ; save the TPA address to LOAD and EXECUTE
+    lda #<TPA
+    sta fcb+sfcb::L1
+    sta fcb+sfcb::E1
+    lda #>TPA
+    sta fcb+sfcb::L2
+    sta fcb+sfcb::E2
+
+    ; save the size (sector count * 512)
+    lda temp+2
+    sta fcb+sfcb::S0
+    ; x 512 This works because S0, S1 and S2 are all initialised to zero by make.
+    ldx #9
+    clc
+:   asl fcb+sfcb::S0    ;x512
+    rol fcb+sfcb::S1
+    rol fcb+sfcb::S2
+    dex
+    bne :-
+
+    ; set attribute 
+    ;jsr debug_fcb
+    lda #<fcb
+    ldx #>fcb
+    jsr d_close
+    bcc :+
+    jsr printi
+    .byte 10,13,"ERROR CLOSING FILE",10,13,0
+    lda #1
+    clc
+    rts
+:   jsr printi
+    .byte 10,13,"SAVED ",0
+    lda fcb + sfcb::SC
+    jsr bios_prbyte
+    jsr printi
+    .byte " SECTORS",10,13,0
     rts
 
 quit:
@@ -372,11 +513,66 @@ d_findnext:
 d_open:
     ldy #esfos::sfos_d_open
     jmp SFOS
+d_close:
+    ldy #esfos::sfos_d_close
+    jmp SFOS
 d_readseqblock:
     ldy #esfos::sfos_d_readseqblock
     jmp SFOS
+d_writeseqblock:
+    ldy #esfos::sfos_d_writeseqblock
+    jmp SFOS
+d_make:
+    ldy #esfos::sfos_d_make
+    jmp SFOS
 
 ; ---- local helper functions ------------------------------------------------
+
+; parse an 8-bit decimal number from the command line.  David Given - cpm65
+parse_number:
+    lda cmdoffset+0
+    ldx cmdoffset+1
+
+    ; we use the current commandoffset
+    stz temp+0
+    lda cmdoffset+0
+    sta debug_ptr+0
+    lda cmdoffset+1
+    sta debug_ptr+1
+    ldy #0
+@loop:
+    lda (debug_ptr),y
+    beq @exit
+    cmp #' '
+    beq @exit
+    cmp #'0'
+    bcc @parse_error
+    cmp #'9'+1
+    bcs @parse_error
+    sec
+    sbc #'0'
+    tax
+    lda temp+0
+    asl
+    sta temp+0
+    asl
+    asl
+    clc
+    adc temp+0
+    sta temp+0
+    txa
+    clc
+    adc temp+0
+    sta temp+0
+    iny
+    bra @loop
+@parse_error:
+    sec
+    rts
+@exit:
+    lda temp+0
+    clc
+    rts
 
 ; restore old drive after disk activity
 restore_active_drive:
@@ -548,10 +744,11 @@ printi:
     rts
 
 .bss
-commandline:        .res 512
+commandline:        .res 128
 fcb:                .res 32
 fcb2:               .res 32
-temp:               .res 2
+cmdoffset:          .word 0
+temp:               .res 4,0
 active_drive:       .byte 0
 saved_active_drive: .byte 0
 

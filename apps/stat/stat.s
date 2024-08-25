@@ -3,8 +3,8 @@
 .include "sfos.inc"
 
 REBOOT  = $200
-SFOS    = REBOOT + 3
-FCB2    = $320
+SFOS    = REBOOT + 6
+FCB2    = $3A0
 
 .zeropage
 

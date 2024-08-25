@@ -356,21 +356,41 @@ sdcard_init:
         clc
         rts
 
+debug_sector_lba:
+        pha
+        lda #13
+        jsr acia_putc
+        lda #10
+        jsr acia_putc
+        pla
+        bne :+
+        lda #'R'
+        bra :++
+:
+        lda #'W'
+:
+        jsr acia_putc
+        jsr bios_printlba
+        lda #'-'
+        jsr acia_putc
+        lda bdma_ptr + 1
+        jsr bios_prbyte
+        lda bdma_ptr + 0
+        jsr bios_prbyte
+        lda #13
+        jsr acia_putc
+        lda #10
+        jsr acia_putc
+        rts
+
 ;-----------------------------------------------------------------------------
 ; sdcard_read_sector
 ; Set sector_lba prior to calling this function.
 ; result: C=0 -> error, C=1 -> success
 ;-----------------------------------------------------------------------------
 sdcard_read_sector:
-        ;jsr bios_printlba
-        ;lda #13
-        ;jsr acia_putc
-        ;lda #10
-        ;jsr acia_putc
-        ;lda bdma_ptr + 1
-        ;jsr bios_prbyte
-        ;lda bdma_ptr + 0
-        ;jsr bios_prbyte
+        lda #0
+        ;jsr debug_sector_lba
 
         jsr sdcmd_start
         ; Send READ_SINGLE_BLOCK command
@@ -429,6 +449,9 @@ sdcard_read_sector:
 ; result: C=0 -> error, C=1 -> success
 ;-----------------------------------------------------------------------------
 sdcard_write_sector:
+        lda #1
+        ;jsr debug_sector_lba
+
         jsr sdcmd_start
         ; Send WRITE_BLOCK command
         lda #($40 | 24)

@@ -1,7 +1,7 @@
 ; vim: ft=asm_ca65 ts=4 sw=4 et
 .include "fcb.inc"
 .autoimport
-.export sfos_buf
+.export sfos_buf, lba
 
 .globalzp ptr1
 
@@ -122,12 +122,14 @@ get_drvmax:
     rts
 
 login_drive:
+    cmp #$FF
+    beq :+
     jsr get_drvtbl_idx
     tax
     stx cmd                 ; using cmd temporarily for this
     lda drvtbl + drvalloc::is_logged_in,x
     bne @exit
-
+:
     lda #<str_scanning
     ldx #>str_scanning
     jsr bios_puts
@@ -182,6 +184,7 @@ internal_getsetdrive:
     beq @exit
     ; drive is different
     sta drive
+    lda #$00        ; don't force scan
     jsr login_drive
 @exit:
     clc
@@ -261,7 +264,7 @@ sfos_d_parsefcb:
 @nodrive:
     txa
     bne :+
-    lda drive       ; pop in the current drive if one was not given.
+    lda drive               ; pop in the current drive if one was not given.
 :   pha                     ; drive letter pushed to stack
 
     ; Read the filename
@@ -407,14 +410,15 @@ sfos_d_findnext:
     bne :+
     ; first, is the caller looking for deleted files?
     ldy #sfcb::DD
-    cmp (param),y
+    lda (param),y
+    cmp #$E5
     beq @matched
     ; next, is the filenum of this deleted file more than maxdrv
     jsr get_drvtbl_idx
     tax
     lda drvtbl + drvalloc::maxdrv,x
     cmp current_dirent + sfcb::FN
-    bcs :+
+    bcs @nomatch
     lda #2
     sec
     rts
@@ -452,8 +456,7 @@ read_directory_entry:
     asl                     ; x 32
     tay
     ldx #0                  ; index into current_dirent
-:   lda (zptemp1),y          ; copy the directory entry into current_dirent
-    ;jsr to_upper            ;XXX: BROKEN!!!!! compare apples with apples
+:   lda (zptemp1),y         ; copy the directory entry into current_dirent
     sta current_dirent,x
     iny
     inx
@@ -461,8 +464,8 @@ read_directory_entry:
     bne :-
     inc current_dirpos      ; increment the current_dirpos and check for end
     lda current_dirpos      ; the end of the current directory sector
-    cmp #8                  ; XXX: NASTY SHIT>> Only when dirpos is 8 should
-    beq :+                  ; XXX: zptemp1+ 1 be incremented.
+    cmp #8
+    beq :+
     bra :++
 :   inc zptemp1+1
 :   cmp #16
@@ -503,12 +506,124 @@ sfos_d_open:
     lda (param),y
     sta lba + 1
     stz lba + 0
-    jsr bios_setlba         ; sets the bios lba for sdcard ops.and the lba are set.; get the sector count from the fcblda fcb + sfcb::SC
-    sta cmd                     ; using cmd temporarily here.
+    jsr bios_setlba         ; sets the bios lba for sdcard ops.and the lba are set.
+    sta cmd                 ; using cmd temporarily here.
 @sector_loop:
     clc
     rts
 @notfound:
+    sec
+    rts
+
+; param points to FCB that needs to be closed.
+sfos_d_close:
+    jsr compute_drive_index_lba ; lba is set
+    ldy #sfcb::FN
+    lda (param),y
+    lsr     ;/2
+    lsr     ;/4
+    lsr     ;/8
+    lsr     ;/16
+    clc                     ; add to lba+0 for sector conaining drive
+    adc lba+0
+    sta lba+0
+    lda #<lba
+    ldx #>lba
+    jsr bios_setlba
+    ; now read the index sector into the sfos_buf
+    lda #<sfos_buf
+    ldx #>sfos_buf
+    jsr bios_setdma
+    jsr bios_sdread
+    bcc @error
+    ; now insert the fcb into the sector
+    ldy #sfcb::FN
+    lda (param),y
+
+    and #$0F                ; mod 16
+    ldx #5                  ; x 32
+:   asl
+    dex
+    bne :-
+
+    tax                     ; x holds position in the buffer.
+    ldy #sfcb::FN
+    lda (param),y
+    ldy #0
+    cmp #$80                ; when the dirpos is > 80 we must insert the fcb into the
+    bcs @upper              ; second half of the 512byte sector.
+:   lda (param),y           ; copy fcb to lower half of sector
+    sta sfos_buf,x
+    inx
+    iny
+    cpy #32
+    bne :-
+    bra @flush
+@upper:                     ; copy fcb to upper half of sector.
+:   lda (param),y           ; copy fcb to lower half of sector
+    sta sfos_buf+256,x
+    inx
+    iny
+    cpy #32
+    bne :-
+@flush:
+    lda #<sfos_buf
+    ldx #>sfos_buf
+    jsr bios_setdma
+    lda #<lba
+    ldx #>lba
+    jsr bios_setlba
+    jsr bios_sdwrite
+    bcs @exit
+@error:
+    sec
+    rts
+@exit:
+    lda #$FF                ; force drive scan
+    jsr login_drive
+    lda #0
+    clc
+    rts
+
+; param points to FCB containing filename to create.
+; Returns updated FCB containing Filenumber.
+sfos_d_make:
+    jsr sfos_d_findfirst
+    bcs :+
+    lda #3
+    bra @error
+:   ; file does not exist.
+    ldy #sfcb::DD           ; tell find first to return an empty slot
+    lda #$E5
+    sta (param),y
+    jsr sfos_d_findfirst
+    bcc @exit
+    lda 1
+    bra @error
+@exit:
+    ; allocate dirent by setting file attribute to 0x40
+    lda #$40
+    ldy #sfcb::FA
+    sta (param),y
+    ; zero out L1, L2, E1, E2, S0, S1, S2, Z1, Z2, SC
+    lda #0
+    ldy #sfcb::SC
+    sta (param),y
+    ldy #sfcb::L1
+    sta (param),y
+    iny
+    sta (param),y
+
+    ldy #sfcb::E1
+:
+    sta (param),y
+    iny
+    cpy #sfcb::S2 + 1
+    bne :-
+
+    clc
+    rts
+@error:
     sec
     rts
 
@@ -528,9 +643,19 @@ sfos_d_setdma:
 sfos_d_readseqblock:
     lda #<lba
     ldx #>lba
-    jsr bios_setlba         ; update the bios LBA to current lba
+    jsr bios_setlba
 
     jsr bios_sdread
+    bra _sdresponse
+
+sfos_d_writeseqblock:
+    lda #<lba
+    ldx #>lba
+    jsr bios_setlba
+    jsr bios_sdwrite
+    ; fall through
+
+_sdresponse:
     bcs :+
     sec
     rts
@@ -578,15 +703,6 @@ dispatch:
 ; ---- UNIMPLIMENTED FUNCTIONS -----------------------------------------------
 ; ----------------------------------------------------------------------------
 sfos_d_createfcb:
-    jmp unimplimented
-
-sfos_d_make:
-    jmp unimplimented
-
-sfos_d_close:
-    jmp unimplimented
-
-sfos_d_writeseqblock:
     jmp unimplimented
 
 sfos_d_readseqbyte:
