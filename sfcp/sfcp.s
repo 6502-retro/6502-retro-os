@@ -1,7 +1,7 @@
 ; vim: ft=asm_ca65 ts=4 sw=4 et
 .include "sfos.inc"
 .include "fcb.inc"
-.export main
+.export main, prompt
 .autoimport
 
 .globalzp ptr1
@@ -17,18 +17,16 @@ sfcpcmd:    .word 0
 .code
 ; main user interface - First show a prompt.
 main:
-    jsr s_reset
     lda #<str_banner
     ldx #>str_banner
     jsr c_printstr
     lda #1
     sta active_drive
     sta saved_active_drive
-    ldx #0
-    jsr d_getsetdrive
 
 prompt:
     jsr newline
+
 prompt_no_newline:
     jsr show_prompt
 
@@ -153,6 +151,7 @@ decode_command:
     rts
 
 load_transient:
+    jsr set_user_drive
     ; check if FCB has extension.  if not, then add .COM
     lda fcb+sfcb::T1
     cmp #' '
@@ -171,6 +170,8 @@ load_transient:
     jsr newline
     lda #'?'
     jsr c_write
+    jsr restore_active_drive
+    lda #0
     jmp prompt
 
     ; now dma and the lba are set.
@@ -205,6 +206,7 @@ load_transient:
     sta sfcpcmd+1
 
 call:
+    jsr restore_active_drive
     jmp (sfcpcmd)
 
 dir:

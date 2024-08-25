@@ -1,7 +1,7 @@
 ; vim: ft=asm_ca65 ts=4 sw=4 et
 .include "fcb.inc"
 .autoimport
-.export sfos_buf, lba
+.export sfos_buf, lba, sfos_s_reset
 
 .globalzp ptr1
 
@@ -18,9 +18,9 @@ zptemp2:    .word 0
 
 ; reset with warm boot and log into drive A
 sfos_s_reset:
-    jsr bios_wboot
     lda #1
-    jmp internal_getsetdrive
+    jsr internal_getsetdrive
+    jmp main
 
 ; read a char from the serial console
 ; echo it too

@@ -36,12 +36,15 @@ bios_boot:
     sta __SYSTEM_RUN__ -1,x
     dex
     bne @L2
-    ;
-    jmp main
+    jsr zerobss
+    jsr zero_lba
+    jmp sfos_s_reset
+   ;
 
 bios_wboot:
-    jsr zerobss
-    jmp zero_lba
+    ; usually this is where we need to check if the SFCP needs to be
+    ; reloaded, but as our sfcp will be residing in rom, we don't care.
+    jmp prompt 
 
 bios_conin:
     jmp acia_getc

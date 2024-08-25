@@ -32,3 +32,38 @@ the end is reached (255) then it returns an error conditions which sfcp can
 catch to know that the last file has been found.  Any file on the directory
 with a file attribute of 0xE5 will cause sfos to retun an end of directory
 error too.
+
+### ERA
+
+```text
+era <filename>
+```
+
+Deletes `<filename>` from current drive if it can be found.  Wildcards are
+accepted but only the first found file will be removed.  Perhaps this
+functionality can be extended to something more brutal.
+
+### SAVE
+
+```text
+save <filename> <count>
+```
+
+Saves `<count>` pages of data from the start of the TPA into `<filename>`
+
+### TYPE
+
+```text
+type [drive:]<filename>
+```
+
+Prints the ascii contents of `<filename>` from `[drive]`.
+
+### REN
+
+```text
+ren <source> <dest>
+```
+
+Renames a file in the current directory to a new name in the same directory.
+You can not use rename to move a file.

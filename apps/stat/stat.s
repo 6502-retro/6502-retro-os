@@ -3,15 +3,20 @@
 .include "sfos.inc"
 
 REBOOT  = $200
+WBOOT   = REBOOT + 3
 SFOS    = REBOOT + 6
-FCB2    = $3A0
+
+; hard coded addresses that SFCP uses
+FCB         = $380
+FCB2        = $3A0
+CMDLINE     = $300
+CMDOFFSET   = $3C0    ; pointer into CMDLINE
 
 .zeropage
 
 .code
 
 main:
-    ; Print hello, world and exit
     lda #<str_message
     ldx #>str_message
     jsr c_printstr
@@ -20,6 +25,12 @@ main:
 ; empty files found.  Print each file with the size as you go.
 
     jsr set_user_drive
+    lda #<str_current_drive
+    ldx #>str_current_drive
+    jsr c_printstr
+    lda active_drive
+    jsr prbyte
+    jsr newline
 
     ; initialize used space long to 0
     ldx #3
@@ -43,23 +54,31 @@ main:
     jsr newline
     jsr tab
 
-    lda #<str_hexprefix
-    ldx #>str_hexprefix
-    jsr c_printstr
+    ;lda #<str_hexprefix
+    ;ldx #>str_hexprefix
+    ;jsr c_printstr
 
     lda fcb + sfcb::S2
-    jsr prbyte
-    lda fcb + sfcb::S1
-    jsr prbyte
-    lda fcb + sfcb::S0
+    bne :+
+    lda #' '
+    jsr c_write
+    bra :++
+:   jsr prbyte
+:   lda fcb + sfcb::S1
+    bne :+
+    lda #' '
+    jsr c_write
+    bra :++
+:   jsr prbyte
+:   lda fcb + sfcb::S0
     jsr prbyte
 
     lda #' '
     jsr c_write
 
-    lda #<str_hexprefix
-    ldx #>str_hexprefix
-    jsr c_printstr
+;    lda #<str_hexprefix
+;    ldx #>str_hexprefix
+;    jsr c_printstr
 
     lda fcb + sfcb::SC
     jsr prbyte
@@ -99,17 +118,30 @@ main:
     jsr newline
     jsr newline
     jsr tab
-    lda #<str_hexprefix
-    ldx #>str_hexprefix
-    jsr c_printstr
+
+;    lda #<str_hexprefix
+;    ldx #>str_hexprefix
+;    jsr c_printstr
 
     lda used_space + 3
-    jsr prbyte
-    lda used_space + 2
-    jsr prbyte
-    lda used_space + 1
-    jsr prbyte
-    lda used_space + 0
+    bne :+
+    lda #' '
+    jsr c_write
+    bra :++
+:   jsr prbyte
+:   lda used_space + 2
+    bne :+
+    lda #' '
+    jsr c_write
+    bra :++
+:   jsr prbyte
+:   lda used_space + 1
+    bne :+
+    lda #' '
+    jsr c_write
+    bra :++
+:   jsr prbyte
+:   lda used_space + 0
     jsr prbyte
 
     lda #<str_total_space
@@ -193,6 +225,7 @@ set_primary_drive:
     lda fcb
     bne set_drive
     rts
+
 set_user_drive:
     lda #$FF
     ldx #$00
@@ -211,9 +244,8 @@ set_drive:
     ldx #0
     jmp d_getsetdrive
 
-
 exit:
-    jmp REBOOT
+    jmp WBOOT
 
 ; ---- SFOS CALLS ------------------------------------------------------------
 c_write:
@@ -239,8 +271,9 @@ active_drive: .byte 0
 saved_active_drive: .byte 0
 .rodata
 
-str_message:     .byte "Stat",10,13,0
+str_message:     .byte 10,13,"Drive Statistics:",10,13,"(Values shown in HEX)",10,13,0
 str_newline:     .byte 10,13,0
 str_tab:         .byte "        ",0
 str_hexprefix:   .byte "0x",0
-str_total_space: .byte " of 0x2000000 bytes",10,13,0
+str_total_space: .byte " of 2000000 bytes",10,13,0
+str_current_drive:.byte 10,13,"Current Drive: ",0

@@ -72,3 +72,15 @@ overwritten and re-initialised by the BIOS and SFOS subsystems from disk.
 
 The 6502-Retro! has enough ROM to hold the BIOS, SFOS and SFCP and so the SFCP
 is bundled together in the ROM to maximise RAM for user applications.
+
+## Boot Sequence
+
+### Cold Start
+
+- Clears BSS, copies the jump table and dispatch routine into run area, resets
+the hardware stack.
+- Initialise Drive A and jump to SFCP
+
+### Warm Start
+
+- Jumps to prompt in the SFCP
