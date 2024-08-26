@@ -19,6 +19,9 @@ s_reset:
 d_getsetdrive:
     ldy #esfos::sfos_d_getsetdrive
     jmp SFOS
+c_status:
+    ldy #esfos::sfos_c_status
+    jmp SFOS
 c_write:
     ldy #esfos::sfos_c_write
     jmp SFOS

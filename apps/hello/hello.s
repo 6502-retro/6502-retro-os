@@ -2,17 +2,24 @@
 .include "fcb.inc"
 .include "sfos.inc"
 
-REBOOT  = $200
-WBOOT   = REBOOT + 3
-SOFS    = REBOOT + 6
+.zeropage
+ptr:    .word 0
+addr:   .word 0
+line:   .word 0
+fileaddr: .word 0
+
+.code
 
 main:
-    ; Print hello, world and exit
-    lda #<message
-    ldx #>message
-    ldy #esfos::sfos_c_printstr
-    jsr SOFS
 
-    jmp REBOOT
+    lda #<str_message
+    ldx #>str_message
+    jsr c_printstr
+    jmp WBOOT
 
-message: .byte 10,13,"Hello, World!",10,13,0
+.include "../app.inc"
+
+.bss
+
+.rodata
+str_message: .byte 10,13,"Hello, from TPA",10,13,0

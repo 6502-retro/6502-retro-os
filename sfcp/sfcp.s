@@ -497,12 +497,13 @@ save:
     stx temp+3
     jsr d_setdma
 
-    stz lba+3
-    lda fcb + sfcb::DD
-    sta lba+2
-    lda fcb + sfcb::FN
-    sta lba+1
-    stz lba+0
+    ;; I think make should already have set the LBA
+    ;stz lba+3
+    ;lda fcb + sfcb::DD
+    ;sta lba+2
+    ;lda fcb + sfcb::FN
+    ;sta lba+1
+    ;stz lba+0
 
     stz temp+2      ; number of sectors written
 @lp:
@@ -525,6 +526,8 @@ save:
     lda temp+3
     adc #2
     sta temp+3
+    tax
+    lda #0
     jsr d_setdma
 
     bra @lp         ; write next 2 pages

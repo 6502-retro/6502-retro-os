@@ -4,4 +4,4 @@ SOURCES = \
 APPNAME = hello
 
 # DO NOT EDIT THIS
-include ../Make.rules
+include ../Make.rules# Sources and objects

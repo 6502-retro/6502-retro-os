@@ -621,6 +621,19 @@ sfos_d_make:
     cpy #sfcb::S2 + 1
     bne :-
 
+    ; set the lba here so that next write operation has it.
+    stz lba + 3
+    ldy #sfcb::DD
+    lda (param),y
+    sta lba + 2
+    ldy #sfcb::FN
+    lda (param),y
+    sta lba + 1
+    stz lba + 0
+    lda #<lba
+    ldx #>lba
+    jsr bios_setlba
+    lda #0
     clc
     rts
 @error:
