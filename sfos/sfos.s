@@ -35,7 +35,7 @@ sfos_c_read:
 sfos_c_write:
     lda param + 0
 internal_c_write:
-    jsr to_upper
+    ;jsr to_upper
     jsr bios_conout
     jsr bios_const
     beq @exit

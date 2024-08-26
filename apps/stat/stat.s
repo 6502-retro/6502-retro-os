@@ -31,8 +31,8 @@ main:
 
     jsr make_fcb
 
-    lda #<fcb
-    ldx #>fcb
+    lda #<_fcb
+    ldx #>_fcb
     jsr d_findfirst
     bcc @loop
     jmp exit
@@ -49,19 +49,19 @@ main:
     ;ldx #>str_hexprefix
     ;jsr c_printstr
 
-    lda fcb + sfcb::S2
+    lda _fcb + sfcb::S2
     bne :+
     lda #' '
     jsr c_write
     bra :++
 :   jsr prbyte
-:   lda fcb + sfcb::S1
+:   lda _fcb + sfcb::S1
     bne :+
     lda #' '
     jsr c_write
     bra :++
 :   jsr prbyte
-:   lda fcb + sfcb::S0
+:   lda _fcb + sfcb::S0
     jsr prbyte
 
     lda #' '
@@ -71,7 +71,7 @@ main:
 ;    ldx #>str_hexprefix
 ;    jsr c_printstr
 
-    lda fcb + sfcb::SC
+    lda _fcb + sfcb::SC
     jsr prbyte
 
     lda #' '
@@ -79,7 +79,7 @@ main:
 
     ;print file name 
     ldx #sfcb::N1
-:   lda fcb,x
+:   lda _fcb,x
     cmp #' '
     beq :+
     jsr c_write
@@ -89,7 +89,7 @@ main:
 :   lda #'.'
     jsr c_write
     ldx #sfcb::T1
-:   lda fcb,x
+:   lda _fcb,x
     cmp #' '
     beq :+
     jsr c_write
@@ -100,8 +100,8 @@ main:
     ; get next directory entry
 :   jsr make_fcb
 
-    lda #<fcb
-    ldx #>fcb
+    lda #<_fcb
+    ldx #>_fcb
     jsr d_findnext
 
     bcc @loop
@@ -147,13 +147,13 @@ main:
 ;
 accumlate_drive_total:
     clc
-    lda fcb + sfcb::S0
+    lda _fcb + sfcb::S0
     adc used_space + 0
     sta used_space + 0
-    lda fcb + sfcb::S1
+    lda _fcb + sfcb::S1
     adc used_space + 1
     sta used_space + 1
-    lda fcb + sfcb::S2
+    lda _fcb + sfcb::S2
     adc used_space + 2
     sta used_space + 2
     lda used_space + 3
@@ -166,7 +166,7 @@ make_fcb:
     ldy #sfcb::N1
     lda #'?'
 :
-    sta fcb,y
+    sta _fcb,y
     iny
     cpy #sfcb::T3 + 1
     bne :-
@@ -212,11 +212,6 @@ restore_active_drive:
     ldx #0
     jmp d_getsetdrive
 
-set_primary_drive:
-    lda fcb
-    bne set_drive
-    rts
-
 set_user_drive:
     lda #$FF
     ldx #$00
@@ -256,7 +251,7 @@ d_findnext:
     jmp SFOS
 
 .bss
-fcb:        .res 32,0
+_fcb:        .res 32,0
 used_space: .dword 0
 active_drive: .byte 0
 saved_active_drive: .byte 0
