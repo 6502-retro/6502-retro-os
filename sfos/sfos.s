@@ -690,9 +690,6 @@ increment_lba:
     lda lba + 3
     adc #0
     sta lba + 3
-    lda #<lba
-    ldx #>lba
-    jsr bios_setlba
     rts
 
 ; sets the dma to the sfos_buf

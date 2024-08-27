@@ -9,7 +9,7 @@ FCB2        = $3A0
 CMDLINE     = $300
 CMDOFFSET   = $3C0    ; pointer into CMDLINE
 SFOS_BUF    = $400
-
+SFOS_BUF_END = $600
 .code
 ;
 ; ---- SFOS functions ------------------------------------------------------

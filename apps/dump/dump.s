@@ -45,12 +45,7 @@ sector_loop:
 
     jsr d_readseqblock
 
-    dec FCB2 + sfcb::SC
-    lda FCB2 + sfcb::SC
-    bpl :+
-    jmp exit
-
-:   lda #<SFOS_BUF
+    lda #<SFOS_BUF
     sta addr+0
     sta line+0      ; so that we can repoint addr at the line for the
     lda #>SFOS_BUF
@@ -117,6 +112,10 @@ line_ascii_loop:
     lda line+1
     cmp #>SFOS_BUF + 2
     bne lines_loop
+
+    dec FCB2 + sfcb::SC
+    lda FCB2 + sfcb::SC
+    beq exit
     jmp sector_loop
 exit:
     jsr restore_active_drive

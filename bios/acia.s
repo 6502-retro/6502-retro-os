@@ -38,7 +38,10 @@ acia_getc_nw:
     and #$08
     beq @done
     lda acia_data
+    sec
+    rts
 @done:
+    clc
     rts
 
 acia_putc:

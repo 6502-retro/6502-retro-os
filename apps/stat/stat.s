@@ -1,7 +1,6 @@
 ; vim: ft=asm_ca65 sw=4 ts=4 et
 .include "fcb.inc"
 .include "sfos.inc"
-.include "../app.inc"
 
 .zeropage
 
@@ -45,20 +44,18 @@ main:
     jsr newline
     jsr tab
 
-    ;lda #<str_hexprefix
-    ;ldx #>str_hexprefix
-    ;jsr c_printstr
-
     lda _fcb + sfcb::S2
     bne :+
-    lda #' '
-    jsr c_write
+    lda #<str_padding
+    ldx #>str_padding
+    jsr c_printstr
     bra :++
 :   jsr prbyte
 :   lda _fcb + sfcb::S1
     bne :+
-    lda #' '
-    jsr c_write
+    lda #<str_padding
+    ldx #>str_padding
+    jsr c_printstr
     bra :++
 :   jsr prbyte
 :   lda _fcb + sfcb::S0
@@ -66,10 +63,6 @@ main:
 
     lda #' '
     jsr c_write
-
-;    lda #<str_hexprefix
-;    ldx #>str_hexprefix
-;    jsr c_printstr
 
     lda _fcb + sfcb::SC
     jsr prbyte
@@ -233,22 +226,7 @@ set_drive:
 exit:
     jmp WBOOT
 
-; ---- SFOS CALLS ------------------------------------------------------------
-c_write:
-    ldy #esfos::sfos_c_write
-    jmp SFOS
-c_printstr:
-    ldy #esfos::sfos_c_printstr
-    jmp SFOS
-d_getsetdrive:
-    ldy #esfos::sfos_d_getsetdrive
-    jmp SFOS
-d_findfirst:
-    ldy #esfos::sfos_d_findfirst
-    jmp SFOS
-d_findnext:
-    ldy #esfos::sfos_d_findnext
-    jmp SFOS
+.include "../app.inc"
 
 .bss
 _fcb:        .res 32,0
@@ -260,6 +238,6 @@ saved_active_drive: .byte 0
 str_message:     .byte 10,13,"Drive Statistics:",10,13,"(Values shown in HEX)",10,13,0
 str_newline:     .byte 10,13,0
 str_tab:         .byte "        ",0
-str_hexprefix:   .byte "0x",0
 str_total_space: .byte " of 2000000 bytes",10,13,0
 str_current_drive:.byte 10,13,"Current Drive: ",0
+str_padding:    .byte "  ",0

@@ -4,6 +4,7 @@ LD = ld65
 RELIST = scripts/relist.py
 FINDSYM = scripts/findsymbols
 LOADTRIM = scripts/loadtrim.py
+TTY_DEVICE = /dev/ttyUSB0
 
 # Assembler flags
 ASFLAGS += -I inc -g --feature labels_without_colons --cpu 65C02 --feature string_escapes
@@ -51,3 +52,6 @@ $(BUILD_DIR)/rom.raw: $(SFCP_OBJS) $(SFOS_OBJS) $(BIOS_OBJS)
 
 $(BUILD_DIR)/rom.bin: $(BUILD_DIR)/rom.raw
 	$(LOADTRIM) build/rom.raw build/rom.img $(SFM_LOAD_ADDR)
+
+upload:
+	sx -b --delay-startup 3 -X $(BUILD_DIR)/rom.img > $(TTY_DEVICE) < $(TTY_DEVICE)

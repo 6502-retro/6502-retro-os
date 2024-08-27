@@ -163,41 +163,43 @@ GoodCrc:
     sta ptr+0            ; to disk
     lda #>SFOS_BUF
     sta ptr+1
+    jsr clear_buf
 @get_target_address_end:
     dec bflag            ; set the flag so we won't get another address
 CopyBlk:
     ldy #$00             ; set offset to zero
 CopyBlk3:
     lda Rbuff,x          ; get data byte from buffer
-    sta (ptr),y          ; save to target
-    inc ptr              ; point to next address
+    sta (ptr)            ; save to target
+    inc ptr+0            ; point to next address
     bne CopyBlk4         ; did it step over page boundary?
     inc ptr+1            ; adjust high address for page crossing
 
 ;;  ; check if we need to flush the buffer to disk.
     lda ptr+1
-    cmp #>SFOS_BUF + 2
+    cmp #>SFOS_BUF_END
     bne CopyBlk4
     ;; WRITE BUFFER TO DISK
     phx
     lda #<SFOS_BUF
     ldx #>SFOS_BUF
     jsr d_setdma
+
     jsr d_writeseqblock
     bcc :+
     plx
     jsr restore_active_drive
     jmp WBOOT
 :
-    plx
-    inc FCB + sfcb::SC
     lda #<SFOS_BUF
     sta ptr+0
     lda #>SFOS_BUF
     sta ptr+1
-
+    inc FCB + sfcb::SC
+    jsr clear_buf    
+    plx
 CopyBlk4:
-    inx                     ; point to next data byte
+    inx                  ; point to next data byte
     cpx #$82             ; is it the last byte
     bne CopyBlk3         ; no, get the next one
 IncBlk:
@@ -211,7 +213,7 @@ Done:
     jsr Flush            ; get leftover characters, if any
     jsr Print_Good       ;
 
-    lda #<SFOS_BUF
+    lda #<SFOS_BUF      ; write the last sector
     ldx #>SFOS_BUF
     jsr d_setdma
     jsr d_writeseqblock
@@ -330,12 +332,7 @@ GoodMsg:
 ; input chr from ACIA (no waiting)
 ;
 Get_Chr:
-    jsr c_status
-    bne :+
-    clc
-    rts
-:   sec
-    rts
+    jmp c_status
 
 ; output to OutPut Port
 ;
@@ -406,13 +403,22 @@ newline:
     ldx #>str_newline
     jmp c_printstr
 
+clear_buf:
+    lda #0
+    ldy #0
+:   sta SFOS_BUF,y
+    iny
+    bne :-
+:   sta SFOS_BUF+256,y
+    iny
+    bne :-
+    rts
 
 
 .include "../app.inc"
 
 .bss
 Rbuff: .res 128, 0
-used_space: .dword 0
 active_drive: .byte 0
 saved_active_drive: .byte 0
 
