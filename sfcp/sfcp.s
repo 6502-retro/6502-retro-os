@@ -395,8 +395,7 @@ ren:
     jsr printi
     .byte 10,13,"===> REN",10,13,0
     lda #1  ; syntax error for now
-    clc
-    rts
+    jmp prompt
 
 type:
     jsr set_user_drive

@@ -21,6 +21,15 @@ run in userspace.
 The following sections describe the inner workings of how the intrinsic
 commands in sfcp work.
 
+### BANK
+
+```text
+bank <#>
+```
+
+Set the rom bank and switch to it by jumping to the vector defined at 0xFFFC.
+Accepts a value from 0 to 3.
+
 ### DIR
 
 The way DIR works is by setting the fcb to be all wildcards.  Then searching
@@ -42,6 +51,24 @@ era <filename>
 Deletes `<filename>` from current drive if it can be found.  Wildcards are
 accepted but only the first found file will be removed.  Perhaps this
 functionality can be extended to something more brutal.
+
+### FREE
+
+Print out the memory assignments:
+
+```text
+free
+
+MEMORY Assignments
+ZEROPAGE: E0-F8 0018
+SYSTEM:   0200-0211 0011
+BSS:      0300-0642 0342
+TPA:      0800-9E00 9600
+```
+
+### HELP
+
+Display SFCP intrinsic commands.
 
 ### SAVE
 
