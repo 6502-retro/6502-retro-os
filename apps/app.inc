@@ -2,13 +2,14 @@
 REBOOT  = $200
 WBOOT   = REBOOT + 3
 SFOS    = REBOOT + 6
+RSTFAR  = REBOOT + 9
 
 ; hard coded addresses that SFCP uses
-FCB         = $380
-FCB2        = $3A0
-CMDLINE     = $300
-CMDOFFSET   = $3C0    ; pointer into CMDLINE
-SFOS_BUF    = $400
+FCB          = $380
+FCB2         = $3A0
+CMDLINE      = $300
+CMDOFFSET    = $3C0    ; pointer into CMDLINE
+SFOS_BUF     = $400
 SFOS_BUF_END = $600
 .code
 ;
@@ -61,6 +62,4 @@ d_writeseqblock:
 d_make:
     ldy #esfos::sfos_d_make
     jmp SFOS
-
-
 

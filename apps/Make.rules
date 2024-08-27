@@ -11,7 +11,7 @@ INCLUDES = -I $(TOP)/../inc
 # Assembler flags
 ASFLAGS += $(INCLUDES) -g --feature labels_without_colons --cpu 65C02 --feature string_escapes
 
-LOAD_ADDR = 1000
+LOAD_ADDR = 800
 
 BUILD_DIR = build
 

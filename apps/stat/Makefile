@@ -4,38 +4,4 @@ SOURCES = \
 APPNAME = stat
 
 # DO NOT EDIT THIS
-#include ../Make.rules
-# Assembler, linker and scripts
-AS = ca65
-LD = ld65
-TOP = ..
-RELIST = $(TOP)/../scripts/relist.py
-FINDSYM = $(TOP)/../scripts/findsymbols
-LOADTRIM = $(TOP)/../scripts/loadtrim.py
-CFG = $(TOP)/apps.cfg
-INCLUDES = -I $(TOP)/../inc
-
-# Assembler flags
-ASFLAGS += $(INCLUDES) -g --feature labels_without_colons --cpu 65C02 --feature string_escapes
-
-LOAD_ADDR = 1000
-
-BUILD_DIR = build
-
-OBJS = $(addprefix $(BUILD_DIR)/, $(SOURCES:.s=.o))
-
-all: clean $(BUILD_DIR)/$(APPNAME).bin
-
-clean:
-	rm -fr $(BUILD_DIR)/*
-
-$(BUILD_DIR)/%.o: %.s
-	@mkdir -p $$(dirname $@)
-	$(AS) $(ASFLAGS) -l $(BUILD_DIR)/$*.lst $< -o $@
-
-$(BUILD_DIR)/$(APPNAME).raw: $(OBJS)
-	@mkdir -p $$(dirname $@)
-	$(LD) -C $(CFG) $^ -o $@ -m $(BUILD_DIR)/$(APPNAME).map -Ln $(BUILD_DIR)/$(APPNAME).sym
-
-$(BUILD_DIR)/$(APPNAME).bin: $(BUILD_DIR)/$(APPNAME).raw
-	$(LOADTRIM) build/$(APPNAME).raw build/$(APPNAME).bin $(LOAD_ADDR)
+include ../Make.rules# Sources and objects
