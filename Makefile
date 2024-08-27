@@ -34,7 +34,7 @@ SFCP_SOURCES = \
 
 SFCP_OBJS = $(addprefix $(BUILD_DIR)/, $(SFCP_SOURCES:.s=.o))
 
-all: clean $(BUILD_DIR)/rom.bin
+all: clean $(BUILD_DIR)/rom.bin grep
 
 clean:
 	rm -fr $(BUILD_DIR)/*
@@ -53,5 +53,6 @@ $(BUILD_DIR)/rom.raw: $(SFCP_OBJS) $(SFOS_OBJS) $(BIOS_OBJS)
 $(BUILD_DIR)/rom.bin: $(BUILD_DIR)/rom.raw
 	$(LOADTRIM) build/rom.raw build/rom.img $(SFM_LOAD_ADDR)
 
-upload:
-	sx -b --delay-startup 3 -X $(BUILD_DIR)/rom.img > $(TTY_DEVICE) < $(TTY_DEVICE)
+grep:
+	grep bios_boot $(BUILD_DIR)/rom.sym
+

@@ -9,6 +9,7 @@
 BOOT    = $200
 WBOOT   = BOOT + 3
 SFOS    = BOOT + 6
+RSTFAR  = BOOT + 9
 
 .zeropage
 debug_ptr:  .word 0
@@ -209,6 +210,25 @@ call:
     jsr restore_active_drive
     jmp (sfcpcmd)
 
+bank:
+    lda commandline + 5
+    beq @parse_error
+    lda commandline + 6
+    cmp #' '
+    beq @parse_error
+    cmp #'0'
+    bcc @parse_error
+    cmp #'3'+1
+    bcs @parse_error
+    sec
+    sbc #'0'
+    jmp RSTFAR
+@parse_error:
+    jsr printi
+    .byte 10,13,"INVALID BANK",0
+    lda #0
+    jmp prompt
+
 dir:
     jsr newline
     lda #5
@@ -363,6 +383,12 @@ free:
     ldx temp+1
     jsr print_word
 
+    jmp prompt
+
+help:
+    lda #<str_help
+    ldx #>str_help
+    jsr c_printstr
     jmp prompt
 
 ren:
@@ -865,7 +891,19 @@ str_banner:     .byte 13,10, "6502-Retro! (SFCP)",0
 str_COM:        .byte "COM"
 str_tab:        .byte "    ",0
 str_sep:        .byte " : ",0
+str_help:
+    .byte 10,13,"BANK <#> Enter a rom bank number from 1 to 3"
+    .byte 10,13,"DIR [A:] Enter a drive number to list files"
+    .byte 10,13,"ERA [A:]FILENAME Delete a file"
+    .byte 10,13,"FREE Display memory information"
+    .byte 10,13,"QUIT Exit to monitor"
+    .byte 10,13,"TYPE [A:]FILENAME Display ascii contents of a file"
+    .byte 10,13,"SAVE FILENAME ## Save ## pages of memory starting at TPA to a file"
+    .byte 10,13,0
 commands_tbl:
+    .byte "BANK",$80
+    .lobytes bank
+    .hibytes bank
     .byte "DIR ",$80
     .lobytes dir
     .hibytes dir
@@ -875,6 +913,9 @@ commands_tbl:
     .byte "FREE",$80
     .lobytes free
     .hibytes free
+    .byte "HELP",$80
+    .lobytes help
+    .hibytes help
     .byte "QUIT",$80
     .lobytes quit
     .hibytes quit

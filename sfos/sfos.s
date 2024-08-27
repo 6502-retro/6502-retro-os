@@ -1,5 +1,6 @@
 ; vim: ft=asm_ca65 ts=4 sw=4 et
 .include "fcb.inc"
+.include "io.inc"
 .autoimport
 .export sfos_buf, lba, sfos_s_reset
 
@@ -7,6 +8,8 @@
 
 .zeropage
 
+ram_bank:   .byte 0
+rom_bank:   .byte 0
 cmd:        .word 0
 param:      .word 0
 user_dma:   .word 0
@@ -760,6 +763,11 @@ jmptables:
     jmp bios_boot
     jmp bios_wboot
     jmp dispatch
+
+rstfar:
+    sta rom_bank
+    sta rombankreg
+    jmp ($FFFC)
 
 .rodata
 
