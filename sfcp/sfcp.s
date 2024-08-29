@@ -175,7 +175,7 @@ load_transient:
     lda #0
     jmp prompt
 
-    ; now dma and the lba are set.
+    ; now dma is set.
     ; get the sector count from the fcb
 :   lda fcb + sfcb::SC
     sta sfcpcmd                 ; using cmd temporarily here.
@@ -184,7 +184,9 @@ load_transient:
     lda fcb + sfcb::L2
     sta temp+1
 @sector_loop:
-    jsr d_readseqblock
+    lda #<fcb
+    ldx #>fcb
+    jsr d_readseqblock          ; calculates DMA from FCB
     clc
     lda temp+1
     adc #2
@@ -419,6 +421,8 @@ type:
     ldx #>sfos_buf
     jsr d_setdma
 
+    lda #<fcb2
+    ldx #>fcb2
     jsr d_readseqblock
 
     lda #<sfos_buf
@@ -530,6 +534,8 @@ save:
     lda #'.'
     jsr c_write
 
+    lda #<fcb
+    ldx #>fcb
     jsr d_writeseqblock
     bcs @error
     inc temp+2
@@ -621,7 +627,7 @@ c_readstr:
     ldy #esfos::sfos_c_readstr
     jmp SFOS
 d_setdma:
-    ldy #esfos::sfos_d_setmda
+    ldy #esfos::sfos_d_setdma
     jmp SFOS
 d_parsefcb:
     ldy #esfos::sfos_d_parsefcb

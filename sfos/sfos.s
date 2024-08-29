@@ -1,4 +1,4 @@
-; vim: ft=asm_ca65 ts=4 sw=4 et
+; vim: ft=asm_ca65 ts=4 sw=4 etsfos
 .include "fcb.inc"
 .include "io.inc"
 .autoimport
@@ -91,6 +91,9 @@ sfos_c_readstr:
     cpy cmdlen
     bne @L1
 @done:
+    iny
+    lda #0
+    sta (param),y
     tya
     sta (param)             ; overwrite the commandline length with the
     rts                     ; actual commandline length entered.
@@ -139,7 +142,7 @@ login_drive:
     jsr compute_drive_index_lba
 @sector_lp:
     jsr internal_setdma
-    jsr sfos_d_readseqblock     ; read 1 index block
+    jsr internal_readblock ; read 1 index block
     lda user_dma+0
     sta zptemp0+0
     lda user_dma+1
@@ -217,7 +220,7 @@ home_drive:
     sta current_filenum
     sta current_dirpos
     ; user_dma is already defined by the caller.
-    jsr sfos_d_readseqblock ;read first block
+    jsr internal_readblock ;read first block
     lda user_dma+0
     sta zptemp1+0
     lda user_dma+1
@@ -473,7 +476,7 @@ read_directory_entry:
 :   inc zptemp1+1
 :   cmp #16
     bne :+
-    jsr sfos_d_readseqblock ; if it was the end of the sector, load the next
+    jsr internal_readblock  ; if it was the end of the sector, load the next
     stz current_dirpos      ; sector and reset current_dirpos.
     lda user_dma+0
     sta zptemp1+0
@@ -502,16 +505,19 @@ sfos_d_open:
     pla
     jsr bios_setdma         ; sets the bios dma for sdcard ops.
     ; compute LBA
-    stz lba + 3
-    lda drive
-    sta lba + 2
-    ldy #sfcb::FN
-    lda (param),y
-    sta lba + 1
-    stz lba + 0
-    jsr bios_setlba         ; sets the bios lba for sdcard ops.and the lba are set.
-    sta cmd                 ; using cmd temporarily here.
-@sector_loop:
+    ;;;stz lba + 3
+    ;;;lda drive
+    ;;;sta lba + 2
+    ;;;ldy #sfcb::FN
+    ;;;lda (param),y
+    ;;;sta lba + 1
+    ;;;stz lba + 0
+    ;;;jsr bios_setlba         ; sets the bios lba for sdcard ops.and the lba are set.
+    ; initialize the Current Record to 0.
+    ldy #sfcb::CR
+    lda #0
+    sta (param),y
+
     clc
     rts
 @notfound:
@@ -589,7 +595,7 @@ sfos_d_close:
     rts
 
 ; param points to FCB containing filename to create.
-; Returns updated FCB containing Filenumber.
+; Returns updated FCB containing Drive, FN and CR
 sfos_d_make:
     jsr sfos_d_findfirst
     bcs :+
@@ -624,6 +630,9 @@ sfos_d_make:
     cpy #sfcb::S2 + 1
     bne :-
 
+    ldy #sfcb::CR
+    sta (param),y
+
     ; set the lba here so that next write operation has it.
     stz lba + 3
     ldy #sfcb::DD
@@ -654,20 +663,31 @@ sfos_d_setdma:
     stx user_dma + 1
     jmp bios_setdma
 
-; Writes a sector of data (512 bytes) into the previously set DMA.
-; Post updates LBA to be ready for next block to read.
-sfos_d_readseqblock:
+; These internal read and write block functions assume a previously set LBA and DMA
+; and do not update the LBA on completion.
+internal_readblock:
     lda #<lba
     ldx #>lba
     jsr bios_setlba
+    jsr bios_sdread
+    bcs :+
+    lda #1
+    sec
+    rts
+:   inc lba + 0
+    clc
+    rts
 
+; Given the FCB passed in param, the LBA is determined from the DRIVE + CR
+; fields and the block is read into the current DMA address.
+; On completion, the FCB CR field is updated to the next record.
+sfos_d_readseqblock:
+    jsr set_fcb_lba
     jsr bios_sdread
     bra _sdresponse
 
 sfos_d_writeseqblock:
-    lda #<lba
-    ldx #>lba
-    jsr bios_setlba
+    jsr set_fcb_lba
     jsr bios_sdwrite
     ; fall through
 
@@ -675,26 +695,36 @@ _sdresponse:
     bcs :+
     sec
     rts
-:   jsr increment_lba
-    clc
-    rts
+:   jmp increment_fcb_lba   ; carry is set if rollover
 
-increment_lba:
-    clc
-    lda lba + 0
-    adc #1
-    sta lba + 0
-    lda lba + 1
-    adc #0
-    sta lba + 1
-    lda lba + 2
-    adc #0
+set_fcb_lba:
+    stz lba + 3
+    ldy #sfcb::DD
+    lda (param),y
     sta lba + 2
-    lda lba + 3
-    adc #0
-    sta lba + 3
+    ldy #sfcb::FN
+    lda (param),y
+    sta lba + 1
+    ldy #sfcb::CR
+    lda (param),y
+    sta lba + 0
+    lda #<lba
+    ldx #>lba
+    jsr bios_setlba
     rts
 
+increment_fcb_lba:
+    ldy #sfcb::CR
+    lda (param),y
+    clc
+    adc #1
+    sta (param),y
+    beq :+          ; rolled over - a problem.
+    clc
+    rts
+:   sec
+    rts
+;
 ; sets the dma to the sfos_buf
 internal_setdma:
     lda #<sfos_buf

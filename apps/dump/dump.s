@@ -27,7 +27,7 @@ main:
 
     lda #<FCB2
     ldx #>FCB2
-    jsr d_open      ; Sets LBA and DMA, but we need to change the DMA for this.
+    jsr d_open      ; sets DMA, but we need to change the DMA for this.
     bcc :+
     lda #<str_notfound
     ldx #>str_notfound
@@ -42,7 +42,8 @@ sector_loop:
     lda #<SFOS_BUF
     ldx #>SFOS_BUF
     jsr d_setdma
-
+    lda #<FCB2
+    ldx #>FCB2
     jsr d_readseqblock
 
     lda #<SFOS_BUF

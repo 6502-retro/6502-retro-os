@@ -176,6 +176,18 @@ Given a pointer to an FCB in XA populated with the file name and optional drive
 number, find the next free file on the drive from the dirent table and update
 the FCB.
 
+The provided FCB is then initialised with the following fields:
+
+- Drive
+- File number
+- Current Record = 0
+- File Name
+- File Extension
+- Load address = 0
+- Exec address = 0
+- Last byte offset = 0
+- File Attribute = 0x40
+
 Returns with carry clear on success and carry set on failure with the error
 code in A.
 
@@ -187,6 +199,18 @@ code in A.
 
 Given a populated FCB pointed to by XA, open the specific file, validate the
 fields and return with carry clear if successful.
+
+The provided FCB is then initialised with the following fields:
+
+- Drive
+- File number
+- Current Record = 0
+- File Name
+- File Extension
+- Load address = from dirent
+- Exec address = from dirent
+- Last byte offset = from dirent
+- File Attribute = from dirent
 
 Carry is set if failed and error code in A:
 
@@ -205,16 +229,46 @@ Carry is set on failure and error code in A:
 
 ## 14 d_setdma
 
-Lorem Ipsum,
+Sets the DMA address for use by subsequent disk IO operations.
 
 ## 15 d_readseqblock
 
-Read a single sector of bytes (512) from the SDCARD at the previously defined
-LBA into memory at the DMA
+Read a single sector of bytes (512) from the SDCARD LBA as defined by
+the provided FCB. The target will be the previously defined DMA address.
+
+The LBA is a function of the DRIVE + FILE NUMBER + CURRENT
+RECORD.  EG:
+
+```text
+Drive = 01
+FileNumber = 02
+Current Record = 00
+      00-DD-FN-CR
+LBA = 00-01 02 00
+```
+
+On completion, the CR record in the FCB is incremented.  If the CR rolls over
+back to zero, an error is returned.
 
 ## d_writeseqblock
+
+Write a single sector of bytes (512) to the SDCARD LBA as defined by
+the provided FCB. The source will be the previously defined DMA address.
+
+The LBA is a function of the DRIVE + FILE NUMBER + CURRENT
+RECORD.  EG:
+
+```text
+Drive = 01
+FileNumber = 02
+Current Record = 00
+      00-DD-FN-CR
+LBA = 00-01 02 00
+```
+
+On completion, the CR record in the FCB is incremented.  If the CR rolls over
+back to zero, an error is returned.
 
 ## d_readseqbyte
 
 ## d_writeseqbyte
-

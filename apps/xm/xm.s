@@ -184,7 +184,8 @@ CopyBlk3:
     lda #<SFOS_BUF
     ldx #>SFOS_BUF
     jsr d_setdma
-
+    lda #<FCB
+    ldx #>FCB
     jsr d_writeseqblock
     bcc :+
     plx
@@ -216,6 +217,8 @@ Done:
     lda #<SFOS_BUF      ; write the last sector
     ldx #>SFOS_BUF
     jsr d_setdma
+    lda #<FCB
+    ldx #>FCB
     jsr d_writeseqblock
 
     inc FCB+sfcb::SC

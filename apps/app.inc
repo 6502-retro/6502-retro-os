@@ -36,7 +36,7 @@ c_readstr:
     ldy #esfos::sfos_c_readstr
     jmp SFOS
 d_setdma:
-    ldy #esfos::sfos_d_setmda
+    ldy #esfos::sfos_d_setdma
     jmp SFOS
 d_parsefcb:
     ldy #esfos::sfos_d_parsefcb

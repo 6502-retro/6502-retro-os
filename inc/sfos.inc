@@ -14,7 +14,7 @@
     sfos_d_make             = 11
     sfos_d_open             = 12
     sfos_d_close            = 13
-    sfos_d_setmda           = 14
+    sfos_d_setdma           = 14
     sfos_d_readseqblock     = 15
     sfos_d_writeseqblock    = 16
     sfos_d_readseqbyte      = 17

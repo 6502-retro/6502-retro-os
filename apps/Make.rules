@@ -1,15 +1,20 @@
 # Assembler, linker and scripts
 AS = ca65
 LD = ld65
+CC = cl65
+
 TOP = ..
 RELIST = $(TOP)/../scripts/relist.py
 FINDSYM = $(TOP)/../scripts/findsymbols
 LOADTRIM = $(TOP)/../scripts/loadtrim.py
 CFG = $(TOP)/apps.cfg
 INCLUDES = -I $(TOP)/../inc
+LIB = -I $(TOP)/lib
 
 # Assembler flags
 ASFLAGS += $(INCLUDES) -g --feature labels_without_colons --cpu 65C02 --feature string_escapes
+# Compiler flags
+CCFLAGS = --cpu 65C02 -t none -Ln $(BUILD_DIR)/$(APPNAME).sym -C $(CFG) -m $(BUILD_DIR)/$(APPNAME).map -o $(BUILD_DIR)/$(APPNAME).raw $(LIB) $(INCLUDES) -l $(BUILD_DIR)/$(APPNAME).lst
 
 LOAD_ADDR = 800
 
