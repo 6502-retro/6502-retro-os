@@ -13,16 +13,19 @@ ASFLAGS += $(INCLUDES) -g --feature labels_without_colons --cpu 65C02 --feature 
 BUILD_DIR = build
 
 SOURCES = \
+	  sfos_wrappers.s \
 	  sfos_c_write.s \
 	  sfos_c_read.s \
 	  sfos_c_printstr.s \
 	  sfos_c_readstr.s \
 	  sfos_c_status.s \
+	  sfos_d_getsetdrive.s \
 	  sfos_d_setdma.s \
 	  sfos_d_parsefcb.s \
 	  sfos_d_findfirst.s \
 	  sfos_d_make.s \
 	  sfos_d_open.s \
+	  sfos_d_close.s \
 	  sfos_d_readseqblock.s \
 	  sfos_d_writeseqblock.s \
 	  sfos_s_warmboot.s

@@ -24,6 +24,7 @@
         S0  ;filesize low
         S1  ;filesize middle
         S2  ;filesize high
+        S3  ;filesize unused
         CR  ;current record
 .endenum
 

@@ -389,7 +389,7 @@ debug_sector_lba:
 ; result: C=0 -> error, C=1 -> success
 ;-----------------------------------------------------------------------------
 sdcard_read_sector:
-        lda #0
+        ;lda #0
         ;jsr debug_sector_lba
 
         jsr sdcmd_start
@@ -449,7 +449,7 @@ sdcard_read_sector:
 ; result: C=0 -> error, C=1 -> success
 ;-----------------------------------------------------------------------------
 sdcard_write_sector:
-        lda #1
+        ;lda #1
         ;jsr debug_sector_lba
 
         jsr sdcmd_start

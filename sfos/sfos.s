@@ -1,4 +1,5 @@
-; vim: ft=asm_ca65 ts=4 sw=4 etsfos
+; vim: ft=asm_ca65 ts=4 sw=4
+
 .include "fcb.inc"
 .include "io.inc"
 .autoimport
@@ -521,6 +522,7 @@ sfos_d_open:
     clc
     rts
 @notfound:
+	lda #0
     sec
     rts
 
@@ -596,7 +598,17 @@ sfos_d_close:
 
 ; param points to FCB containing filename to create.
 ; Returns updated FCB containing Drive, FN and CR
+; Reuses current_dirent to stash the incomming fcb so the filename can be
+; extracted and restored over the new FCB found.
 sfos_d_make:
+    ; stash dirent.
+    ldy #31
+:
+    lda (param),y
+    sta temp_fcb,y
+    dey
+    bpl :-
+
     jsr sfos_d_findfirst
     bcs :+
     lda #3
@@ -614,38 +626,37 @@ sfos_d_make:
     lda #$40
     ldy #sfcb::FA
     sta (param),y
-    ; zero out L1, L2, E1, E2, S0, S1, S2, Z1, Z2, SC
+
+    ldy #sfcb::CR
     lda #0
-    ldy #sfcb::SC
     sta (param),y
+
+    ; fill in details from the current dirent.
+    ldy #sfcb::SC
+    lda temp_fcb,y
+    sta (param),y
+
     ldy #sfcb::L1
+    lda temp_fcb,y
     sta (param),y
     iny
+    lda temp_fcb,y
     sta (param),y
 
     ldy #sfcb::E1
 :
+    lda temp_fcb,y
     sta (param),y
     iny
     cpy #sfcb::S2 + 1
     bne :-
 
-    ldy #sfcb::CR
+    ldy #12
+:   lda temp_fcb,y
     sta (param),y
+    dey
+    bne :-
 
-    ; set the lba here so that next write operation has it.
-    stz lba + 3
-    ldy #sfcb::DD
-    lda (param),y
-    sta lba + 2
-    ldy #sfcb::FN
-    lda (param),y
-    sta lba + 1
-    stz lba + 0
-    lda #<lba
-    ldx #>lba
-    jsr bios_setlba
-    lda #0
     clc
     rts
 @error:
@@ -786,6 +797,7 @@ to_upper:
     drvtbl:         .res 16
     lba:            .res 4, 0
     cmdlen:         .byte 0
+    temp_fcb:       .res 32,0
 
 .segment "SYSTEM"
 ; dispatch function, will be relocated on boot into SYSRAM

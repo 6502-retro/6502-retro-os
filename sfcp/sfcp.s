@@ -503,14 +503,6 @@ save:
     clc
     rts
 :
-    ; copy fcb2 filename into fcb
-    ldx #sfcb::N1
-:   lda fcb2,x
-    sta fcb,x
-    inx
-    cpx #sfcb::T3+1
-    bne :-
-
     ; convert command tail which is the number of pages to save to a byte
     jsr parse_number
     bcc :+
@@ -659,9 +651,6 @@ d_make:
 
 ; parse an 8-bit decimal number from the command line.  David Given - cpm65
 parse_number:
-    lda cmdoffset+0
-    ldx cmdoffset+1
-
     ; we use the current commandoffset
     stz temp+0
     lda cmdoffset+0

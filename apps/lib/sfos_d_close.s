@@ -3,17 +3,18 @@
 .include "sfos.inc"
 .include "asminc.inc"
 
-.export _sfos_d_make
+.export _sfos_d_close
 
 .code
-_sfos_d_make:
-    ldy #esfos::sfos_d_make
+_sfos_d_close:
+    ldy #esfos::sfos_d_close
     jsr SFOS
-    bcs :+
+    bcc :+
     lda #0
     ldx #0
     rts
-:   lda #1
+:
+    lda #1
     tax
     rts
 

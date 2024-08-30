@@ -49,13 +49,6 @@ main:
     clc
     rts
 :
-    ; copy fcb2 filename into fcb
-    ldx #sfcb::N1
-:   lda FCB2,x
-    sta FCB,x
-    inx
-    cpx #sfcb::T3+1
-    bne :-
 
 start:
     jsr PrintMsg         ; send prompt and info
@@ -197,7 +190,7 @@ CopyBlk3:
     lda #>SFOS_BUF
     sta ptr+1
     inc FCB + sfcb::SC
-    jsr clear_buf    
+    jsr clear_buf
     plx
 CopyBlk4:
     inx                  ; point to next data byte
