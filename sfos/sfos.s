@@ -17,6 +17,7 @@ user_dma:   .word 0
 zptemp0:    .word 0
 zptemp1:    .word 0
 zptemp2:    .word 0
+zpbufptr:   .word 0
 
 .code
 
@@ -485,7 +486,7 @@ read_directory_entry:
     sta zptemp1+1
 :   rts
 
-; given an fcb pointed by param, find the file and set the LBA and DMA address.
+; given an fcb pointed by param, find the file and set the DMA address.
 sfos_d_open:
     ldy #sfcb::DD
     lda (param),y
@@ -505,24 +506,25 @@ sfos_d_open:
     tax
     pla
     jsr bios_setdma         ; sets the bios dma for sdcard ops.
-    ; compute LBA
-    ;;;stz lba + 3
-    ;;;lda drive
-    ;;;sta lba + 2
-    ;;;ldy #sfcb::FN
-    ;;;lda (param),y
-    ;;;sta lba + 1
-    ;;;stz lba + 0
-    ;;;jsr bios_setlba         ; sets the bios lba for sdcard ops.and the lba are set.
     ; initialize the Current Record to 0.
     ldy #sfcb::CR
     lda #0
     sta (param),y
 
+    ; save the filesize in maths 
+    ldy #sfcb::S0
+    lda (param),y
+    sta maths+0
+    ldy #sfcb::S1
+    lda (param),y
+    sta maths+1
+    ldy #sfcb::S2
+    lda (param),y
+    sta maths+2
+
     clc
     rts
 @notfound:
-	lda #0
     sec
     rts
 
@@ -675,7 +677,7 @@ sfos_d_setdma:
     jmp bios_setdma
 
 ; These internal read and write block functions assume a previously set LBA and DMA
-; and do not update the LBA on completion.
+; and do update the LBA on completion.
 internal_readblock:
     lda #<lba
     ldx #>lba
@@ -695,18 +697,24 @@ internal_readblock:
 sfos_d_readseqblock:
     jsr set_fcb_lba
     jsr bios_sdread
-    bra _sdresponse
+    bcc sd_op_fail
+
+    lda user_dma+0      ; we want to set the buffer pointer just in case
+    sta zpbufptr+0       ; the next thing we do will be readseqbyte
+    lda user_dma+1
+    sta zpbufptr+1
+
+    jmp increment_fcb_cr
+
+sd_op_fail:
+    sec
+    rts
 
 sfos_d_writeseqblock:
     jsr set_fcb_lba
     jsr bios_sdwrite
-    ; fall through
-
-_sdresponse:
-    bcs :+
-    sec
-    rts
-:   jmp increment_fcb_lba   ; carry is set if rollover
+    bcc sd_op_fail
+    jmp increment_fcb_cr   ; carry is set if rollover
 
 set_fcb_lba:
     stz lba + 3
@@ -724,18 +732,78 @@ set_fcb_lba:
     jsr bios_setlba
     rts
 
-increment_fcb_lba:
+increment_fcb_cr:
     ldy #sfcb::CR
     lda (param),y
-    clc
-    adc #1
+    inc
     sta (param),y
     beq :+          ; rolled over - a problem.
     clc
     rts
 :   sec
     rts
-;
+
+; input param = FCB
+; The first block must have already been read in by the caller.
+; Returns the next byte from the buffer.
+; When the last buffer is read, stash it, load the next sector into the buffer
+; and return the stashed byte.
+; Buffer is at the current DMA address.
+; pointer to current byte is in zpbufptr
+; we need to know if we have read the final byte of the file.
+; do this by decrementing the size inside the FCB. When that gets to zero we
+; are done.
+sfos_d_readseqbyte:
+    lda (zpbufptr)           ; get the byte pointed to by zpbufptr
+    pha                     ; stash it
+    inc zpbufptr+0           ; increment buffer pointer
+    bne :+
+    inc zpbufptr+1
+:   lda zpbufptr+1
+    ldx user_dma+1
+    inx
+    inx
+    cpx zpbufptr+1
+    bne @return
+
+    lda user_dma+0        ; reset the buffer pointer.  Ready for the next
+    sta zpbufptr+0           ; byte
+    ldx user_dma+1
+    stx zpbufptr+1
+    jsr bios_setdma         ; set dma pointer in bios
+
+    jsr sfos_d_readseqblock ; read the new sector
+    bcc @return             ; if OKAY carry on, otherwise return with carry set.
+    rts
+@return:
+    ; decrement the remaining size
+    lda maths+0
+    bne @dec_ones
+    lda maths+1
+    bne @dec_tens
+    lda maths+2
+@dec_hundreds:
+    dec maths+2
+@dec_tens:
+    dec maths+1
+@dec_ones:
+    dec maths+0
+    lda maths+0
+    ora maths+1
+    ora maths+2
+    beq @exit
+@ok:
+    pla                     ; retreive the stashed byte
+    clc                     ; return okay.
+    rts
+@exit:                      ; we have reached zero bytes in the FCB
+    pla                     ; We still return the stashed byte.
+    sec
+    rts
+
+sfos_d_writeseqbyte:
+    jmp unimplimented
+
 ; sets the dma to the sfos_buf
 internal_setdma:
     lda #<sfos_buf
@@ -758,13 +826,6 @@ dispatch:
 ; ----------------------------------------------------------------------------
 sfos_d_createfcb:
     jmp unimplimented
-
-sfos_d_readseqbyte:
-    jmp unimplimented
-
-sfos_d_writeseqbyte:
-    jmp unimplimented
-
 
 ; ----------------------------------------------------------------------------
 ; ---- HELPER FUNCTIONS ------------------------------------------------------
@@ -798,6 +859,7 @@ to_upper:
     lba:            .res 4, 0
     cmdlen:         .byte 0
     temp_fcb:       .res 32,0
+    maths:          .res 4
 
 .segment "SYSTEM"
 ; dispatch function, will be relocated on boot into SYSRAM

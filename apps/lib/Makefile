@@ -27,6 +27,7 @@ SOURCES = \
 	  sfos_d_open.s \
 	  sfos_d_close.s \
 	  sfos_d_readseqblock.s \
+	  sfos_d_readseqbyte.s \
 	  sfos_d_writeseqblock.s \
 	  sfos_s_warmboot.s
 

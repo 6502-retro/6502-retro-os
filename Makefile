@@ -16,11 +16,11 @@ BUILD_DIR = build
 
 # Sources and objects
 BIOS_SOURCES = \
-	       bios/acia.s \
 	       bios/bios.s \
+	       bios/acia.s \
 	       bios/sdcard.s \
+	       bios/zerobss.s \
 	       bios/vectors.s \
-	       bios/zerobss.s
 
 BIOS_OBJS = $(addprefix $(BUILD_DIR)/, $(BIOS_SOURCES:.s=.o))
 

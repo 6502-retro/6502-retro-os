@@ -84,3 +84,35 @@ the hardware stack.
 ### Warm Start
 
 - Jumps to prompt in the SFCP
+
+## Default OS Programs
+
+### HELLO.COM
+
+This is the standard assembly version of a helloworld program.  Run it and it
+says, "Hello"
+
+### DUMP.COM
+
+Dumps in ASCII HEX format the contents of a file.
+
+### STAT.COM
+
+Lists filesize, used sectors and file names of the files on a given drive or
+the default drive.
+
+### XM.COM
+
+XMODEM RECEIVE
+
+Specify a filename to save to.  If the file name does not already exist on the
+drive then XMODEM receive starts listening for the first byte.  Use your serial
+terminal to initiate an XMODEM send and the file will be transferred with CRC
+Checking into the file given on the disk.   File will be loaded into the start
+of TPA so make sure that all the files you compile to be delivered this way are
+compiled to start at TPA. (on SFM that's 0x800)
+
+### COPY.COM
+
+Copy files between drives and on the same drive but to a new filename.
+(probably needs this check to be actually implimented.)
