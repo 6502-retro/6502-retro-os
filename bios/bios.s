@@ -1,10 +1,11 @@
 ; vim: ft=asm_ca65
+
 .autoimport
 .globalzp ptr1, bdma_ptr, lba_ptr
 
 .export bios_boot, bios_wboot, bios_conin, bios_conout, bios_const
 .export bios_setdma, bios_setlba, bios_sdread, bios_sdwrite, bios_puts
-.export bios_prbyte, bios_printlba
+.export bios_prbyte
 
 .zeropage
 
@@ -98,6 +99,7 @@ bios_puts:
 @done:
     rts
 
+.if DEBUG=1
 bios_printlba:
     pha
     phx
@@ -116,36 +118,35 @@ bios_printlba:
     plx
     pla
     rts
+.endif
 
 bios_prbyte:
-    PHA             ;Save A for LSD.
-    LSR
-    LSR
-    LSR             ;MSD to LSD position.
-    LSR
-    JSR PRHEX       ;Output hex digit.
-    PLA             ;Restore A.
-PRHEX:
-    AND #$0F        ;Mask LSD for hex print.
-    ORA #$B0        ;Add "0".
-    CMP #$BA        ;Digit?
-    BCC ECHO        ;Yes, output it.
-    ADC #$06        ;Add offset for letter.
-ECHO:
-    PHA             ;*Save A
-    AND #$7F        ;*Change to "standard ASCII"
-    JSR acia_putc
-    PLA             ;*Restore A
-    RTS             ;*Done, over and out...
+    pha             ;Save A for LSD.
+    lsr
+    lsr
+    lsr             ;MSD to LSD position.
+    lsr
+    jsr prhex       ;Output hex digit.
+    pla             ;Restore A.
+prhex:
+    and #$0F        ;Mask LSD for hex print.
+    ora #$B0        ;Add "0".
+    cmp #$BA        ;Digit?
+    bcc echo        ;Yes, output it.
+    adc #$06        ;Add offset for letter.
+echo:
+    pha             ;*Save A
+    and #$7F        ;*Change to "standard ASCII"
+    jsr acia_putc
+    pla             ;*Restore A
+    rts             ;*Done, over and out...
 
 ;---- Helper functions -------------------------------------------------------
 set_sdbuf_ptr:
     lda bdma + 1
     sta bdma_ptr + 1
-    ;jsr bios_prbyte
     lda bdma + 0
     sta bdma_ptr + 0
-    ;jsr bios_prbyte
     rts
 
 zero_lba:

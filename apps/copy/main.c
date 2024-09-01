@@ -57,7 +57,7 @@ void main(void) {
 
     // Parse new filename
     sfos_d_setdma((uint16_t*)&fcb);
-    sfos_d_parsefcb((uint16_t*)cmdoffset);
+    sfos_d_parsefcb((uint16_t*)sfos_cmdoffset);
 
     // Open Source filename
     sfos_d_getsetdrive((&fcb2)->DRIVE);

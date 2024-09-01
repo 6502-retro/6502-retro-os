@@ -17,7 +17,9 @@ class Index(object):
     | En   | 11-12  | Execution Address. Can be zero if file is not executable           |
     | Zn   | 13-14  | Last byte offset.  The offset to last byte in the last used sector |
     | Sn   | 15-17  | File size. 24 bits                                                 |
-    | xx   | 18-1F  |                                                                    |
+    | xx   | 18-18  | Unused. Allows for C to evaluate 32 bit number                     |
+    | CR   | 19-19  | Current record. Used by DISK IO to track current sector.           |
+    | xx   | 18-1F  | Unused                                                             |
     """
 
     def __init__(self, barray):
@@ -34,12 +36,12 @@ class Index(object):
 
     @staticmethod
     def name2filename(filename: str):
-        name_bytes = f"{filename[:8]}".ljust(8, " ")
+        name_bytes = f"{filename[:8].upper()}".ljust(8, " ")
         return name_bytes
 
     @staticmethod
     def ext2extension(extension: str):
-        extension_bytes = f"{extension[:3]}".ljust(3, " ")
+        extension_bytes = f"{extension[:3].upper()}".ljust(3, " ")
         return extension_bytes
 
     @staticmethod
@@ -76,7 +78,7 @@ class Index(object):
         )
 
     def flush(self, fd):
-        seekpos = (INDEX_SECTOR_START + ((self.drive -1) * 16)) * SECTOR_SIZE + (
+        seekpos = (INDEX_SECTOR_START + ((self.drive - 1) * 16)) * SECTOR_SIZE + (
             self.file_num * INDEX_SIZE
         )
         fd.seek(seekpos)

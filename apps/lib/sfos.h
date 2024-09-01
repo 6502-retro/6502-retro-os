@@ -7,10 +7,10 @@
 //hard coded addresses that SFCP uses
 #define FCB          0x380
 #define FCB2         0x3A0
-#define CMDLINE      0x300
-#define CMDOFFSET    0x3C0    // address of commandline
-#define SFOS_BUF     0x400
-#define SFOS_BUF_END 0x600
+
+#define fcb (*(_fcb*)FCB)
+#define fcb2 (*(_fcb*)FCB2)
+
 
 typedef struct __fcb{
     uint8_t     DRIVE;
@@ -26,13 +26,9 @@ typedef struct __fcb{
     uint8_t     CR;
 } _fcb;
 
-//extern _fcb fcb;
-//extern _fcb fcb2;
-#define fcb (*(_fcb*)FCB)
-#define fcb2 (*(_fcb*)FCB2)
-
-extern uint16_t cmdoffset;
-extern uint16_t commandline;
+extern uint8_t sfos_error_code;
+extern uint16_t sfos_cmdoffset;
+extern uint16_t sfos_commandline;
 extern uint16_t sfos_buf;
 extern uint16_t sfos_buf_end;
 

@@ -1,6 +1,8 @@
 ; vim: ft=asm_ca65 ts=4 sw=4 et
 .include "sfos.inc"
 .include "fcb.inc"
+.include "errors.inc"
+
 .export main, prompt
 .autoimport
 
@@ -242,11 +244,14 @@ dir:
     lda #<fcb
     ldx #>fcb
     jsr d_findfirst
-    bcs @exit
-    bra @skip_first
+    bcc @skip_first
+    ; Error on find first can be DRIVE_ERROR or END_OF_DIR
+    cmp #ERROR::FILE_NOT_FOUND  ; it's okay to have end of directory
+    beq @exit                   ; on find first. (empty drive)
+    sec
+    rts
 @next:
     bcs @exit
-
     lda temp
     cmp #1
     beq @skip_first
@@ -261,7 +266,7 @@ dir:
     ldx #>fcb
     jsr d_findnext
     bra @next
-@exit:
+@exit:                          ; this exit is normal, end of drive.
     jsr restore_active_drive
     lda #0
     clc
@@ -819,7 +824,7 @@ print_fcb:
     inx
     cpx #(sfcb::T3+1)
     bne :-
-:   rts
+    rts
 
 show_prompt:
     lda #$ff

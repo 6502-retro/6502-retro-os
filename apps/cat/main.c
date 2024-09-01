@@ -71,12 +71,12 @@ void main(void) {
 
     for (;;) {
         c = sfos_d_readseqbyte(&fcb2);
-        if (c) {
+        if (sfos_error_code)
+            break;
+        else {
             sfos_c_write(c);
             if (c == '\n')
             sfos_c_write('\r');
-        } else {
-            break;
         }
     }
 

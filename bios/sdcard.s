@@ -356,6 +356,7 @@ sdcard_init:
         clc
         rts
 
+.if DEBUG
 debug_sector_lba:
         pha
         lda #13
@@ -382,6 +383,7 @@ debug_sector_lba:
         lda #10
         jsr acia_putc
         rts
+.endif
 
 ;-----------------------------------------------------------------------------
 ; sdcard_read_sector
@@ -389,9 +391,10 @@ debug_sector_lba:
 ; result: C=0 -> error, C=1 -> success
 ;-----------------------------------------------------------------------------
 sdcard_read_sector:
-        ;lda #0
-        ;jsr debug_sector_lba
-
+.if DEBUG=1
+        lda #0
+        jsr debug_sector_lba
+.endif
         jsr sdcmd_start
         ; Send READ_SINGLE_BLOCK command
         lda #($40 | 17)
@@ -449,9 +452,10 @@ sdcard_read_sector:
 ; result: C=0 -> error, C=1 -> success
 ;-----------------------------------------------------------------------------
 sdcard_write_sector:
-        ;lda #1
-        ;jsr debug_sector_lba
-
+.if DEBUG=1
+        lda #1
+        jsr debug_sector_lba
+.endif
         jsr sdcmd_start
         ; Send WRITE_BLOCK command
         lda #($40 | 24)

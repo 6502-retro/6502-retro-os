@@ -2,6 +2,8 @@
 
 .include "fcb.inc"
 .include "io.inc"
+.include "errors.inc"
+
 .autoimport
 .export sfos_buf, lba, sfos_s_reset
 
@@ -195,9 +197,12 @@ internal_getsetdrive:
     lda #$00        ; don't force scan
     jsr login_drive
 @exit:
+    sta error_code
     clc
     rts
 @out_of_range:
+    lda #ERROR::DRIVE_ERROR
+    sta error_code
     sec
     rts
 
@@ -242,8 +247,7 @@ home_drive:
 sfos_d_parsefcb:
     ; param -> commandline (filename)
     ; dma -> FCB
-    lda #0
-    sta zptemp0             ; failure flag
+    stz zptemp0             ; failure flag
 
     ; check the drive
 
@@ -310,7 +314,6 @@ sfos_d_parsefcb:
     lda (param),y
     bra @L2
     ; read the extension
-
 :   iny
     ldx #3
 @L3:
@@ -362,9 +365,12 @@ sfos_d_parsefcb:
     ldx param+1
     bcc :+                  ; did we rollover on the adc above?
     inx                     ; XA points to first char after space
-:   clc                     ; TODO: should call skipsapces here.
+:   clc                     ; 
     ldy zptemp0             ; was there a failure?
     beq :+
+    lda #ERROR::PARSE_ERROR ; return parse error or XA.
+    sta error_code
+    ldx #0
     sec
 :   rts
 
@@ -390,7 +396,8 @@ sfos_d_findfirst:
     jsr internal_setdma
     jsr home_drive
     bcc :+
-    lda #$01                ; TODO: CHECK ERROR CODES
+    lda #ERROR::DRIVE_ERROR
+    sta error_code
     sec
     rts
 :   jsr read_directory_entry
@@ -405,12 +412,11 @@ sfos_d_findfirst:
 ;   - sector lba
 ;   - current_directory_pos
 sfos_d_findnext:
-    ; check if drive matches current.  It won't if we went over the drive indexes.
-    ; might be a better way to do this XXX: Is there a better way?
     lda drive
     cmp current_dirent + sfcb::DD
     beq :+
-    lda #$02                ; end of directory
+    lda #ERROR::FILE_NOT_FOUND
+    sta error_code
     sec
     rts
 :   lda current_dirent + sfcb::FA
@@ -427,7 +433,8 @@ sfos_d_findnext:
     lda drvtbl + drvalloc::maxdrv,x
     cmp current_dirent + sfcb::FN
     bcs @nomatch
-    lda #2
+    lda #ERROR::FILE_NOT_FOUND
+    sta error_code
     sec
     rts
 :   ldy #sfcb::N1
@@ -446,13 +453,18 @@ sfos_d_findnext:
     dey
     bpl:-
     jsr read_directory_entry    ; for next time (if there's a next time)
-    lda #$FF
+    bcc :+
+    rts
+:   lda #$FF
     clc
+    lda #ERROR::OK
+    sta error_code
     rts
 @nomatch:
     ; we have to check the next directory entry.
     jsr read_directory_entry
-    bra sfos_d_findnext
+    bcc sfos_d_findnext
+    rts
 
 ; reads the directory entry, loads the next sector from disk if needed
 read_directory_entry:
@@ -473,30 +485,44 @@ read_directory_entry:
     inc current_dirpos      ; increment the current_dirpos and check for end
     lda current_dirpos      ; the end of the current directory sector
     cmp #8
-    beq :+
-    bra :++
-:   inc zptemp1+1
-:   cmp #16
-    bne :+
+    beq @second_half
+    cmp #16                 ; do we need to load a new block into the buffer
+    beq @next_block
+    clc
+    rts
+@second_half:               ; Once we get to 8 dirents, we need to increment
+    inc zptemp1+1           ; the high byte of the pointer into the buffer.
+    clc
+    rts
+
+@next_block:
     jsr internal_readblock  ; if it was the end of the sector, load the next
-    stz current_dirpos      ; sector and reset current_dirpos.
+    bcc :+
+    lda #ERROR::DRIVE_ERROR
+    sta error_code
+    sec
+    rts
+:   stz current_dirpos      ; sector and reset current_dirpos.
     lda user_dma+0
     sta zptemp1+0
     lda user_dma+1
     sta zptemp1+1
-:   rts
+    rts
 
 ; given an fcb pointed by param, find the file and set the DMA address.
 sfos_d_open:
     ldy #sfcb::DD
     lda (param),y
-    beq :+
+    beq :+                  ; if the drive is provided, then switch to that drive
     jsr internal_getsetdrive
+    bcc :+                  ; allow for drive error from internal getsetdrive.
+    rts
 :
     jsr sfos_d_findfirst    ; sets internal dma already
-    bcs @notfound
+    bcc :+
+    rts
     ; set the dma address
-    ldy #sfcb::L1
+:   ldy #sfcb::L1
     lda (param),y
     sta user_dma+0
     pha
@@ -511,21 +537,19 @@ sfos_d_open:
     lda #0
     sta (param),y
 
-    ; save the filesize in maths 
+    ; save the filesize in fsize 
     ldy #sfcb::S0
     lda (param),y
-    sta maths+0
+    sta fsize+0
     ldy #sfcb::S1
     lda (param),y
-    sta maths+1
+    sta fsize+1
     ldy #sfcb::S2
     lda (param),y
-    sta maths+2
-
+    sta fsize+2
+    lda #ERROR::OK
+    sta error_code
     clc
-    rts
-@notfound:
-    sec
     rts
 
 ; param points to FCB that needs to be closed.
@@ -537,7 +561,7 @@ sfos_d_close:
     lsr     ;/4
     lsr     ;/8
     lsr     ;/16
-    clc                     ; add to lba+0 for sector conaining drive
+    clc                     ; add to lba+0 for sector conaining file dirent
     adc lba+0
     sta lba+0
     lda #<lba
@@ -547,8 +571,8 @@ sfos_d_close:
     lda #<sfos_buf
     ldx #>sfos_buf
     jsr bios_setdma
-    jsr bios_sdread
-    bcc @error
+    jsr bios_sdread         ; not calling internal_readblock because we don't
+    bcc @error              ; want the LBA incremented here.
     ; now insert the fcb into the sector
     ldy #sfcb::FN
     lda (param),y
@@ -563,8 +587,8 @@ sfos_d_close:
     ldy #sfcb::FN
     lda (param),y
     ldy #0
-    cmp #$80                ; when the dirpos is > 80 we must insert the fcb into the
-    bcs @upper              ; second half of the 512byte sector.
+    cmp #$80                ; when the filenum is > 80 we must insert
+    bcs @upper              ; the fcb into thesecond half of the 512byte sector.
 :   lda (param),y           ; copy fcb to lower half of sector
     sta sfos_buf,x
     inx
@@ -573,28 +597,31 @@ sfos_d_close:
     bne :-
     bra @flush
 @upper:                     ; copy fcb to upper half of sector.
-:   lda (param),y           ; copy fcb to lower half of sector
+:   lda (param),y
     sta sfos_buf+256,x
     inx
     iny
     cpy #32
     bne :-
 @flush:
-    lda #<sfos_buf
-    ldx #>sfos_buf
-    jsr bios_setdma
+    lda #<sfos_buf          ; there is no internal writeblock like there is an
+    ldx #>sfos_buf          ; internal readlbock.  Because this is the only time
+    jsr bios_setdma         ; that function is needed.  So it's inlined here.
     lda #<lba
     ldx #>lba
     jsr bios_setlba
     jsr bios_sdwrite
     bcs @exit
 @error:
+    lda #ERROR::DRIVE_ERROR
+    sta error_code
     sec
     rts
 @exit:
     lda #$FF                ; force drive scan
     jsr login_drive
-    lda #0
+    lda #ERROR::OK
+    sta error_code
     clc
     rts
 
@@ -613,17 +640,33 @@ sfos_d_make:
 
     jsr sfos_d_findfirst
     bcs :+
-    lda #3
-    bra @error
-:   ; file does not exist.
-    ldy #sfcb::DD           ; tell find first to return an empty slot
+    lda #ERROR::FILE_EXISTS
+    sta error_code
+    sec
+    rts
+:   ; file does not exist or drive error
+    cmp #ERROR::DRIVE_ERROR
+    sta error_code
+    bne :+
+    sec
+    rts
+:   ldy #sfcb::DD           ; tell find first to return an empty slot
     lda #$E5
     sta (param),y
     jsr sfos_d_findfirst
-    bcc @exit
-    lda 1
-    bra @error
-@exit:
+    bcc @allocate
+    cmp #ERROR::END_OF_DIR
+    sta error_code
+    bne :+
+    lda #ERROR::DRIVE_FULL
+    sta error_code
+    sec
+    rts
+:   lda #ERROR::DRIVE_ERROR
+    sta error_code
+    sec
+    rts
+@allocate:
     ; allocate dirent by setting file attribute to 0x40
     lda #$40
     ldy #sfcb::FA
@@ -658,11 +701,9 @@ sfos_d_make:
     sta (param),y
     dey
     bne :-
-
+    lda #ERROR::OK
+    sta error_code
     clc
-    rts
-@error:
-    sec
     rts
 
 ; ----------------------------------------------------------------------------
@@ -684,7 +725,8 @@ internal_readblock:
     jsr bios_setlba
     jsr bios_sdread
     bcs :+
-    lda #1
+    lda #ERROR::DRIVE_ERROR
+    sta error_code
     sec
     rts
 :   inc lba + 0
@@ -707,6 +749,8 @@ sfos_d_readseqblock:
     jmp increment_fcb_cr
 
 sd_op_fail:
+    lda #ERROR::DRIVE_ERROR
+    sta error_code
     sec
     rts
 
@@ -736,11 +780,15 @@ increment_fcb_cr:
     ldy #sfcb::CR
     lda (param),y
     inc
+    beq :+                  ; have we gone past the end of MAX FILESIZE
     sta (param),y
-    beq :+          ; rolled over - a problem.
     clc
+    lda #ERROR::OK
+    sta error_code
     rts
-:   sec
+:   lda #ERROR::FILE_MAX_REACHED
+    sta error_code
+    sec
     rts
 
 ; input param = FCB
@@ -754,9 +802,9 @@ increment_fcb_cr:
 ; do this by decrementing the size inside the FCB. When that gets to zero we
 ; are done.
 sfos_d_readseqbyte:
-    lda (zpbufptr)           ; get the byte pointed to by zpbufptr
+    lda (zpbufptr)          ; get the byte pointed to by zpbufptr
     pha                     ; stash it
-    inc zpbufptr+0           ; increment buffer pointer
+    inc zpbufptr+0          ; increment buffer pointer
     bne :+
     inc zpbufptr+1
 :   lda zpbufptr+1
@@ -766,40 +814,42 @@ sfos_d_readseqbyte:
     cpx zpbufptr+1
     bne @return
 
-    lda user_dma+0        ; reset the buffer pointer.  Ready for the next
-    sta zpbufptr+0           ; byte
+    lda user_dma+0          ; reset the buffer pointer.  Ready for the next
+    sta zpbufptr+0          ; byte
     ldx user_dma+1
     stx zpbufptr+1
     jsr bios_setdma         ; set dma pointer in bios
 
     jsr sfos_d_readseqblock ; read the new sector
     bcc @return             ; if OKAY carry on, otherwise return with carry set.
+    ; reutrn the error from readseqblock - error_code already populated.
     rts
 @return:
-    ; decrement the remaining size
-    lda maths+0
+    ; decrement the remaining size  (24 bit decrement)
+    lda fsize+0
     bne @dec_ones
-    lda maths+1
+    lda fsize+1
     bne @dec_tens
-    lda maths+2
+    lda fsize+2
 @dec_hundreds:
-    dec maths+2
+    dec fsize+2
 @dec_tens:
-    dec maths+1
+    dec fsize+1
 @dec_ones:
-    dec maths+0
-    lda maths+0
-    ora maths+1
-    ora maths+2
+    dec fsize+0
+    lda fsize+0             ; 24bit check for zero
+    ora fsize+1
+    ora fsize+2
     beq @exit
-@ok:
+@ok:                        ; Return the value not the ERROR CODE.
     pla                     ; retreive the stashed byte
     clc                     ; return okay.
     rts
 @exit:                      ; we have reached zero bytes in the FCB
     pla                     ; We still return the stashed byte.
     sec
-    rts
+    lda #ERROR::OK          ; it's not an error so populate error_code with OK
+    rts                     ; caller has to check error_code
 
 sfos_d_writeseqbyte:
     jmp unimplimented
@@ -859,20 +909,21 @@ to_upper:
     lba:            .res 4, 0
     cmdlen:         .byte 0
     temp_fcb:       .res 32,0
-    maths:          .res 4
+    fsize:          .res 4
 
 .segment "SYSTEM"
 ; dispatch function, will be relocated on boot into SYSRAM
 jmptables:
-    jmp bios_boot
-    jmp bios_wboot
-    jmp dispatch
+    jmp bios_boot       ; 0x200
+    jmp bios_wboot      ; 0x203
+    jmp dispatch        ; 0x206
+error_code: .byte 0     ; 0x209
 
-rstfar:
+rstfar:                 ; 0x20A
     sta rom_bank
-    sta rombankreg
-    jmp ($FFFC)
-
+    sta rombankreg      ; 0x20C
+    jmp ($FFFC)         ; 0x20E
+                        ; 0x211
 .rodata
 
 sfos_jmp_tbl_lo:

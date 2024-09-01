@@ -9,6 +9,9 @@ TTY_DEVICE = /dev/ttyUSB0
 # Assembler flags
 ASFLAGS += -I inc -g --feature labels_without_colons --cpu 65C02 --feature string_escapes
 
+# Set DEBUG=1 for debugging.
+DEBUG = -D DEBUG=0
+
 SFM_LOAD_ADDR = 8000
 
 # Where should the builds be placed
@@ -41,7 +44,7 @@ clean:
 
 $(BUILD_DIR)/%.o: %.s
 	@mkdir -p $$(dirname $@)
-	$(AS) $(ASFLAGS) -l $(BUILD_DIR)/$*.lst $< -o $@
+	$(AS) $(ASFLAGS) $(DEBUG) -l $(BUILD_DIR)/$*.lst $< -o $@
 
 $(BUILD_DIR)/rom.raw: $(SFCP_OBJS) $(SFOS_OBJS) $(BIOS_OBJS)
 	@mkdir -p $$(dirname $@)
