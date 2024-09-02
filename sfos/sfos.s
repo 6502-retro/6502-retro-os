@@ -878,9 +878,10 @@ sfos_d_readseqbyte:
     clc                     ; return okay.
     rts
 @exit:                      ; we have reached zero bytes in the FCB
-    pla                     ; We still return the stashed byte.
     sec
-    lda #ERROR::OK          ; it's not an error so populate error_code with OK
+    lda #ERROR::FILE_EOF    ; it's not an error so populate error_code with OK
+    sta error_code
+    pla                     ; We still return the stashed byte.
     rts                     ; caller has to check error_code
 
 ; input param = FCB requires buffer DMA to be pre-assigned.
