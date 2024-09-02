@@ -29,6 +29,7 @@ SOURCES = \
 	  sfos_d_readseqblock.s \
 	  sfos_d_readseqbyte.s \
 	  sfos_d_writeseqblock.s \
+	  sfos_d_writeseqbyte.s \
 	  sfos_s_warmboot.s
 
 OBJS = $(addprefix $(BUILD_DIR)/, $(SOURCES:.s=.o))

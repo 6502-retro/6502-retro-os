@@ -6,6 +6,9 @@
 .export bios_boot, bios_wboot, bios_conin, bios_conout, bios_const
 .export bios_setdma, bios_setlba, bios_sdread, bios_sdwrite, bios_puts
 .export bios_prbyte
+.if DEBUG=1
+.export bios_printlba
+.endif
 
 .zeropage
 

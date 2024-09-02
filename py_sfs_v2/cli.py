@@ -142,7 +142,7 @@ def cp(image, source, destination):
     sfs = SFS(image)
     drive -= 0x40
     if copy_dir == 0:
-        if sfs.create(drive-1, sfs_filename):
+        if sfs.create(drive - 1, sfs_filename):
             with open(local_filename, "rb") as fd:
                 if sfs.write(fd.read()):
                     print(f"Wrote {sfs.idx.file_size} bytes...")

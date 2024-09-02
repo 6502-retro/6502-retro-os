@@ -1,3 +1,4 @@
+<!-- vim: set ft=markdown -->
 # SFOS
 
 The Simple Filesystem Operating System (SFOS) is a collection of routines that
@@ -271,4 +272,14 @@ back to zero, an error is returned.
 
 ## d_readseqbyte
 
+Return the next byte from an open file given by the input FCB pointed by XA.
+When the end of the file is reached, an error condition is returned with Carry
+set and the the error_code = ERROR::OK. Note: DMA must must be set to an
+appropriate 512 byte buffer to begin with.  It's safe to use the `sfos_buf` for
+this purpose.
+
 ## d_writeseqbyte
+
+Write the byte in A to the openfile given by the input FCB.  Note: DMA must be
+set to an appropriate 512 byte buffer to begin with.  It's safe to use the
+`sfos_buf` for this purpose.

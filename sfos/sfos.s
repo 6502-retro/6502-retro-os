@@ -554,6 +554,36 @@ sfos_d_open:
 
 ; param points to FCB that needs to be closed.
 sfos_d_close:
+    ; do we have a dirty sector to write before we close?
+    lda dirty_sector
+    beq @close
+
+    lda user_dma+0
+    ldx user_dma+1
+    jsr bios_setdma
+    jsr sfos_d_writeseqblock
+    bcc @update_fcb
+    rts                     ; return with error from write sequential block
+@update_fcb:
+    ldy #sfcb::SC
+    lda (param),y
+    inc
+    sta (param),y
+
+    ldy #sfcb::S0           ; update the FCB filesize
+    lda fsize+0
+    sta (param),y
+    jsr bios_prbyte
+    iny
+    lda fsize+1
+    sta (param),y
+    jsr bios_prbyte
+    iny
+    lda fsize+2
+    sta (param),y
+    jsr bios_prbyte
+
+@close:
     jsr compute_drive_index_lba ; lba is set
     ldy #sfcb::FN
     lda (param),y
@@ -701,6 +731,11 @@ sfos_d_make:
     sta (param),y
     dey
     bne :-
+    stz dirty_sector        ; clear the dirty sector flag
+    stz fsize+0
+    stz fsize+1
+    stz fsize+2
+    stz fsize+3
     lda #ERROR::OK
     sta error_code
     clc
@@ -710,11 +745,14 @@ sfos_d_make:
 ; ---- SYSTEM / DISK FUNCTIONS -----------------------------------------------
 ; ----------------------------------------------------------------------------
 
+; also sets zpbufptr for read and write byte operations
 sfos_d_setdma:
     lda param + 0
     sta user_dma + 0
+    sta zpbufptr + 0
     ldx param + 1
     stx user_dma + 1
+    stx zpbufptr + 1
     jmp bios_setdma
 
 ; These internal read and write block functions assume a previously set LBA and DMA
@@ -740,11 +778,6 @@ sfos_d_readseqblock:
     jsr set_fcb_lba
     jsr bios_sdread
     bcc sd_op_fail
-
-    lda user_dma+0      ; we want to set the buffer pointer just in case
-    sta zpbufptr+0       ; the next thing we do will be readseqbyte
-    lda user_dma+1
-    sta zpbufptr+1
 
     jmp increment_fcb_cr
 
@@ -807,8 +840,7 @@ sfos_d_readseqbyte:
     inc zpbufptr+0          ; increment buffer pointer
     bne :+
     inc zpbufptr+1
-:   lda zpbufptr+1
-    ldx user_dma+1
+:   ldx user_dma+1
     inx
     inx
     cpx zpbufptr+1
@@ -851,8 +883,64 @@ sfos_d_readseqbyte:
     lda #ERROR::OK          ; it's not an error so populate error_code with OK
     rts                     ; caller has to check error_code
 
+; input param = FCB requires buffer DMA to be pre-assigned.
+; wirtes to the buffer, fills up and when full, writes the buffer to disk.
+; errors out when file max is reached.
 sfos_d_writeseqbyte:
-    jmp unimplimented
+    pla                     ; caller has to push the byte to write.
+    sta (zpbufptr)          ; save the byte given in A to the buffer
+    inc dirty_sector        ; mark the sector as dirty.
+    inc zpbufptr+0          ; increment the buffer pointer
+    bne :+
+    inc zpbufptr+1
+:   ldx user_dma+1          ; compare with the top of userdma
+    inx
+    inx
+    cpx zpbufptr+1
+    bne @return             ; carry on if we haven't reached the top.
+
+    lda user_dma+0          ; set the dma pointer in the bios
+    sta zpbufptr+0
+    ldx user_dma+1
+    stx zpbufptr+1
+    jsr bios_setdma         ; write the new sector
+
+    jsr sfos_d_writeseqblock
+    bcc @clear_dirty_flag
+    ; return with the error from write sequential block
+    rts
+@clear_dirty_flag:
+    stz dirty_sector
+    ; also increment the sector count in the FCB
+    ldy #sfcb::SC
+    lda (param),y
+    inc
+    sta (param),y
+
+    jsr clear_internal_buffer
+@return:
+    ; increment the filesize which was initialised to zero by make
+    clc                     ; when the filesize reaches 0x0200000
+    lda fsize+0             ; we have reached the max filesize and
+    adc #1                  ; must return that in the error_code
+    sta fsize+0
+    lda fsize+1
+    adc #0
+    sta fsize+1
+    lda fsize+2
+    adc #0
+    sta fsize+2
+    cmp #2                  ; max filesize reached.
+    bne :+
+    lda #ERROR::FILE_MAX_REACHED
+    sta error_code
+    sec
+    rts
+:
+    lda #ERROR::OK
+    sta error_code
+    clc
+    rts
 
 ; sets the dma to the sfos_buf
 internal_setdma:
@@ -881,6 +969,17 @@ sfos_d_createfcb:
 ; ---- HELPER FUNCTIONS ------------------------------------------------------
 ; ----------------------------------------------------------------------------
 
+clear_internal_buffer:
+    lda #0
+    ldy #0
+:   sta sfos_buf+0,y
+    iny
+    bne :-
+:   sta sfos_buf+256,y
+    iny
+    bne :-
+    rts
+
 unimplimented:
     lda #<str_unimplimented
     ldx #>str_unimplimented
@@ -901,6 +1000,7 @@ to_upper:
 .bss
 .align $100
     sfos_buf:       .res 512
+    sfos_buf_end:
     drive:          .byte 0
     current_filenum:.byte 0
     current_dirent: .res 32, 0
@@ -910,6 +1010,7 @@ to_upper:
     cmdlen:         .byte 0
     temp_fcb:       .res 32,0
     fsize:          .res 4
+    dirty_sector:   .byte 0
 
 .segment "SYSTEM"
 ; dispatch function, will be relocated on boot into SYSRAM
@@ -968,10 +1069,10 @@ sfos_jmp_tbl_hi:
     .hibytes sfos_d_writeseqbyte
 
 banner:             .byte "6502-Retro! (SFOS)", 13, 10, 0
-str_unimplimented:  .byte 13, 10, "!!! UNIMPLIMENTED !!!", 13, 10, 0 
+str_unimplimented:  .byte 13, 10, "!!! UNIMPLIMENTED !!!", 13, 10, 0
 str_badfilename:    .byte 13, 10, "BAD FILENAME", 13,10,0
 str_COM:            .byte "COM"
-str_scanning:       .byte 10,13,"Scanning drive...",10,13,0
+str_scanning:       .byte 10,13,"Scanning drive...",10,13,  0
 terminators:
                     .byte " =><.:,[]/|"
                     .byte 10,13,127,9,0
