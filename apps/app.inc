@@ -63,4 +63,12 @@ d_writeseqblock:
 d_make:
     ldy #esfos::sfos_d_make
     jmp SFOS
-
+d_readrawblock:
+    ldy #esfos::sfos_d_readrawblock
+    jmp SFOS
+d_writerawblock:
+    ldy #esfos::sfos_d_writerawblock
+    jmp SFOS
+d_setlba:
+    ldy #esfos::sfos_d_setlba
+    jmp SFOS

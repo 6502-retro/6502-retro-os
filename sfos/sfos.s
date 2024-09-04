@@ -617,7 +617,8 @@ sfos_d_close:
     ldy #sfcb::FN
     lda (param),y
     ldy #0
-    cmp #$80                ; when the filenum is > 80 we must insert
+    and #$0F
+    cmp #$8                 ; when the filenum is > 80 we must insert
     bcs @upper              ; the fcb into thesecond half of the 512byte sector.
 :   lda (param),y           ; copy fcb to lower half of sector
     sta sfos_buf,x
@@ -754,6 +755,12 @@ sfos_d_setdma:
     stx user_dma + 1
     stx zpbufptr + 1
     jmp bios_setdma
+
+; XA is a pointer to the 32bit word containing the DMA address
+sfos_d_setlba:
+    lda param + 0
+    ldx param + 1
+    jmp bios_setlba
 
 ; These internal read and write block functions assume a previously set LBA and DMA
 ; and do update the LBA on completion.
@@ -943,6 +950,10 @@ sfos_d_writeseqbyte:
     clc
     rts
 
+; DMA is set already, LBA is set already, do not increment LBA
+sfos_d_writerawblock:
+    jmp bios_sdwrite
+
 ; sets the dma to the sfos_buf
 internal_setdma:
     lda #<sfos_buf
@@ -964,6 +975,9 @@ dispatch:
 ; ---- UNIMPLIMENTED FUNCTIONS -----------------------------------------------
 ; ----------------------------------------------------------------------------
 sfos_d_createfcb:
+    jmp unimplimented
+
+sfos_d_readrawblock:
     jmp unimplimented
 
 ; ----------------------------------------------------------------------------
@@ -1048,6 +1062,9 @@ sfos_jmp_tbl_lo:
     .lobytes sfos_d_writeseqblock
     .lobytes sfos_d_readseqbyte
     .lobytes sfos_d_writeseqbyte
+    .lobytes sfos_d_setlba
+    .lobytes sfos_d_readrawblock
+    .lobytes sfos_d_writerawblock
 sfos_jmp_tbl_hi:
     .hibytes sfos_s_reset
     .hibytes sfos_c_read
@@ -1068,6 +1085,9 @@ sfos_jmp_tbl_hi:
     .hibytes sfos_d_writeseqblock
     .hibytes sfos_d_readseqbyte
     .hibytes sfos_d_writeseqbyte
+    .hibytes sfos_d_setlba
+    .hibytes sfos_d_readrawblock
+    .hibytes sfos_d_writerawblock
 
 banner:             .byte "6502-Retro! (SFOS)", 13, 10, 0
 str_unimplimented:  .byte 13, 10, "!!! UNIMPLIMENTED !!!", 13, 10, 0

@@ -12,7 +12,7 @@
 #define fcb2 (*(_fcb*)FCB2)
 
 
-typedef struct __fcb{
+typedef struct {
     uint8_t     DRIVE;
     uint8_t     NAME[8];
     uint8_t     EXT[3];
@@ -40,6 +40,8 @@ extern void __fastcall__ sfos_c_status();
 
 /* set dma, takes a pointer to the buffer to set the DMA to */
 extern void __fastcall__ sfos_d_setdma(uint16_t * buf);
+/* set lba, takes a pointer to a 32bit value */
+extern void __fastcall__ sfos_d_setlba(uint32_t * lba);
 
 /* parse fcb, takes a pointer to a buffer that contains the text to be parsed.
 * Returns a pointer to the new location in the buffer after parsing
@@ -53,8 +55,10 @@ extern uint8_t __fastcall__ sfos_d_close(volatile _fcb * f);
 extern uint8_t __fastcall__ sfos_d_readseqblock(volatile _fcb * f);
 extern uint8_t __fastcall__ sfos_d_readseqbyte(volatile _fcb * f);
 extern uint8_t __fastcall__ sfos_d_writeseqblock(volatile _fcb * f);
+extern void sfos_d_writerawblock();
 extern void __fastcall__ sfos_d_writeseqbyte(volatile _fcb * f, char c);
 
 extern void sfos_s_warmboot();
+extern void sfos_s_reboot();
 
 #endif

@@ -1,3 +1,4 @@
+<!-- vim: set ft=markdown -->
 # SFCP
 
 This is the primary user interface into the operating system.  When the

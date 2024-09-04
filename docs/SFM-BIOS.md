@@ -1,3 +1,4 @@
+<!-- vim: set ft=markdown -->
 # SFM Bios
 
 These are the BIOS functions are needed by SFM to interact with hardware:

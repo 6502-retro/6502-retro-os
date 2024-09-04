@@ -1,3 +1,4 @@
+<!-- vim: set ft=markdown -->
 # SFS V2
 
 This document describes the Simple File System - Version 2 for use with SD

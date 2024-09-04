@@ -19,4 +19,7 @@
     sfos_d_writeseqblock    = 16
     sfos_d_readseqbyte      = 17
     sfos_d_writeseqbyte     = 18
+    sfos_d_setlba           = 19
+    sfos_d_readrawblock     = 20
+    sfos_d_writerawblock    = 21
 .endenum

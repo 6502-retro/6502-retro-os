@@ -17,6 +17,7 @@ LEVEL = logging.getLevelName(os.environ.get("LOG_LEVEL", "INFO").upper())
 logger = logging.getLogger()
 logger.setLevel(level=LEVEL)
 
+
 @dataclass
 class Segment:
     name: str = ""
@@ -107,7 +108,7 @@ def scan_map(
 
 
 lst_matcher = re.compile(
-    "^([0-9A-F]{6})r \\d  (\w\w |   )(\w\w |   )(\w\w |   )(\w\w |   )\s*$"
+    r"^([0-9A-F]{6})r \\d  (\w\w |   )(\w\w |   )(\w\w |   )(\w\w |   )\s*$"
 )
 seg_matcher = re.compile(r'^\s*\.segment "([A-Z_][A-Z0-9_]*)"', re.IGNORECASE)
 spc_matcher = re.compile(r"^\s*\.(bss|code|data|rodata|zeropage)(\s|$)", re.IGNORECASE)

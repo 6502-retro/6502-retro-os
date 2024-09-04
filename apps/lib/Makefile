@@ -6,6 +6,7 @@ AR = ar65
 
 TOP = ..
 INCLUDES = -I $(TOP)/../inc
+NONE = /home/davelatham/cc65/lib/none.lib
 
 # Assembler flags
 ASFLAGS += $(INCLUDES) -g --feature labels_without_colons --cpu 65C02 --feature string_escapes
@@ -30,6 +31,8 @@ SOURCES = \
 	  sfos_d_readseqbyte.s \
 	  sfos_d_writeseqblock.s \
 	  sfos_d_writeseqbyte.s \
+	  sfos_d_setlba.s \
+	  sfos_d_writerawblock.s \
 	  sfos_s_warmboot.s
 
 OBJS = $(addprefix $(BUILD_DIR)/, $(SOURCES:.s=.o))
@@ -44,5 +47,5 @@ $(BUILD_DIR)/%.o: %.s
 	$(AS) $(ASFLAGS) -l $(BUILD_DIR)/$*.lst $< -o $@
 
 $(BUILD_DIR)/sfoslib.lib: $(OBJS)
-	cp ../../../cc65/lib/none.lib $@
+	cp $(NONE) $@
 	$(AR) a $@ $(OBJS)

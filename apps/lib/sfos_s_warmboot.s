@@ -2,9 +2,11 @@
 ;
 .include "asminc.inc"
 
-.export _sfos_s_warmboot
+.export _sfos_s_warmboot, _sfos_s_reboot
 
 .code
 _sfos_s_warmboot:
     jmp WBOOT
+_sfos_s_reboot:
+    jmp REBOOT
 
