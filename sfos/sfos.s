@@ -573,15 +573,12 @@ sfos_d_close:
     ldy #sfcb::S0           ; update the FCB filesize
     lda fsize+0
     sta (param),y
-    jsr bios_prbyte
     iny
     lda fsize+1
     sta (param),y
-    jsr bios_prbyte
     iny
     lda fsize+2
     sta (param),y
-    jsr bios_prbyte
 
 @close:
     jsr compute_drive_index_lba ; lba is set

@@ -19,7 +19,11 @@ main:
     ldx #>str_current_drive
     jsr c_printstr
     lda active_drive
-    jsr prbyte
+    clc
+    adc #$40
+    jsr c_write
+    lda #':'
+    jsr c_write
     jsr newline
 
     ; initialize used space long to 0
@@ -238,6 +242,6 @@ saved_active_drive: .byte 0
 str_message:     .byte 10,13,"Drive Statistics:",10,13,"(Values shown in HEX)",10,13,0
 str_newline:     .byte 10,13,0
 str_tab:         .byte "        ",0
-str_total_space: .byte " of 2000000 bytes",10,13,0
-str_current_drive:.byte 10,13,"Current Drive: ",0
+str_total_space: .byte " of 2,000,000 bytes",10,13,0
+str_current_drive:.byte 10,13,"Drive: ",0
 str_padding:    .byte "  ",0
