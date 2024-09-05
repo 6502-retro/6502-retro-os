@@ -1,7 +1,6 @@
 ; vim: ft=asm_ca65 sw=4 ts=4 et
 .include "fcb.inc"
 .include "sfos.inc"
-
 .zeropage
 ptr:    .word 0
 addr:   .word 0
@@ -21,7 +20,7 @@ main:
     ; - while read sequential block == TRUE:
     ;   - print the bytes and ascii chars
     ; - exit
-    
+
     ; FCB2 contains the file
     jsr set_user_drive
 
@@ -38,6 +37,11 @@ main:
     stz addr+1
     stz fileaddr+0
     stz fileaddr+1
+
+    lda FCB2 + sfcb::SC ; If there is no data then exit immediately.
+    bne sector_loop
+    jmp exit
+
 sector_loop:
     lda #<SFOS_BUF
     ldx #>SFOS_BUF

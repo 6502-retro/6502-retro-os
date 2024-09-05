@@ -32,8 +32,8 @@ extern uint16_t sfos_commandline;
 extern uint16_t sfos_buf;
 extern uint16_t sfos_buf_end;
 
-extern void __fastcall__ sfos_c_printstr(char * text);
-extern void __fastcall__ sfos_c_write(uint8_t c);
+extern void __fastcall__ sfos_c_printstr(const char * text);
+extern void __fastcall__ sfos_c_write(const uint8_t c);
 extern uint8_t __fastcall__ sfos_c_read();
 extern void __fastcall__ sfos_c_readstr(uint8_t len, char * buf);
 extern void __fastcall__ sfos_c_status();

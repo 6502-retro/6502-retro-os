@@ -31,7 +31,7 @@ main:
 
     lda CMDOFFSET+0
     ldx CMDOFFSET+1
-:   jsr d_parsefcb
+    jsr d_parsefcb
     jsr newline
     ; FCB contains the destination copy:
     ; open the source
@@ -69,12 +69,14 @@ main:
     ldx #>FCB
     jsr d_make
 
-    jsr debug_fcb_records
-
     lda FCB2+sfcb::SC
     sta temp
     jsr prbyte
     jsr newline
+
+    ; if the source file is empty, we just close and complete the copy.
+    lda FCB2 + sfcb::SC
+    beq close
 
 loop:
     ; read a block of the source
@@ -97,64 +99,15 @@ loop:
     dec temp
     lda temp
     bne loop
-
+close:
     lda #<FCB
     ldx #>FCB
     jsr d_close
 
-
-    jsr debug_fcb_records
-    ;
-    ; write a block of the destination
-    ;
-    jsr restore_active_drive
+    ; all done
     jmp exit
 
 ; ---- HELPER FUNCTIONS ------------------------------------------------------
-debug_fcb_records:
-    lda FCB+sfcb::DD
-    jsr prbyte
-    lda #'-'
-    jsr c_write
-    lda FCB+sfcb::FN
-    jsr prbyte
-    lda #'-'
-    jsr c_write
-    lda FCB+sfcb::SC
-    jsr prbyte
-    lda #'-'
-    jsr c_write
-    lda FCB+sfcb::S2
-    jsr prbyte
-    lda FCB+sfcb::S1
-    jsr prbyte
-    lda FCB+sfcb::S0
-    jsr prbyte
-
-    jsr newline
-
-    lda FCB2+sfcb::DD
-    jsr prbyte
-    lda #'-'
-    jsr c_write
-    lda FCB2+sfcb::FN
-    jsr prbyte
-    lda #'-'
-    jsr c_write
-    lda FCB2+sfcb::SC
-    jsr prbyte
-    lda #'-'
-    jsr c_write
-    lda FCB2+sfcb::S2
-    jsr prbyte
-    lda FCB2+sfcb::S1
-    jsr prbyte
-    lda FCB2+sfcb::S0
-    jsr prbyte
-    
-    jsr newline
-    rts
-
 
 prbyte:
     pha             ;save a for lsd.
@@ -234,6 +187,7 @@ set_drive:
     jmp d_getsetdrive
 
 exit:
+    jsr restore_active_drive
     jmp WBOOT
 
 .include "../app.inc"
@@ -245,6 +199,6 @@ saved_active_drive: .byte 0
 temp:               .byte 0
 
 .rodata
-str_message:     .byte 10,13,"Copy file...",10,13,0
-str_newline:     .byte 10,13,0
-
+str_message:    .byte 10,13,"Copy file...",10,13,0
+str_newline:    .byte 10,13,0
+str_error:      .byte 10,13,"Error copying file...",10,13,0
