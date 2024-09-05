@@ -1,4 +1,0 @@
-mon.o:	mon.s regs-sxb.h
-
-mon.s regs-sxb.h:
-
