@@ -1,0 +1,125 @@
+NEW
+
+REM Sorts
+REM Input is an array of 256 elements of 0-255
+
+100 X = TOP     : REM Input/Output
+110 Y = X + 256 : REM Bucket counts
+
+REM Initialise counts and Generate random input
+
+REM Get data
+
+120 GOSUB 800
+
+REM Print Input
+
+129 PR "Original data:"
+130 GOSUB 900
+
+REM Bucket Sort
+
+150 GOSUB 600 : PR "Bucket Time: ", T : GOSUB 900
+
+REM Comb
+
+240 GOSUB 800
+250 GOSUB 700 : PR "Comb Time: ", T : GOSUB 900
+
+REM Bubble
+
+260 GOSUB 800
+270 GOSUB 500 : PR "Bubble Time: ", T : GOSUB 900
+
+REM Shell
+
+280 GOSUB 800
+290 GOSUB 400 : PR "Shell Time: ", T : GOSUB 900
+
+299 END
+
+400 !160 = 0 : REM Zero the clock
+405 M = 1 : E = 255
+410 DO : M = M * 3 + 1 : UNTIL M > E
+420 DO
+430   M = M / 3
+435   FOR I = M TO E
+440     V = ?(X+I) : J = I
+450     K = J - M
+455     IF (K < 0) OR (?(X+K) < V) GOTO 475
+460       ?(X+J) = ?(X+K)
+465       J = K
+470       GOTO 450
+475     ?(X+J) = V
+477   NEXT I
+485 UNTIL M = 1
+490 T = !160 : REM Read the clock
+499 RETURN
+
+    
+REM Classic Bubble Sort
+REM ============================================================
+
+500 !160 = 0 : REM Zero the clock
+510 FOR I = 0 TO 255
+515   FOR J = I TO 255
+520     IF ?(X+I) > ?(X+J) T = ?(X+I) : ?(X+I) = ?(X+J) : ?(X+J) = T
+530   NEXT J
+540 NEXT I
+550 T = !160 : REM Read clock
+560 RETURN
+
+REM Bucket sort
+REM ============================================================
+
+600 !160 = 0 : REM Zero the clock
+610 FOR I = 0 TO 255
+620   Z = ?(X+I) : Q = Y + Z : REM Index
+630   ?Q = ?Q + 1            : REM Count
+640 NEXT I
+
+REM Re-Create sorted data from bucket counts
+
+650 J = 0 : FOR I = 0 TO 255
+660   C = ?(Y+I) : REM Count in this bucket
+670   IF C <> 0 DO : ?(X+J) = I : J = J + 1 : C = C - 1 : UNTIL C = 0
+680 NEXT I
+690 T = !160 : REM Read clock
+699 RETURN
+
+REM Comb/Combination Sort
+REM ============================================================
+
+700 !160 = 0 : REM Zero the clock
+705 S = 256 : G = 256 : REM Initial values
+710 DO
+715   G = G * 10 / 13
+720   IF G < 1 G = 1
+725   W = 0
+730   FOR I = 0 TO 255 - G
+740     J = I + G
+750     IF ?(X+I) > ?(X+J) T = ?(X+I) : ?(X+I) = ?(X+J) : ?(X+J) = T : W = W + 1
+760   NEXT I
+770 UNTIL (G = 1) AND (W = 0)
+780 T = !160 : REM Read clock
+799 RETURN
+
+REM Generate Random input (and zero the bucket counters)
+REM ============================================================
+
+800 RND = 1234 : REM Seed, so we get the same 'random' numbers
+810 FOR I = 0 TO 255
+820   ?(X+I) = RND % 256 : ?(Y+I) = 0
+830 NEXT I
+840 RETURN
+
+REM Print the input array
+REM ============================================================
+
+900 @ = 3 : Q = 0
+910 FOR I = 0 TO 255
+920   PR ?(X+I);
+930    Q = Q + 1 : IF Q = 16 Q = 0 : PR ""
+940 NEXT I
+950 PR ""
+960 RETURN

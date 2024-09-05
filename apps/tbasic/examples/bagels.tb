@@ -1,0 +1,46 @@
+NEW
+  100 PR ""
+  110 PR "BAGELS" : PR "======" : PR ""
+  120 PR "I will think of a 3-digit number from 100 through 999."
+  130 PR "You try to guess what it is."
+  140 PR "For each correct digit in the correct location..."
+  150 PR "... I will print 'FERMI'."
+  160 PR "For each correct digit in the wrong location..."
+  170 PR "... I will print 'PICO'."
+  180 PR "If no digits are correct, I will print 'BAGELS'" : PR "" : PR ""
+  190 REM
+  200 A=(RND%9)+1 : B=RND%10 : C=RND%10
+  210 T=0 : REM Tries
+  220PR A,B,C
+  230 REM               Select a number
+  240 REM
+  250 PRINT "Please guess a 3-digit number. ";
+  260 INPUT G :             REM Input guess. Test range:
+  270 REM
+  280 IF G > 1000 OR G < 100 GOTO 250
+  290 F=0:P=0:T=T+1           : REM Zero counters
+  300 REM Left digit
+  310 D=G/100
+  320 IF D=A F=F+1            : REM Correct digit & location
+  330 IF (D=B) OR (D=C) P=P+1 : REM Correct digit, bad location
+  340 REM Middle digit
+  350 D=(G%100)/10
+  360 IF D=B F=F+1            : REM Correct digit & location
+  370 IF (D=A) OR (D=C) P=P+1 : REM Correct digit, bad location
+  380 REM Right digit
+  390 D=G%10
+  400 IF D=C F=F+1            : REM Correct digit & location
+  410 IF (D=A) OR (D=B) P=P+1 : REM Correct digit, bad location
+  420 REM Won?
+  430 IF F<3 GOTO 500
+  440 PRINT "Congratulations! You got it in ", T, " tries."
+  450 PRINT "Play again? (1=Yes, 0=No)";
+  460 INPUT Q : IF Q=0 GOTO 540
+  470 GOTO 200
+  480 REM
+  490 REM                        Next section prints clues
+  500 IF F <> 0 FOR T=1 TO F: PRINT "FERMI "; : NEXT T
+  510 IF P <> 0 FOR T=1 TO P: PRINT "PICO ";  : NEXT T
+  520 IF F+P=0 PRINT "BAGELS"
+  530 PR "" : GOTO 250  : REM Get next guess
+  540 PR "Goodbye"

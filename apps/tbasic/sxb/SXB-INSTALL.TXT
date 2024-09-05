@@ -1,0 +1,293 @@
+
+;********************************************************************************
+;* This file is part of gibl:							*
+;*	Gordons Interactive Basic Language                                      *
+;********************************************************************************
+;*    A Tiny Basic for the 6502 inspired by the NIBL Tiny Basic interpreter;	*
+;*    "National Industrial Basic Language" originally for the INS8060 SC/MP	*
+;*    system.									*
+;*										*
+;*    gibl is distributed under a "Source Available" license.			*
+;*	It is NOT Open source and must not be treated as such.			*
+;*										*
+;*    See the file LICENSE for details.						*
+;*										*
+;*    gibl is Copyright (c) 2023 by Gordon Henderson				*
+;********************************************************************************
+
+See also README.TXT and PORTING.TXT
+
+GIBL runs on the W65C134-SXB SBC in one of 2 different ways: From RAM
+or from ROM (EEPROM). When running from ROM it can use the spare EEPROM
+memory for program storage. It can auto-boot from power-on directly into
+a GIBL program enabling turn-key microcontroller functionality.
+
+
+Installation on the W65C134-SXB Board
+===============================================================================
+
+Pre-Built Binary files and a TinyBasic helper program are provided to help
+you flash GIBL into the SXB board. These files can be found in the sxb
+directory in the main distribution directory:
+
+  sxb/
+    mon.srec
+    ram.srec
+    rom.srec
+    flash.tb
+
+These files are:
+
+mon.srec:
+  This is a tiny kernel that replaces the on-board ROM monitor in the
+  '134 CPU. It provides the serial IO routines and a 100Hz ticker for
+  your GIBL programs to use.
+
+  You don't need this to run the RAM version of GIBL, only the ROM version.
+
+ram.srec:
+  This is a version of GIBL that uses the internal monitor ROM for serial
+  IO. This is slightly slower than the ROM version as it has to place
+  a lot of frequently used data in RAM, however it is required to get
+  the ROM version copied into the Flash/EEPROM memory.
+
+rom.srec:
+  This is the version of GIBL that I'd expect you to use for day to day
+  use. It has the ability to store program in EEPROM and can auto-run
+  a program at power-on.
+
+flash.tb:
+  This is a TinyBasic (GIBL) program that will let you copy the GIBL
+  and monitor images into the EEPROM.
+
+
+Getting started
+===============================================================================
+
+To get started you will need the facilities to connect to the SXB board
+via a serial interface and your terminal program will need the ability
+to send a text file to the board. It may need to insert a pause after
+each character and each newline sent, depending on it's ability to use
+the handshaking facilities offered by the SXBs monitor program.
+
+Start your terminal program, connect to the serial device (may be
+/dev/ttyUSB0 under Linux, see your local system if it's not Linux for
+the correct communications port to use). Baud rate is 9600, format, 8N1.
+
+You may have to enable auto-line feed as the SXB monitor does not do this
+for you.
+
+Press ENTER a few times and make sure you get a "." (dot) prompt.
+
+If you press the reset button on the board you should see something like:
+
+  134 ROM Version 1.07
+  (C) Copyright 1995
+  Western Design Center
+  01 07/04/1993  12:00:08
+
+  ADDR F  A  X  Y  SP
+  F1BC 30 0D 30 3F FF
+  .
+
+Press the "E" key a couple of times and it should eventually respond with 
+
+  E 0000  00
+
+The numbers are the last address written and the SREC checksum. This is not
+automatically reset when you start a download, so you need to press E to read
+and reset it.
+
+Now you need to send the file:
+
+  ram.srec
+
+to the device. You will need to work out how to get your terminal program
+to do this for you. You could copy & paste it a line or 2 at a time, but
+your terminal program really ought to be able to do this for you.
+
+Once the file has been sent, and you have a "." prompt again, press E to
+check the download end address and checksum. You should see something like:
+
+  E 1F7F  00                                                                                
+
+The 1F7F number is the next address to be written (it may differ slightly)
+but the final 2 digits ought to be 00 to indicate a correct checksum.
+
+Start the RAM version with:
+
+  G 1000
+
+1000 is the start address where the SREC file was downloaded into.
+
+If it works then you should see:
+
+  W65C134-SXB: RAM: Flash Utility                                                           
+  GIBL: [v04]
+
+  >
+
+The output may be double-spaced, but that's not important for now. (GIBL
+does output the CR+LF combination and your terminal may be outputting
+an LF at this point)
+
+Try a few TinyBasic commands:
+
+  > PRINT "Hello, World"
+  > PR 1+2*3
+  > LED = 9
+  > LED = 6
+
+and so on. The LED commands control the on-board 4 LEDs located below
+the long edge connector.
+
+At this point you have GIBL in RAM, but we need to get the ROM/EEPROM
+versions, so press the reset button on the board and download the other
+2 files:
+
+  rom.srec
+  mon.srec
+
+As before, use the E command before the download to zero the counters
+and check after.
+
+After downloading rom.srec you should get:
+
+  E 6FA9  00
+
+And again, the actual 6FA9 number may be slightly different, and after
+downloading mon.srec:
+
+  E 8000  00
+
+It should always be 8000 here as the file is exactly 4KB and downloads
+from $7000 through $7FFF.
+
+Now, re-start the RAM version of GIBL with
+
+  G 1000
+
+and you then need to copy & paste or download via serial the program:
+
+  flash.tb
+
+The is a TinyBasic program that uses the facilities in the RAM version of GIBL to
+copy data to the EEPROM. Run the program and select 1 then 2 then if it's all OK you
+can select 3 to reboot into the ROM version of GIBL...
+
+If that works, then congratulations! You have GIBL running in EEPROM on the SXB.
+
+But if you press the reset key you'll be back into the original WDC
+monitor ROM but you can enter GIBL by typing
+
+  G E000
+
+at the dot prompt.
+
+
+Setting up Auto-Start
+===============================================================================
+
+Boot the SXB board and start GIBL. There are 2 calls in the GIBL monitor which
+will enable or disable the auto-start feature.
+
+  CALL &F012
+
+will enable the auto-start and:
+
+  CALL &F015
+
+will disable it.
+
+
+SXB Specific GIBL commands
+===============================================================================
+
+There are a few commands specific to the SXB version of GIBL:
+
+  LED
+
+This will let you set the on-board LEDs. You can also read this value. Try
+
+  LED = 1
+  LED = LED * 2
+  LED = LED * 2
+  LED = LED * 2
+
+which should march a single lit LED along the row of LEDs.
+
+DIR
+
+  This will output a directory of the files stored in the EEPROM. There
+  are 16 file slots numbered from 0 through 15. They are of varying sizes;
+  4KB, 8KB and 16KB.  These fixes sizes are to avoid the need to write a
+  full filing system for the device.
+
+  To make DIR work you must have a line zero in your program with the
+  string REM then a space then some text. This is what gets printed out
+  by the DIR command. e.g.
+
+    0REM Mandelbrot
+
+LD n
+
+  Load a file from slot n where n is a number from 0 through 15.
+
+SV n
+
+  Save a file into slot n where n is a number from 0 through 15.
+
+CH n
+
+  Chain a program in slot n. Chain loads the file and runs it without
+  clearing the variables. CH can be used inside a program to load and run
+  another program.
+
+Auto Running a GIBL program
+===============================================================================
+
+If you have a file stored in slot 15 with the first line:
+
+  0REM!BOOT
+
+then when GIBL starts it will automatically load and run that program.
+
+
+Access to the on-board ports is by the byte indirection (peek and poke)
+commands. See the larson.tb program for an example.
+
+
+GIBL Memory Map in the W65C134-SXB board
+===============================================================================
+
+Zero Page usage:
+	$00 - $3F:	Hardware registers
+	$40 - $4F:	Used by the replacement "monitor"/IO Harness
+	$50 - $FE:	Used by GIBL
+
+Page one:
+	$0100 - $017F:	Keyboard input buffer and
+			temporary space for the DIR command.
+	$0180 - $01FF:	6502 Stack
+
+Page 2:
+	$0200 - $027F:	Keyboard/Serial input buffer
+	$0280 - $02FF:	Serial output buffer
+
+Page 3:
+	$0300 - $03FF:	Used by the EEPROM access code
+			(copied here from EEPROM)
+
+Page 3:	$0400 - $04FF:	Overflow GIBL data that wouldn't fit into Zero Page
+	$0500 - $0FFF:	Unused
+	$1000 - $1FFF:	GIBL when running in RAM
+	$2000 - $7FFF:	GIBL/TinyBasic program space and free RAM space.
+
+Bank 3 of the EEPROM (The default bank enabled at power-on)
+
+	$8000 - $8FFF:	Flash/EEPROM - WDC Signature for auto-boot.
+	$9000 - $9FFF:	Program save slot 15 - 4K - the AutoBoot slot
+	$A000 - $BFFF:	Program save slot 14 - 16K
+	$C000 - $DFFF:	Unused (could be more save space)
+	$E000 - $EFFF:	GIBL ROM code
+	$F000 - $FFFF:	Either the WDC ROM or the GIBL Monitor code.

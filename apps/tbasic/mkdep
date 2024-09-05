@@ -1,0 +1,11 @@
+#!/bin/bash
+
+rm -f depends
+touch depends
+
+while [ "$1" != "" ]; do
+  ca65 -g --cpu 65C02 --create-dep /tmp/foo $1
+  cat /tmp/foo >> depends
+  shift
+done
+

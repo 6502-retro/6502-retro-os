@@ -1,0 +1,11 @@
+NEW
+
+10REM Table of random numbers
+15C = 0 :@ = 3
+20FOR I = 1 TO 200
+30X = RND % 1000
+40PR X;
+45C = C + 1
+46IF C = 15 THEN C = 0 : PRINT ""
+50NEXT I
+99END

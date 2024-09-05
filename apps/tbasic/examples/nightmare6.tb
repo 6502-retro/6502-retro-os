@@ -1,0 +1,134 @@
+NEW
+
+REM Nightmare #6 - Originally in Apple Integer Basic on the Apple II
+
+REM A is input string, G is the array to store the data in.
+
+ 1 A=TOP : G=A+200
+
+ 2 VDU 12 : PR "" : PR ""
+ 3 $A = "NIGHTMARE #6" :                     GOSUB 7000
+ 4 $A = "Original Copyright (c) 1978 by" :   GOSUB 7000
+ 5 $A = "Apple Computer, Inc." :             GOSUB 7000
+ 6 PR ""
+ 7 $A = "Written by Gary Shannon," :         GOSUB 7000
+ 8 $A = "This version by Gordon Henderson" : GOSUB 7000
+ 9 $A = "in GIBL TinyBasic" :                GOSUB 7000
+10 GOSUB 7100
+11 FOR I = 1 TO 3000 : NEXT I
+
+15 FOR I = 1 TO 26
+16  ?(G+I) = I
+17  PRINT "NIGHTMARE #6   ";
+18 NEXT I
+
+
+20 PR "" : PR ""
+22 PRINT "The Game...": PR ""
+24 PRINT "The object of the game ..."
+26 PRINT "... is to figure out the object of the game."
+27 GOSUB 7100
+28 P=1000 : N = 2 : M = 0
+
+REM Main Loop
+
+40 GOSUB 7100 : PR "        You have ",P, " points." : PR ""
+42 GOSUB 6000
+50 IF M = 11 GOTO 600
+52 M = M + 1 : PRINT "Your move -- ";
+54 INPUT $A
+
+REM Check length
+
+60 GOSUB 7200
+
+65 IF I = 0 PRINT "It is not legal to pass."      : GOSUB 9000 : GOTO 40
+70 IF I = 1 PRINT "Too short to be a legal move." : GOSUB 9000 : GOTO 40
+72 IF I > 2 PRINT "Too long to be a legal move."  : GOSUB 9000 : GOTO 40
+
+80 Z=0 : FOR I = 0 TO 1 : X=Y : Y = ?(A+I) - 64
+82   IF (Y >= 1) AND (Y <= 26) GOTO 84
+83   PR "'"; : VDU Y+64 : PR "' is not a legal character" : Z = 1
+84 NEXT I
+
+88 IF Z = 1 GOSUB 9000 : GOTO 40
+90 IF X = Y GOSUB 8010 : GOTO 40
+
+100 PRINT "That's a legal move!"
+110 IF (?(G+X) <> 0) AND (?(G+Y) <> 0) GOTO 130
+120 GOSUB 8000 : GOTO 40
+130 ?(G+Y) = ?(G+Y) + ?(G+X)
+140 ?(G+X) = 0 : IF ?(G+Y) % 10 GOTO 500 
+145 IF ?(G+Y) = 0 GOTO 510
+
+150 PRINT "And you even won ", ?(G+Y), " points!"
+160 P = P + ?(G+Y) : GOTO 40
+
+500 PRINT "... But you don't win any points (Sorry)": GOTO 40
+510 PRINT "... And you almost won some points.":      GOTO 40
+
+
+600 PR "The game is over." 
+610 PR "Your score of ", P, " out of a possible 2080 is..." : PR "...";
+620 IF P >  890           GOTO 630
+625 PRINT "Lousy.":     GOTO 700
+630 IF P > 1335 GOTO 640
+635 PRINT "Fair." :       GOTO 700
+640 IF P > 1555 GOTO 650
+645 PRINT "Not bad.":     GOTO 700
+650 IF P > 1665 GOTO 660
+655 PRINT "Pretty good.": GOTO 700
+660 IF P > 1720 GOTO 670
+665 PRINT "Very good.":   GOTO 700
+670 IF P > 1780 GOTO 680
+675 PRINT "Excellent!":   GOTO 700
+680 PRINT "Top caliber, Superfragilisticly Stupendous!"
+685 PR ""
+700 PRINT "Thanks for the game."
+710 END 
+
+
+REM Debug @ 6000
+
+6000 RETURN
+REM 6000 @=2: FOR I = 1 TO 26
+REM 6010 VDU I+64 : PR ":", ?(G+I)," ";
+REM 6015 IF I = 13 PR ""
+REM 6020 NEXT I
+REM 6025 PR ""
+REM 6030 RETURN
+
+REM Center $A in a field width of 80 columns..
+
+7000 GOSUB 7200
+7020 I = (80 - I) / 2
+7025 DO : PR " "; : I = I -1 : UNTIL I < 0
+7030 PR $A
+7040 RETURN
+
+REM Output a line
+
+7100 FOR I = 0 TO 79 : PR "-"; : NEXT I : RETURN
+
+REM Get length of $A in I
+
+7200 I = -1
+7210 DO : I = I + 1 : UNTIL ?(A+I) = 13
+7220 RETURN
+
+REM Super Zonk and Nightmare #6 'errors'
+
+8000 FOR I=1 TO 5: PRINT "SUPER ZONK" :             NEXT I : N = N * 2
+8010 FOR I=1 TO 5: PRINT "          NIGHTMARE #6" : NEXT I : N = N * 2
+8020 PRINT "YOU LOSE ", N, " POINTS" : PR "" : IF P < N THEN 9050
+8030 P = P - N : GOTO 40
+
+9000 PRINT "You lose ", N, " points"
+9005 GOSUB 7100
+9010 IF P < N GOTO 9050
+9020 P = P - N : N = N * 3 / 2
+9030 RETURN
+
+9050 FOR I=1 TO 56: PRINT "*****"; : NEXT I : PR ""
+9060 PRINT "YOU LOSE!"
+9070 END 

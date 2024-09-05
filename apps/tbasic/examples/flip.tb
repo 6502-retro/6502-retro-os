@@ -1,0 +1,9 @@
+NEW
+10REM Coin Flipping
+20PRINT "How many flips ";
+30INPUT F
+40H = 0
+50FOR I = 1 TO F
+60IF RND % 2 = 0 THEN H = H + 1
+70NEXT I
+80PRINT "Heads: ",H, " Tails: ", F-H

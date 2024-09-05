@@ -1,0 +1,41 @@
+    0REM Larson2
+  100?&1F = &FF : REM Port 5 all outputs
+  102P = &1D : REM I/O Port 5
+  105D = TOP : L = D + 20
+  106T = 10 : REM centisecs.
+  110Q = 0
+  120$D = "........" : GOSUB 900
+  130$D = "1......." : GOSUB 900
+  140$D = "11......" : GOSUB 900
+  145$D = "111....." : GOSUB 900
+  150$D = ".111...." : GOSUB 900
+  160$D = "..111..." : GOSUB 900
+  170$D = "...111.." : GOSUB 900
+  180$D = "....111." : GOSUB 900
+  190$D = ".....111" : GOSUB 900
+  200$D = "......11" : GOSUB 900
+  210$D = ".......1" : GOSUB 900
+  220$D = "........" : GOSUB 900
+  230REM Play pattern forwards
+  300FOR I = 0 TO Q-1
+  302  V = ?(L+I) : GOSUB 800
+  304NEXT I
+  306REM Play pattern backwards
+  310FOR I = Q-1 TO 0 STEP -1
+  320  V = ?(L+I) : GOSUB 800
+  330NEXT I
+  340GOTO 300
+  799REM Poke value into the output and wait
+  800?P = V : ?&4B = 0 : DO : UNTIL ?&4B > T : RETURN
+  899REM Turn string into binary numbe and store
+  900Y = 0
+  905FOR I = 0 TO 7
+  910  X = ?(D+I)
+  915  Y = Y / 2
+  920  IF X = 49 Y = Y + 128
+  940NEXT I
+  950REM Store
+  960?(L+Q) = Y
+  970Q = Q + 1
+  980RETURN
+
