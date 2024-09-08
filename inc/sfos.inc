@@ -23,3 +23,4 @@
     sfos_d_readrawblock     = 20
     sfos_d_writerawblock    = 21
 .endenum
+

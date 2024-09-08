@@ -12,6 +12,12 @@ CMDLINE      = $300
 CMDOFFSET    = $3C0    ; pointer into CMDLINE
 SFOS_BUF     = $400
 SFOS_BUF_END = $600
+
+
+acia_getc     = $8D48
+acia_getc_nw  = $8D53
+acia_putc     = $8D61
+
 .code
 ;
 ; ---- SFOS functions ------------------------------------------------------

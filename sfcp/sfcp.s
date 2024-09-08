@@ -11,7 +11,7 @@
 BOOT    = $200
 WBOOT   = BOOT + 3
 SFOS    = BOOT + 6
-RSTFAR  = BOOT + 9
+RSTFAR  = BOOT + 10
 
 .zeropage
 debug_ptr:  .word 0
@@ -196,7 +196,7 @@ load_transient:
     lda temp+1
     cmp #$9E                    ; hard stop at start of IO
     bne :+
-    lda #3
+    lda #ERROR::OUT_OF_MEMORY
     sec
     rts
 :   lda temp+0

@@ -9,5 +9,6 @@
         DRIVE_ERROR             ; 6
         DRIVE_FULL              ; 7
         PARSE_ERROR             ; 8
+        OUT_OF_MEMORY           ; 9
 .endenum
 
