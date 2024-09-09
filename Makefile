@@ -22,6 +22,7 @@ BIOS_SOURCES = \
 	       bios/bios.s \
 	       bios/acia.s \
 	       bios/sdcard.s \
+	       bios/sn76489.s \
 	       bios/zerobss.s \
 	       bios/vectors.s \
 

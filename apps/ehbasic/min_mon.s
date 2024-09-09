@@ -7,11 +7,11 @@
 ; running [F6] then start the code with the RESET [CTRL][SHIFT]R. Just selecting RUN
 ; will do nothing, you'll still have to do a reset to run the code.
 
-acia_getc     = $8D48
-acia_getc_nw  = $8D53
-acia_putc     = $8D61
-WBOOT         = $8C96
-PROG_TOP      = $020A
+acia_getc     = $8DBE
+acia_getc_nw  = $8DC9
+acia_putc     = $8DD7
+sn_beep       = $910D
+WBOOT         = $0203
 
 
 .include "../../inc/sfos.inc"

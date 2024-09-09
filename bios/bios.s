@@ -42,6 +42,7 @@ bios_boot:
     bne @L2
     jsr zerobss
     jsr zero_lba
+    jsr sn_beep
     jmp sfos_s_reset
    ;
 

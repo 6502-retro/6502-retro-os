@@ -24,7 +24,8 @@ retro_bye:
         jmp     WBOOT
 
 retro_beep:
-       rts
+        jmp     sn_beep
+
 
 SFOS = $206
 ERROR_CODE  = $209

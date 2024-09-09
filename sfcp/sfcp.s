@@ -295,8 +295,8 @@ era:
 
 free:
     jsr printi
-    .byte 10,13,"MEMORY Assignments"
-    .byte 10,13,"ZEROPAGE: ",0 
+    .byte 10,13,"\r\nTYPE: START-END SIZE"
+    .byte 10,13,"\r\nZEROPAGE: ",0 
 
     lda #<__ZEROPAGE_LOAD__
     jsr bios_prbyte
@@ -390,6 +390,45 @@ free:
     ldx temp+1
     jsr print_word
 
+    jsr printi
+    .byte 10,13,"SFM       ",0
+    lda #<__CODE_LOAD__
+    ldx #>__CODE_LOAD__
+    jsr print_word
+    lda #'-'
+    jsr c_write
+    lda #<__CODE_SIZE__
+    sta temp+0
+    lda #>__CODE_SIZE__
+    sta temp+1
+    clc
+    lda temp+0
+    adc #<__CODE_LOAD__
+    adc #<__RODATA_SIZE__
+    sta temp+0
+    lda temp+1
+    adc #>__CODE_LOAD__
+    adc #>__RODATA_SIZE__
+    sta temp+1
+    lda temp+0
+    ldx temp+1
+    jsr print_word
+    lda #' '
+    jsr c_write
+    lda #<__CODE_SIZE__
+    sta temp+0
+    lda #>__CODE_SIZE__
+    sta temp+1
+    clc
+    lda temp+0
+    adc #<__RODATA_SIZE__
+    sta temp+0
+    lda temp+1
+    adc #>__RODATA_SIZE__
+    sta temp+1
+    lda temp+0
+    ldx temp+1
+    jsr print_word
     jmp prompt
 
 help:
