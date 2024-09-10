@@ -1,7 +1,7 @@
 ; vim: ft=asm_ca65
 ; contains additional commands for EH Basic
-.segment "BASICZP" : zeropage
-basptr: .word 0
+basptr = $FA
+
 .code
 ; BYE - Quits EHBASIC
 ; CLS - CLEAR Screen by issuing Ansi escape sequence "ESC [J2"
@@ -27,11 +27,136 @@ retro_beep:
         jmp     sn_beep
 
 
-SFOS = $206
-ERROR_CODE  = $209
+SFOS            = $206
+ERROR_CODE      = $209
+FCB             = $380
+SFOS_BUF        = $400
+SFOS_BUF_END    = $600
 
-FCB  = $380
-SFOS_BUF = $400
+save:
+
+        stz fsize + 0
+        stz fsize + 1
+        stz fsize + 2
+        stz fsize + 3
+
+        lda #'C'
+        jsr acia_putc
+
+        jsr create_fcb
+        lda #<FCB
+        ldx #>FCB
+        ldy #esfos::sfos_d_findfirst
+        jsr SFOS
+
+        bcc @open
+        ; make
+        lda #<FCB
+        ldx #>FCB
+        ldy #esfos::sfos_d_make
+        jsr SFOS
+
+        lda #'M'
+        jsr acia_putc
+        jmp @save
+@open:
+        jsr open_file
+        stz FCB + sfcb::SC
+
+        lda #'O'
+        jsr acia_putc
+
+@save:
+        lda #<SFOS_BUF
+        ldx #>SFOS_BUF
+        ldy #esfos::sfos_d_setdma
+        jsr SFOS
+
+        jsr clear_buf
+        stz dirty_sector
+
+        ; redirect stdout to file
+        lda #<fwrite
+        sta VEC_OUT + 0
+        lda #>fwrite
+        sta VEC_OUT + 1
+
+        sec
+        jsr LAB_14BD            ; LIST
+
+        lda #<ACIAout
+        sta VEC_OUT + 0
+        lda #>ACIAout
+        sta VEC_OUT + 1
+
+        lda #<FCB
+        ldx #>FCB
+        ldy #esfos::sfos_d_close
+        jsr SFOS
+
+        jsr restore_active_drive
+        rts
+
+fwrite:
+        pha
+        phx
+        phy
+        sta (basptr)
+        inc dirty_sector
+        inc basptr+0
+        bne :+
+        inc basptr+1
+        lda basptr+1
+        cmp #>SFOS_BUF_END
+        bne :+
+
+        lda #<SFOS_BUF
+        ldx #>SFOS_BUF
+        ldy #esfos::sfos_d_setdma
+        jsr SFOS
+
+        lda #<FCB
+        ldx #>FCB
+        ldy #esfos::sfos_d_writeseqblock
+        jsr SFOS
+
+        inc FCB + sfcb::SC
+        stz dirty_sector
+
+        jsr clear_buf
+
+:       clc
+        lda fsize + 0
+        adc #1
+        sta fsize + 0
+        lda fsize + 1
+        adc #0
+        sta fsize + 1
+        lda fsize + 2
+        adc #0
+        sta fsize + 2
+
+        ply
+        plx
+        pla
+        clc
+        rts
+
+clear_buf:
+        lda #0
+        ldy #0
+:       sta SFOS_BUF+0,y
+        iny
+        bne :-
+:       sta SFOS_BUF+256,y
+        iny
+        bne :-
+        lda #<SFOS_BUF
+        sta basptr+0
+        lda #>SFOS_BUF
+        sta basptr+1
+        rts
+
 
 load:
         ; open file
@@ -81,9 +206,6 @@ load:
         jsr LAB_1319
         rts
 
-save:
-        rts
-
 fread:
         phx
         phy
@@ -104,11 +226,13 @@ nullout:
 fread_error:
         lda ERROR_CODE
         cmp #ERROR::FILE_EOF
-        beq close_file
-        ldx #$2A
+        bne :+
+        jsr reset_redirects
+        jmp file_exit
+:       ldx #$2A
         jmp LAB_XERR
 
-open_file:
+create_fcb:
         ; clear out FCB
         ldx #0
         lda #0
@@ -122,6 +246,7 @@ open_file:
         ldx #>FCB
         ldy #esfos::sfos_d_setdma
         jsr SFOS
+        jsr set_user_drive
 
         jsr LAB_EVEX
         lda Dtypef
@@ -140,15 +265,17 @@ open_file:
         lda basptr + 0
         ldx basptr + 1
         ldy #esfos::sfos_d_parsefcb
-        jsr SFOS
+        jmp SFOS
 
+open_file:
+        jsr create_fcb
         lda #<FCB
         ldx #>FCB
         ldy #esfos::sfos_d_open
         jsr SFOS
         rts
 
-close_file:
+reset_redirects:
 
         lda #<ACIAout
         sta VEC_OUT + 0
@@ -159,6 +286,10 @@ close_file:
         sta VEC_IN + 0
         lda #>ACIAin
         sta VEC_IN + 1
+        rts
+
+file_exit:
+        jsr restore_active_drive
 
         lda #<strReady
         ldy #>strReady
@@ -166,7 +297,6 @@ close_file:
 
         jsr LAB_1477
         jmp LAB_1319
-
         rts
 
 restore_active_drive:
@@ -210,11 +340,9 @@ retro_dir:
         rts
 
 .bss
-_fcb:               .res 32,0
 active_drive:       .byte 0
 saved_active_drive: .byte 0
-temp:               .byte 0
-
+temp:               .word 0
 
 .rodata
 strAnsiCLSHome: .byte $0D,$0A, $1b, "[2J", $1b, "[H", $0

@@ -7,10 +7,10 @@
 ; running [F6] then start the code with the RESET [CTRL][SHIFT]R. Just selecting RUN
 ; will do nothing, you'll still have to do a reset to run the code.
 
-acia_getc     = $8DBE
-acia_getc_nw  = $8DC9
-acia_putc     = $8DD7
-sn_beep       = $910D
+;acia_getc     = $8DC2
+;acia_getc_nw  = $8DCD
+;acia_putc     = $8DDB
+;sn_beep       = $9111
 WBOOT         = $0203
 
 

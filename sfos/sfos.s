@@ -893,6 +893,7 @@ sfos_d_readseqbyte:
 ; errors out when file max is reached.
 sfos_d_writeseqbyte:
     pla                     ; caller has to push the byte to write.
+    pha
     sta (zpbufptr)          ; save the byte given in A to the buffer
     inc dirty_sector        ; mark the sector as dirty.
     inc zpbufptr+0          ; increment the buffer pointer
@@ -913,6 +914,7 @@ sfos_d_writeseqbyte:
     jsr sfos_d_writeseqblock
     bcc @clear_dirty_flag
     ; return with the error from write sequential block
+    pla
     rts
 @clear_dirty_flag:
     stz dirty_sector
@@ -940,11 +942,13 @@ sfos_d_writeseqbyte:
     lda #ERROR::FILE_MAX_REACHED
     sta error_code
     sec
+    pla
     rts
 :
     lda #ERROR::OK
     sta error_code
-    clc
+    pla
+    sec
     rts
 
 ; DMA is set already, LBA is set already, do not increment LBA
