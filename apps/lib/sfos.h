@@ -36,7 +36,7 @@ extern void __fastcall__ sfos_c_printstr(const char * text);
 extern void __fastcall__ sfos_c_write(const uint8_t c);
 extern uint8_t __fastcall__ sfos_c_read();
 extern void __fastcall__ sfos_c_readstr(uint8_t len, char * buf);
-extern void __fastcall__ sfos_c_status();
+extern uint8_t __fastcall__ sfos_c_status();
 
 /* set dma, takes a pointer to the buffer to set the DMA to */
 extern void __fastcall__ sfos_d_setdma(uint16_t * buf);

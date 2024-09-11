@@ -6,6 +6,8 @@
 .export bios_boot, bios_wboot, bios_conin, bios_conout, bios_const
 .export bios_setdma, bios_setlba, bios_sdread, bios_sdwrite, bios_puts
 .export bios_prbyte
+.export _vdp_sync, _vdp_status
+
 .if DEBUG=1
 .export bios_printlba
 .endif
@@ -22,7 +24,7 @@ bios_boot:
     ldx #$ff
     txs
     cld
-    cli
+    sei
 
     jsr acia_init
     ldx #3
@@ -43,6 +45,8 @@ bios_boot:
     jsr zerobss
     jsr zero_lba
     jsr sn_beep
+
+    cli
     jmp sfos_s_reset
    ;
 
@@ -161,7 +165,10 @@ zero_lba:
     rts
 
 .bss
-    bdma: .word 0
+bdma:       .word 0
+_vdp_status:.res 1
+_vdp_sync:  .res 1
+
 
 .segment "SYSTEM"
 .rodata

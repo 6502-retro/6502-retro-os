@@ -22,3 +22,6 @@ via_acr         = $9F2B
 via_pcr         = $9F2C
 via_ifr         = $9F2D
 via_ier         = $9F2E
+
+vdp_ram         = $9F30
+vdp_reg         = $9F31
