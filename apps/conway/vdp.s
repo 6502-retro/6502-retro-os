@@ -44,15 +44,11 @@ VDP_G2_NAME_TABLE           = $3800
 VDP_COLOR_TABLE             = $2000
 _vdp_sync                   = $65B
 .macro vdp_delay_slow
-        .repeat 8
-                nop
-        .endrepeat
+    jsr delay_slow
 .endmacro
 
 .macro vdp_delay_fast
-        .repeat 4
-                nop
-        .endrepeat
+    jsr delay_fast
 .endmacro
 
 .macro div8
@@ -78,6 +74,21 @@ tmp4: .byte 0
 scr_ptr: .word 0
 
 .code
+
+delay_fast:
+    phy
+    ldy #16
+:   dey
+    bne :-
+    ply
+    rts
+delay_slow:
+    phy
+    ldy #8
+:   dey
+    bne :-
+    ply
+    rts
 
 _vdp_init:
         jsr     vdp_clear_vram
@@ -211,19 +222,19 @@ _vdp_clear_screen_buf:
 
 _vdp_set_write_address:
         sta     VDP_REG
-        vdp_delay_fast
+        vdp_delay_slow
         txa
         ora     #$40
         sta     VDP_REG
-        vdp_delay_fast
+        vdp_delay_slow
         rts
 
 _vdp_set_read_address:
         sta     VDP_REG
-        vdp_delay_fast
+        vdp_delay_slow
         txa
         sta     VDP_REG
-        vdp_delay_fast
+        vdp_delay_slow
         rts
 
 _vdp_wait:
@@ -253,7 +264,7 @@ _vdp_flush:
         ldy     #0
 :       lda     (ptr1),y
         sta     VDP_RAM
-        vdp_delay_fast
+        vdp_delay_slow
         inc     ptr1
         bne     :-
         inc     ptr1+1

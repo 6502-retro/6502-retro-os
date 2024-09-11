@@ -43,7 +43,7 @@ void main(void) {
         memset(screen_buf, 0x20, 0x300);
 
         print_at_xy(0,0,"Press a key to start...\0");
-        //vdp_wait();
+        vdp_wait();
         vdp_flush();
 
         while (sfos_c_status() == 0) {
