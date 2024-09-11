@@ -1025,22 +1025,31 @@ to_upper:
     lba:            .res 4, 0
     cmdlen:         .byte 0
     temp_fcb:       .res 32,0
-    fsize:          .res 4
-    dirty_sector:   .byte 0
 
 .segment "SYSTEM"
 ; dispatch function, will be relocated on boot into SYSRAM
 jmptables:
-    jmp bios_boot       ; 0x200
-    jmp bios_wboot      ; 0x203
-    jmp dispatch        ; 0x206
-error_code: .byte 0     ; 0x209
+    jmp dispatch
+    jmp bios_boot
+    jmp bios_wboot
+    jmp bios_conout
+    jmp bios_conin
+    jmp bios_const
+    jmp bios_puts
+    jmp bios_prbyte
+    jmp sn_beep 
+error_code: .byte 0
 
-rstfar:                 ; 0x20A
+.assert * = $21C, error, "rstfar should be at $20A"
+rstfar:
     sta rom_bank
-    sta rombankreg      ; 0x20C
-    jmp ($FFFC)         ; 0x20E
-                        ; 0x211
+    sta rombankreg
+    jmp ($FFFC)
+
+.assert * = $224, error, "fisize should be at $244"
+fsize:      .res 4
+dirty_sector:   .byte 0
+
 .rodata
 
 sfos_jmp_tbl_lo:

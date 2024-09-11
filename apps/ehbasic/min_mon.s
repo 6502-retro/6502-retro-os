@@ -6,18 +6,13 @@
 ; To run EhBASIC on the simulator load and assemble [F7] this file, start the simulator
 ; running [F6] then start the code with the RESET [CTRL][SHIFT]R. Just selecting RUN
 ; will do nothing, you'll still have to do a reset to run the code.
-
-;acia_getc     = $8DC2
-;acia_getc_nw  = $8DCD
-;acia_putc     = $8DDB
-;sn_beep       = $9111
-WBOOT         = $0203
-
-
 .include "../../inc/sfos.inc"
 .include "../../inc/fcb.inc"
 .include "../../inc/errors.inc"
+.include "../lib/asminc.inc"
+
 .include "basic.s"
+;
 ;
 ; put the IRQ and MNI code in RAM so that it can be changed
 
@@ -56,15 +51,15 @@ LAB_signon
 ; using acai routines from rom bank 0
 
 ACIAout
-        jmp acia_putc
+        jmp CONOUT
 
 ACIAin
-        jmp acia_getc_nw
+        jmp CONST
 ;
 ; vector tables
 
 LAB_vec
-      .word ACIAin            ; byte in from simulated ACIA
+      .word ACIAin            ; byte in from simulated ACIAsfossfos
       .word ACIAout           ; byte out to simulated ACIA
       .word load              ; null load vector for EhBASIC
       .word save              ; null save vector for EhBASIC

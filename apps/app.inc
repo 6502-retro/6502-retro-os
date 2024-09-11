@@ -1,10 +1,21 @@
 ; vim: ft=asm_ca65 sw=4 ts=4 et
-REBOOT      = $200
-WBOOT       = REBOOT + 3
-SFOS        = REBOOT + 6
-ERROR_CODE  = REBOOT + 9
-RSTFAR      = REBOOT + 10
 
+SFOS        = $200
+REBOOT      = SFOS      + 3
+WBOOT       = REBOOT    + 3
+CONOUT      = WBOOT     + 3
+CONIN       = CONOUT    + 3
+CONST       = CONIN     + 3
+CONPUTS     = CONST     + 3
+CONBYTE     = CONPUTS   + 3
+CONBEEP     = CONBYTE   + 3
+ERROR_CODE  = CONBEEP   + 3
+
+RSTFAR      = ERROR_CODE + 1
+
+FSIZE       = RSTFAR + 8
+DIRTY_SECTOR = FSIZE + 4
+;
 ; hard coded addresses that SFCP uses
 FCB          = $380
 FCB2         = $3A0
@@ -13,10 +24,6 @@ CMDOFFSET    = $3C0    ; pointer into CMDLINE
 SFOS_BUF     = $400
 SFOS_BUF_END = $600
 
-
-acia_getc     = $8D48
-acia_getc_nw  = $8D53
-acia_putc     = $8D61
 
 .code
 ;

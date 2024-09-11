@@ -8,11 +8,22 @@
 
 .globalzp ptr1
 
-BOOT    = $200
-WBOOT   = BOOT + 3
-SFOS    = BOOT + 6
-RSTFAR  = BOOT + 10
+SFOS        = $200
+REBOOT      = SFOS      + 3
+WBOOT       = REBOOT    + 3
+CONOUT      = WBOOT     + 3
+CONIN       = CONOUT    + 3
+CONST       = CONIN     + 3
+CONPUTS     = CONST     + 3
+CONBYTE     = CONPUTS   + 3
+CONBEEP     = CONBYTE   + 3
+ERROR_CODE  = CONBEEP   + 3
 
+RSTFAR      = ERROR_CODE + 1
+
+FSIZE       = RSTFAR + 8
+DIRTY_SECTOR = FSIZE + 4
+;
 .zeropage
 debug_ptr:  .word 0
 sfcpcmd:    .word 0

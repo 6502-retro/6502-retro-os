@@ -24,24 +24,17 @@ retro_bye:
         jmp     WBOOT
 
 retro_beep:
-        jmp     sn_beep
-
-
-SFOS            = $206
-ERROR_CODE      = $209
-FCB             = $380
-SFOS_BUF        = $400
-SFOS_BUF_END    = $600
+        jmp     CONBEEP
 
 save:
 
-        stz fsize + 0
-        stz fsize + 1
-        stz fsize + 2
-        stz fsize + 3
+        stz FSIZE + 0
+        stz FSIZE + 1
+        stz FSIZE + 2
+        stz FSIZE + 3
 
         lda #'C'
-        jsr acia_putc
+        jsr CONOUT
 
         jsr create_fcb
         lda #<FCB
@@ -57,14 +50,14 @@ save:
         jsr SFOS
 
         lda #'M'
-        jsr acia_putc
+        jsr CONOUT
         jmp @save
 @open:
         jsr open_file
         stz FCB + sfcb::SC
 
         lda #'O'
-        jsr acia_putc
+        jsr CONOUT
 
 @save:
         lda #<SFOS_BUF
@@ -73,7 +66,7 @@ save:
         jsr SFOS
 
         jsr clear_buf
-        stz dirty_sector
+        stz DIRTY_SECTOR
 
         ; redirect stdout to file
         lda #<fwrite
@@ -102,7 +95,7 @@ fwrite:
         phx
         phy
         sta (basptr)
-        inc dirty_sector
+        inc DIRTY_SECTOR
         inc basptr+0
         bne :+
         inc basptr+1
@@ -121,20 +114,20 @@ fwrite:
         jsr SFOS
 
         inc FCB + sfcb::SC
-        stz dirty_sector
+        stz DIRTY_SECTOR
 
         jsr clear_buf
 
 :       clc
-        lda fsize + 0
+        lda FSIZE + 0
         adc #1
-        sta fsize + 0
-        lda fsize + 1
+        sta FSIZE + 0
+        lda FSIZE + 1
         adc #0
-        sta fsize + 1
-        lda fsize + 2
+        sta FSIZE + 1
+        lda FSIZE + 2
         adc #0
-        sta fsize + 2
+        sta FSIZE + 2
 
         ply
         plx
@@ -337,7 +330,7 @@ exit:
 
 
 retro_dir:
-        rts
+    rts
 
 .bss
 active_drive:       .byte 0
