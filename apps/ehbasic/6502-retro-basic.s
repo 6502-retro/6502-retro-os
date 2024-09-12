@@ -1,4 +1,4 @@
-; vim: ft=asm_ca65
+; vim: ft=asm_ca65 ts=4 sw=4 :
 ; contains additional commands for EH Basic
 basptr = $FA
 
@@ -8,292 +8,286 @@ basptr = $FA
 ; LOAD "FILENAME.BAS" - Loads a FILENAME
 ; SAVE "FILENAME.BAS" - Saves current program into FILENAME.
 retro_cls:
-        PHA
-        PHY
-        lda     #<strAnsiCLSHome
-        ldy     #>strAnsiCLSHome
-        jsr     LAB_18C3                ; print null terminated string
-        PLY
-        PLA
-        rts
+    lda     #<strAnsiCLSHome
+    ldy     #>strAnsiCLSHome
+    jmp     LAB_18C3                ; print null terminated string
 
 retro_bye:
-        lda     #<strByeMessage
-        ldy     #>strByeMessage
-        jsr     LAB_18C3                ; print null terminated string
-        jmp     WBOOT
+    jmp     WBOOT
 
 retro_beep:
-        jmp     CONBEEP
+    jmp     CONBEEP
 
 save:
-        lda #'C'
-        jsr CONOUT
+    jsr create_fcb
+    jsr set_drive
 
-        jsr create_fcb
-        lda #<FCB
-        ldx #>FCB
-        ldy #esfos::sfos_d_findfirst
-        jsr SFOS
+    lda #<FCB
+    ldx #>FCB
+    ldy #esfos::sfos_d_findfirst
+    jsr SFOS
+    bcs @make
+    ldx #$1E
+    jmp LAB_XERR
 
-        bcc @open
-        ; make
-        lda #<FCB
-        ldx #>FCB
-        ldy #esfos::sfos_d_make
-        jsr SFOS
-
-        lda #'M'
-        jsr CONOUT
-        jmp @save
-@open:
-        jsr open_file
-        stz FCB + sfcb::SC
-
-        lda #'O'
-        jsr CONOUT
+@make:
+    lda #<FCB
+    ldx #>FCB
+    ldy #esfos::sfos_d_make
+    jsr SFOS
+    bcc @save
+    ldx #$26
+    jmp LAB_XERR
 
 @save:
-        lda #<SFOS_BUF
-        ldx #>SFOS_BUF
-        ldy #esfos::sfos_d_setdma
-        jsr SFOS
+    lda #<SFOS_BUF
+    ldx #>SFOS_BUF
+    ldy #esfos::sfos_d_setdma
+    jsr SFOS
 
-        jsr clear_buf
+    jsr clear_buf
 
-        ; redirect stdout to file
-        lda #<fwrite
-        sta VEC_OUT + 0
-        lda #>fwrite
-        sta VEC_OUT + 1
+    ; redirect stdout to file
+    lda #<fwrite
+    sta VEC_OUT + 0
+    lda #>fwrite
+    sta VEC_OUT + 1
 
-        sec
-        jsr LAB_14BD            ; LIST
+    sec
+    jsr LAB_14BD            ; LIST
 
-        lda #<ACIAout
-        sta VEC_OUT + 0
-        lda #>ACIAout
-        sta VEC_OUT + 1
+    lda #<ACIAout
+    sta VEC_OUT + 0
+    lda #>ACIAout
+    sta VEC_OUT + 1
 
-        lda #<FCB
-        ldx #>FCB
-        ldy #esfos::sfos_d_close
-        jsr SFOS
+    lda #<FCB
+    ldx #>FCB
+    ldy #esfos::sfos_d_close
+    jmp SFOS
 
-        jsr restore_active_drive
-        rts
-
-; this logic is also available in SFOS as it should be, but for some reason I was
-; having a great deal of trouble getting it to work via the sfos call.
-; The load routines (fread) work just fine via SFOS.
 fwrite:
-        phx
-        phy
-        sta REGA
-        lda #<FCB
-        ldx #>FCB
-        ldy #esfos::sfos_d_writeseqbyte
-        jsr SFOS
-        ply
-        plx
-        rts
+    phx
+    phy
+    sta REGA
+    lda #<FCB
+    ldx #>FCB
+    ldy #esfos::sfos_d_writeseqbyte
+    jsr SFOS
+    ply
+    plx
+    rts
 
 clear_buf:
-        lda #0
-        ldy #0
-:       sta SFOS_BUF+0,y
-        iny
-        bne :-
-:       sta SFOS_BUF+256,y
-        iny
-        bne :-
-        lda #<SFOS_BUF
-        sta basptr+0
-        lda #>SFOS_BUF
-        sta basptr+1
-        rts
+    lda #0
+    ldy #0
+:   sta SFOS_BUF+0,y
+    iny
+    bne :-
+:   sta SFOS_BUF+256,y
+    iny
+    bne :-
+    lda #<SFOS_BUF
+    sta basptr+0
+    lda #>SFOS_BUF
+    sta basptr+1
+    rts
 
 
 load:
-        ; open file
-        ; read file into memory one character at a time
-        ; when read fails, then done.
-        jsr open_file
+    ; open file
+    ; read file into memory one character at a time
+    ; when read fails, then done.
+    jsr open_file
+    jsr set_drive
 
-        lda #<SFOS_BUF
-        ldx #>SFOS_BUF
-        ldy #esfos::sfos_d_setdma
-        jsr SFOS
-        lda #<FCB
-        ldx #>FCB
-        ldy #esfos::sfos_d_readseqblock
-        jsr SFOS
+    lda #<SFOS_BUF
+    ldx #>SFOS_BUF
+    ldy #esfos::sfos_d_setdma
+    jsr SFOS
+    lda #<FCB
+    ldx #>FCB
+    ldy #esfos::sfos_d_readseqblock
+    jsr SFOS
 
-        ; redirect STDIN
-         ; save stack as NEW destroys it
-        tsx
-        inx
-        lda $100,x
-        sta basptr
-        inx
-        lda $100,x
-        sta basptr + 1
+    ; redirect STDIN
+     ; save stack as NEW destroys it
+    tsx
+    inx
+    lda $100,x
+    sta basptr
+    inx
+    lda $100,x
+    sta basptr + 1
 
-        jsr LAB_1463                    ; NEW
+    jsr LAB_1463                    ; NEW
 
-        ; restore stack
-        lda basptr+ 1
-        pha
-        lda basptr
-        pha
+    ; restore stack
+    lda basptr+ 1
+    pha
+    lda basptr
+    pha
 
-        ; redirect input
-        lda #<fread
-        sta VEC_IN + 0
-        lda #>fread
-        sta VEC_IN + 1
+    ; redirect input
+    lda #<fread
+    sta VEC_IN + 0
+    lda #>fread
+    sta VEC_IN + 1
 
-        ; redirect output to null
-        lda #<nullout
-        sta VEC_OUT + 0
-        lda #>nullout
-        sta VEC_OUT + 1
+    ; redirect output to null
+    lda #<nullout
+    sta VEC_OUT + 0
+    lda #>nullout
+    sta VEC_OUT + 1
 
-        jsr LAB_1319
-        rts
+    jmp LAB_1319
 
 fread:
-        phx
-        phy
-        lda #<FCB
-        ldx #>FCB
-        ldy #esfos::sfos_d_readseqbyte
-        jsr SFOS
-        ply
-        plx
-        bcs fread_error
-        cmp #$0a
-        bne nullout
-        lda #$0d
+    phx
+    phy
+    lda #<FCB
+    ldx #>FCB
+    ldy #esfos::sfos_d_readseqbyte
+    jsr SFOS
+    ply
+    plx
+    bcs fread_error
+    cmp #$0a
+    bne nullout
+    lda #$0d
 nullout:
-        sec
-        rts
+    sec
+    rts
 
 fread_error:
-        lda ERROR_CODE
-        cmp #ERROR::FILE_EOF
-        bne :+
-        jsr reset_redirects
-        jmp file_exit
-:       ldx #$2A
-        jmp LAB_XERR
+    lda ERROR_CODE
+    cmp #ERROR::FILE_EOF
+    bne :+
+    jsr reset_redirects
+    jmp file_exit
+:   ldx #$2A
+    jmp LAB_XERR
+
+clear_fcb:
+    ldx #0
+    lda #0
+:   sta FCB,x
+    inx
+    cpx #32
+    bne :-
+    rts
 
 create_fcb:
-        ; clear out FCB
-        ldx #0
-        lda #0
-:       sta FCB,x
-        inx
-        cpx #32
-        bne :-
+    jsr clear_fcb
+    ; parse FCB
+    lda #<FCB
+    ldx #>FCB
+    ldy #esfos::sfos_d_setdma
+    jsr SFOS
 
-        ; parse FCB
-        lda #<FCB
-        ldx #>FCB
-        ldy #esfos::sfos_d_setdma
-        jsr SFOS
-        jsr set_user_drive
+    lda #4              ; ALL FILES ON D DRIVE ALLWAYS
+    sta FCB
 
-        jsr LAB_EVEX
-        lda Dtypef
-        bne :+
-        ldx #$02
-        jmp LAB_XERR            ; syntax error
-:
-        jsr LAB_22B6
-        ; filename is pointed to by X/Y
-        stx basptr + 0
-        sty basptr + 1
-        tay                     ; length in A
-        lda #0
-        sta (basptr),Y          ; zeroterminate the filename string
-
-        lda basptr + 0
-        ldx basptr + 1
-        ldy #esfos::sfos_d_parsefcb
-        jmp SFOS
-
-open_file:
-        jsr create_fcb
-        lda #<FCB
-        ldx #>FCB
-        ldy #esfos::sfos_d_open
-        jsr SFOS
-        rts
-
-reset_redirects:
-
-        lda #<ACIAout
-        sta VEC_OUT + 0
-        lda #>ACIAout
-        sta VEC_OUT + 1
-
-        lda #<ACIAin
-        sta VEC_IN + 0
-        lda #>ACIAin
-        sta VEC_IN + 1
-        rts
-
-file_exit:
-        jsr restore_active_drive
-
-        lda #<strReady
-        ldy #>strReady
-        jsr LAB_18C3
-
-        jsr LAB_1477
-        jmp LAB_1319
-        rts
-
-restore_active_drive:
-    lda FCB
+    jsr LAB_EVEX
+    lda Dtypef
     bne :+
-    rts
-:   lda saved_active_drive
-    sta active_drive
-    ldx #0
-    ldy #esfos::sfos_d_getsetdrive
+    ldx #$02
+    jmp LAB_XERR            ; syntax error
+:
+    jsr LAB_22B6
+    ; filename is pointed to by X/Y
+    stx basptr + 0
+    sty basptr + 1
+    tay                     ; length in A
+    lda #0
+    sta (basptr),Y          ; zeroterminate the filename string
+
+    lda basptr + 0
+    ldx basptr + 1
+    ldy #esfos::sfos_d_parsefcb
     jmp SFOS
 
-set_user_drive:
-    lda #$FF
-    ldx #$00
-    ldy #esfos::sfos_d_getsetdrive
-    jsr SFOS
-    sta active_drive
+open_file:
+    jsr create_fcb
 
-    lda FCB
-    bne set_drive
+    lda #<FCB
+    ldx #>FCB
+    ldy #esfos::sfos_d_open
+    jmp SFOS
+
+reset_redirects:
+    lda #<ACIAout
+    sta VEC_OUT + 0
+    lda #>ACIAout
+    sta VEC_OUT + 1
+
+    lda #<ACIAin
+    sta VEC_IN + 0
+    lda #>ACIAin
+    sta VEC_IN + 1
+    rts
+
+file_exit:
+
+    lda #<strReady
+    ldy #>strReady
+    jsr LAB_18C3
+
+    jsr LAB_1477
+    jmp LAB_1319
+
+exit:
+    jmp WBOOT
+
+search_fcb:
+    jsr clear_fcb
+    ldx #0
+:   lda strSearch,x
+    sta FCB,x
+    inx
+    cpx #sfcb::L1
+    bne :-
+    rts
+
+print_fcb:
+    stz FCB + sfcb::L1
+    ldx #1
+:   lda FCB,x
+    beq :+
+    jsr CONOUT
+    inx
+    bra :-
+:   jmp LAB_CRLF
+
+retro_dir:
+    ; search FCB *.bas
+    ; find first
+    ; find next until none found
+    jsr search_fcb
+    jsr set_drive
+
+    lda #<FCB
+    ldx #>FCB
+    ldy #esfos::sfos_d_findfirst
+    jsr SFOS
+    bcs @exit
+    jsr print_fcb
+@loop:
+    jsr search_fcb
+    lda #<FCB
+    ldx #>FCB
+    ldy #esfos::sfos_d_findnext
+    jsr SFOS
+    bcs @exit
+    jsr print_fcb
+    bra @loop
+@exit:
     rts
 
 set_drive:
-    pha
-    lda active_drive
-    sta saved_active_drive
-    pla
-    sta active_drive
-    ldx #0
+    lda FCB
     ldy #esfos::sfos_d_getsetdrive
     jmp SFOS
-
-
-exit:
-    jsr restore_active_drive
-    jmp WBOOT
-
-
-retro_dir:
-    rts
 
 .bss
 active_drive:       .byte 0
@@ -302,5 +296,5 @@ temp:               .word 0
 
 .rodata
 strAnsiCLSHome: .byte $0D,$0A, $1b, "[2J", $1b, "[H", $0
-strByeMessage:  .byte $0D,$0A,"Exiting ehBasic now...", $0
 strReady:       .byte $0D,$0A,"Ready",$0A,$0D,$0
+strSearch:      .byte 4,"????????BAS"
