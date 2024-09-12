@@ -385,16 +385,16 @@ free:
     jsr print_word
     lda #'-'
     jsr c_write
-    lda #<$9E00
-    ldx #>$9E00
+    lda #<$9EFF
+    ldx #>$9EFF
     jsr print_word
     lda #' '
     jsr c_write
     sec
-    lda #<$9E00
+    lda #<$9EFF
     sbc #<TPA
     sta temp+0
-    lda #>$9E00
+    lda #>$9EFF
     sbc #>TPA
     sta temp+1
     lda temp+0
