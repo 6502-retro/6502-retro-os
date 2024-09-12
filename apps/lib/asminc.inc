@@ -10,10 +10,11 @@ CONBYTE     = CONPUTS   + 3
 CONBEEP     = CONBYTE   + 3
 ERROR_CODE  = CONBEEP   + 3
 
-RSTFAR      = ERROR_CODE + 1
+RSTFAR      = $21C
 
-FSIZE       = RSTFAR + 8
-DIRTY_SECTOR = FSIZE + 4
+REGA        = $224
+REGX        = REGA   + 1
+REGY        = REGX   + 1
 ;
 ; hard coded addresses that SFCP uses
 FCB          = $380

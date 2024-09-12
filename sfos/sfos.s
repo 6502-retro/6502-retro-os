@@ -7,8 +7,6 @@
 .autoimport
 .export sfos_buf, lba, sfos_s_reset
 
-.globalzp ptr1
-
 .zeropage
 
 ram_bank:   .byte 0
@@ -892,63 +890,44 @@ sfos_d_readseqbyte:
 ; wirtes to the buffer, fills up and when full, writes the buffer to disk.
 ; errors out when file max is reached.
 sfos_d_writeseqbyte:
-    pla                     ; caller has to push the byte to write.
-    pha
-    sta (zpbufptr)          ; save the byte given in A to the buffer
-    inc dirty_sector        ; mark the sector as dirty.
-    inc zpbufptr+0          ; increment the buffer pointer
-    bne :+
-    inc zpbufptr+1
-:   ldx user_dma+1          ; compare with the top of userdma
-    inx
-    inx
-    cpx zpbufptr+1
-    bne @return             ; carry on if we haven't reached the top.
+    lda rega
+    sta (zpbufptr)
+    inc dirty_sector
+    inc zpbufptr + 0
+    bne @incsize
+    inc zpbufptr + 1
+    lda zpbufptr + 1
+    cmp #>sfos_buf_end      ; XXX: this is NOT what was implied by the call to setdma!!!!
+    bne @incsize
 
-    lda user_dma+0          ; set the dma pointer in the bios
-    sta zpbufptr+0
+    lda user_dma+0          ; reset the buffer pointer.  Ready for the next
+    sta zpbufptr+0          ; byte
     ldx user_dma+1
     stx zpbufptr+1
-    jsr bios_setdma         ; write the new sector
+    jsr bios_setdma         ; set dma pointer in bios
 
     jsr sfos_d_writeseqblock
-    bcc @clear_dirty_flag
-    ; return with the error from write sequential block
-    pla
-    rts
-@clear_dirty_flag:
-    stz dirty_sector
-    ; also increment the sector count in the FCB
+
     ldy #sfcb::SC
     lda (param),y
     inc
     sta (param),y
-
-    jsr clear_internal_buffer
-@return:
-    ; increment the filesize which was initialised to zero by make
-    clc                     ; when the filesize reaches 0x0200000
-    lda fsize+0             ; we have reached the max filesize and
-    adc #1                  ; must return that in the error_code
-    sta fsize+0
-    lda fsize+1
+    stz dirty_sector
+    jsr clear_internal_buffer   ; XXX : also NOT what was implied by the call to setdma!!!
+@incsize:
+    clc
+    lda fsize + 0
+    adc #1
+    sta fsize + 0  
+    lda fsize + 1
     adc #0
-    sta fsize+1
-    lda fsize+2
+    sta fsize + 1
+    lda fsize + 2
     adc #0
-    sta fsize+2
-    cmp #2                  ; max filesize reached.
-    bne :+
-    lda #ERROR::FILE_MAX_REACHED
-    sta error_code
-    sec
-    pla
-    rts
-:
-    lda #ERROR::OK
-    sta error_code
-    pla
-    sec
+    sta fsize + 2
+@exit:
+    lda $FF
+    clc
     rts
 
 ; DMA is set already, LBA is set already, do not increment LBA
@@ -959,8 +938,10 @@ sfos_d_writerawblock:
 internal_setdma:
     lda #<sfos_buf
     sta user_dma + 0
+    sta zpbufptr + 0
     ldx #>sfos_buf
     stx user_dma + 1
+    stx zpbufptr + 1
     jmp bios_setdma
 
 dispatch:
@@ -1025,6 +1006,8 @@ to_upper:
     lba:            .res 4, 0
     cmdlen:         .byte 0
     temp_fcb:       .res 32,0
+    dirty_sector:   .byte 0
+    fsize:          .dword 0
 
 .segment "SYSTEM"
 ; dispatch function, will be relocated on boot into SYSRAM
@@ -1047,8 +1030,10 @@ rstfar:
     jmp ($FFFC)
 
 .assert * = $224, error, "fisize should be at $244"
-fsize:      .res 4
-dirty_sector:   .byte 0
+rega:       .res 1
+regx:       .res 1
+regy:       .res 1
+.assert * = $227, error, "end of system should be at $227"
 
 .rodata
 

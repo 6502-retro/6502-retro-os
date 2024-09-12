@@ -27,12 +27,6 @@ retro_beep:
         jmp     CONBEEP
 
 save:
-
-        stz FSIZE + 0
-        stz FSIZE + 1
-        stz FSIZE + 2
-        stz FSIZE + 3
-
         lda #'C'
         jsr CONOUT
 
@@ -66,7 +60,6 @@ save:
         jsr SFOS
 
         jsr clear_buf
-        stz DIRTY_SECTOR
 
         ; redirect stdout to file
         lda #<fwrite
@@ -90,49 +83,19 @@ save:
         jsr restore_active_drive
         rts
 
+; this logic is also available in SFOS as it should be, but for some reason I was
+; having a great deal of trouble getting it to work via the sfos call.
+; The load routines (fread) work just fine via SFOS.
 fwrite:
-        pha
         phx
         phy
-        sta (basptr)
-        inc DIRTY_SECTOR
-        inc basptr+0
-        bne :+
-        inc basptr+1
-        lda basptr+1
-        cmp #>SFOS_BUF_END
-        bne :+
-
-        lda #<SFOS_BUF
-        ldx #>SFOS_BUF
-        ldy #esfos::sfos_d_setdma
-        jsr SFOS
-
+        sta REGA
         lda #<FCB
         ldx #>FCB
-        ldy #esfos::sfos_d_writeseqblock
+        ldy #esfos::sfos_d_writeseqbyte
         jsr SFOS
-
-        inc FCB + sfcb::SC
-        stz DIRTY_SECTOR
-
-        jsr clear_buf
-
-:       clc
-        lda FSIZE + 0
-        adc #1
-        sta FSIZE + 0
-        lda FSIZE + 1
-        adc #0
-        sta FSIZE + 1
-        lda FSIZE + 2
-        adc #0
-        sta FSIZE + 2
-
         ply
         plx
-        pla
-        clc
         rts
 
 clear_buf:
