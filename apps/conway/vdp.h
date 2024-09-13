@@ -1,5 +1,5 @@
-#define VDP_RAM 0x9f30
-#define VDP_REG 0x9f31
+#define VDP_RAM 0xbf30
+#define VDP_REG 0xbf31
 
 extern void vdp_init();
 extern void vdp_init_g2();

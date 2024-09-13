@@ -32,8 +32,8 @@
 .export vdp_write_to_screen_xy
 .export vdp_read_from_screen_xy
 
-VDP_RAM         = $9F30
-VDP_REG         = $9F31
+VDP_RAM         = $BF30
+VDP_REG         = $BF31
 
 VDP_SPRITE_PATTERN_TABLE    = 0
 VDP_PATTERN_TABLE           = $800

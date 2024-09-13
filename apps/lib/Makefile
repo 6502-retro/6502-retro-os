@@ -6,7 +6,8 @@ AR = ar65
 
 TOP = ..
 INCLUDES = -I $(TOP)/../inc
-NONE = /home/davelatham/cc65/lib/none.lib
+#NONE = /home/davelatham/cc65/lib/none.lib
+NONE = ./none.lib
 
 # Assembler flags
 ASFLAGS += $(INCLUDES) -g --feature labels_without_colons --cpu 65C02 --feature string_escapes

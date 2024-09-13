@@ -27,6 +27,8 @@ bios_boot:
     sei
 
     jsr acia_init
+    jsr sn_start
+
     ldx #3
 @L1:
     phx

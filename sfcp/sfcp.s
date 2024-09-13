@@ -385,16 +385,16 @@ free:
     jsr print_word
     lda #'-'
     jsr c_write
-    lda #<$9EFF
-    ldx #>$9EFF
+    lda #<TPA_END
+    ldx #>TPA_END
     jsr print_word
     lda #' '
     jsr c_write
     sec
-    lda #<$9EFF
+    lda #<TPA_END
     sbc #<TPA
     sta temp+0
-    lda #>$9EFF
+    lda #>TPA_END
     sbc #>TPA
     sta temp+1
     lda temp+0
@@ -941,7 +941,6 @@ str_help:
     .byte 10,13,"DIR [A:] Enter a drive number to list files"
     .byte 10,13,"ERA [A:]FILENAME Delete a file"
     .byte 10,13,"FREE Display memory information"
-    .byte 10,13,"QUIT Exit to monitor"
     .byte 10,13,"TYPE [A:]FILENAME Display ascii contents of a file"
     .byte 10,13,"SAVE FILENAME ## Save ## pages of memory starting at TPA to a file"
     .byte 10,13,0

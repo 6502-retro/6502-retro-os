@@ -12,6 +12,8 @@ ASFLAGS += -I inc -g --feature labels_without_colons --cpu 65C02 --feature strin
 # Set DEBUG=1 for debugging.
 DEBUG = -D DEBUG=0
 
+# Set CFG to the config for size of rom
+CFG = rom_8k.cfg
 SFM_LOAD_ADDR = 8000
 
 # Where should the builds be placed
@@ -49,7 +51,7 @@ $(BUILD_DIR)/%.o: %.s
 
 $(BUILD_DIR)/rom.raw: $(SFCP_OBJS) $(SFOS_OBJS) $(BIOS_OBJS)
 	@mkdir -p $$(dirname $@)
-	$(LD) -C config/rom.cfg $^ -o $@ -m $(BUILD_DIR)/rom.map -Ln $(BUILD_DIR)/rom.sym
+	$(LD) -C config/$(CFG) $^ -o $@ -m $(BUILD_DIR)/rom.map -Ln $(BUILD_DIR)/rom.sym
 	$(RELIST) $(BUILD_DIR)/rom.map $(BUILD_DIR)/bios
 	$(RELIST) $(BUILD_DIR)/rom.map $(BUILD_DIR)/sfos
 	$(RELIST) $(BUILD_DIR)/rom.map $(BUILD_DIR)/sfcp
