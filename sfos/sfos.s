@@ -9,8 +9,6 @@
 
 .zeropage
 
-ram_bank:   .byte 0
-rom_bank:   .byte 0
 cmd:        .word 0
 param:      .word 0
 user_dma:   .word 0
@@ -1012,28 +1010,31 @@ to_upper:
 .segment "SYSTEM"
 ; dispatch function, will be relocated on boot into SYSRAM
 jmptables:
-    jmp dispatch
-    jmp bios_boot
-    jmp bios_wboot
-    jmp bios_conout
-    jmp bios_conin
-    jmp bios_const
-    jmp bios_puts
-    jmp bios_prbyte
-    jmp sn_beep 
-error_code: .byte 0
+    jmp dispatch    ; 200
+    jmp bios_boot   ; 203
+    jmp bios_wboot  ; 206
+    jmp bios_conout ; 209
+    jmp bios_conin  ; 20B
+    jmp bios_const  ; 20F
+    jmp bios_puts   ; 212
+    jmp bios_prbyte ; 215
+    jmp sn_beep     ; 218
+    jmp sn_start    ; 21B
+    jmp sn_silence  ; 21E
+    jmp sn_stop     ; 221
+    jmp sn_send     ; 224
+error_code: .byte 0 ; 225
 
-.assert * = $21C, error, "rstfar should be at $20A"
+.assert * = $228, error, "rstfar should be at $228"
 rstfar:
-    sta rom_bank
     sta rombankreg
     jmp ($FFFC)
 
-.assert * = $224, error, "fisize should be at $244"
+.assert * = $22E, error, "REG A should be at $22E"
 rega:       .res 1
 regx:       .res 1
 regy:       .res 1
-.assert * = $227, error, "end of system should be at $227"
+.assert * = $231, error, "end of system should be at $231"
 
 .rodata
 

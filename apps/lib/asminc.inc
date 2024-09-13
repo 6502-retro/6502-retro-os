@@ -8,11 +8,15 @@ CONST       = CONIN     + 3
 CONPUTS     = CONST     + 3
 CONBYTE     = CONPUTS   + 3
 CONBEEP     = CONBYTE   + 3
-ERROR_CODE  = CONBEEP   + 3
+SN_START    = CONBEEP   + 3
+SN_SILENCE  = SN_START  + 3
+SN_STOP     = SN_SILENCE + 3
+SN_SEND     = SN_STOP   + 3
+ERROR_CODE  = SN_SEND   + 3
 
-RSTFAR      = $21C
+RSTFAR      = $228
 
-REGA        = $224
+REGA        = $22E
 REGX        = REGA   + 1
 REGY        = REGX   + 1
 ;

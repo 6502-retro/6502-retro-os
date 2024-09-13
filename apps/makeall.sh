@@ -10,4 +10,5 @@ cd ehbasic; make; cd ..
 cd format; make; cd ..
 cd hello; make; cd ..
 cd stat; make; cd ..
+cd vgm; make; cd ..
 cd xm; make; cd ..

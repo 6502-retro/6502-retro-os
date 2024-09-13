@@ -40,7 +40,7 @@ SFCP_SOURCES = \
 
 SFCP_OBJS = $(addprefix $(BUILD_DIR)/, $(SFCP_SOURCES:.s=.o))
 
-all: clean $(BUILD_DIR)/rom.bin grep
+all: clean $(BUILD_DIR)/rom.bin
 
 clean:
 	rm -fr $(BUILD_DIR)/*

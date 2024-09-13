@@ -196,7 +196,7 @@ def ls(image, drive="A"):
         fname = str(idx.fname, encoding="ascii")
         fext = str(idx.fext, encoding="ascii")
         filename = f"{fname}.{fext}"
-        print(f" {chr(idx.drive + 0x41)}:{filename:<11} {idx.file_size:>7} bytes")
+        print(f" {chr(idx.drive + 0x40)}:{filename:<11} {idx.file_size:>7} bytes")
 
     print()
 

@@ -6,10 +6,7 @@ The memory map for the 6502 Retro! looks like this:
 |ADDRESS|   SIZE |DESCRIPTION
 |-------|-------:|------
 | FFFF  |  7,936 | TOP OF ROM
-| E100  |        | BOTTOM OF ROM
-| .     | .      | .
-| E0FF  |    256 | TOP OF IO
-| E000  |        | BOTTOM OF IO
+| E000  |        | BOTTOM OF ROM
 | .     | .      | .
 | DFFF  |  8,192 | TOP OF HIGH RAM
 | C000  |        | BOTTOM OF HIGH RAM
