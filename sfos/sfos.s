@@ -5,7 +5,7 @@
 .include "errors.inc"
 
 .autoimport
-.export sfos_buf, lba, sfos_s_reset
+.export sfos_buf, sfos_s_reset, dispatch
 
 .zeropage
 
@@ -1001,40 +1001,11 @@ to_upper:
     current_dirent: .res 32, 0
     current_dirpos: .byte 0
     drvtbl:         .res 16
-    lba:            .res 4, 0
+    lba:            .res 4,0
     cmdlen:         .byte 0
     temp_fcb:       .res 32,0
     dirty_sector:   .byte 0
     fsize:          .dword 0
-
-.segment "SYSTEM"
-; dispatch function, will be relocated on boot into SYSRAM
-jmptables:
-    jmp dispatch    ; 200
-    jmp bios_boot   ; 203
-    jmp bios_wboot  ; 206
-    jmp bios_conout ; 209
-    jmp bios_conin  ; 20B
-    jmp bios_const  ; 20F
-    jmp bios_puts   ; 212
-    jmp bios_prbyte ; 215
-    jmp sn_beep     ; 218
-    jmp sn_start    ; 21B
-    jmp sn_silence  ; 21E
-    jmp sn_stop     ; 221
-    jmp sn_send     ; 224
-error_code: .byte 0 ; 225
-
-.assert * = $228, error, "rstfar should be at $228"
-rstfar:
-    sta rombankreg
-    jmp ($FFFC)
-
-.assert * = $22E, error, "REG A should be at $22E"
-rega:       .res 1
-regx:       .res 1
-regy:       .res 1
-.assert * = $231, error, "end of system should be at $231"
 
 .rodata
 

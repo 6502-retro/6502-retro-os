@@ -1,4 +1,5 @@
 ; vim: ft=asm_ca65
+.include "io.inc"
 
 .autoimport
 .globalzp ptr1, bdma_ptr, lba_ptr
@@ -7,6 +8,7 @@
 .export bios_setdma, bios_setlba, bios_sdread, bios_sdwrite, bios_puts
 .export bios_prbyte
 .export _vdp_sync, _vdp_status
+.export error_code, rega, regx, regy
 
 .if DEBUG=1
 .export bios_printlba
@@ -165,6 +167,36 @@ zero_lba:
     stz sector_lba + 2 ; drive number
     stz sector_lba + 3 ; always zero
     rts
+
+.segment "SYSTEM"
+; dispatch function, will be relocated on boot into SYSRAM
+jmptables:
+    jmp dispatch    ; 200
+    jmp bios_boot   ; 203
+    jmp bios_wboot  ; 206
+    jmp bios_conout ; 209
+    jmp bios_conin  ; 20B
+    jmp bios_const  ; 20F
+    jmp bios_puts   ; 212
+    jmp bios_prbyte ; 215
+    jmp sn_beep     ; 218
+    jmp sn_start    ; 21B
+    jmp sn_silence  ; 21E
+    jmp sn_stop     ; 221
+    jmp sn_send     ; 224
+error_code: .byte 0 ; 225
+
+.assert * = $228, error, "rstfar should be at $228"
+rstfar:
+    sta rombankreg
+    jmp ($FFFC)
+
+.assert * = $22E, error, "REG A should be at $22E"
+rega:       .res 1
+regx:       .res 1
+regy:       .res 1
+.assert * = $231, error, "end of system should be at $231"
+
 
 .bss
 bdma:       .word 0
