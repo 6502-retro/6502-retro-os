@@ -98,8 +98,9 @@ load:
     ; open file
     ; read file into memory one character at a time
     ; when read fails, then done.
-    jsr open_file
+    jsr search_fcb
     jsr set_drive
+    jsr open_file
 
     lda #<SFOS_BUF
     ldx #>SFOS_BUF

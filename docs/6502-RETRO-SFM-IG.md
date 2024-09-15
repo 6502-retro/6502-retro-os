@@ -1,4 +1,5 @@
 <!-- vim: set ft=markdown cc=80 tw=80 : -->
+
 # 6502-RETRO-SFM - INTEGRATION GUIDE
 
 ## Table of Contents
@@ -6,6 +7,7 @@
 - [Chapter 1: Introduction](#chapter-1-introduction)
 - [Chapter 2: File System Internals](#chapter-2-filesystem-internals)
 - [Chapter 3: BIOS](#chapter-3-bios)
+- [Chapter 4: SFOS](#chapter-4-sfos)
 
 ## Chapter 1: Introduction
 
@@ -219,3 +221,265 @@ As long as these functions are at this known location, then some of the
 applications written for the OS will work.  I say some, because some of them
 expect raw access to bios routines which might not be provided by the person
 porting the OS.
+
+## Chapter 4: SFOS
+
+The SFOS is a collection of routines that the programmer can call to interface
+with the operating system.  It stands for Simple Filesystem Operating System.
+
+The SFCP (See Chapter 5) uses these same calls to provide the user interface to
+the operating system.
+
+The functions provide access to the Serial interface and the filesystem.
+
+### List of SFOS Routines
+
+Each function has a number.  This number is passed by the Y register and any
+arguments are given in XA which is either two bytes, a word, or a pointer.  The
+dispatch function assumes its a pointer and assignes the value into the `param`
+zeropage variable.
+
+|Number|Name
+|-----:|-----------------
+|   0  |s_reset
+|   1  |c_read
+|   2  |c_write
+|   3  |c_printstr
+|   4  |c_readstr
+|   5  |c_status
+|   6  |d_getsetdrive
+|   7  |d_createfcb
+|   8  |d_parsefcb
+|   9  |d_findfirst
+|   10 |d_findnext
+|   11 |d_make
+|   12 |d_open
+|   13 |d_close
+|   14 |d_setdma
+|   15 |d_readseqblock
+|   16 |d_writeseqblock
+|   17 |d_readseqbyte
+|   18 |d_writeseqbyte
+|   19 |d_setlba
+|   20 |d_readrawblock
+|   21 |d_writerawblock
+
+### SFOS Routines
+
+#### 0 - s_reset
+
+INPUT:
+| A | X | Y
+|---|---|--
+| - | - | 0
+
+OUTPUT:
+| A | X | Y | Carry | Error Code
+|---|---|---|-------|:----------
+| - | - | - | -     | -
+
+Resets with a warm boot and logs into drive A.
+
+### 1 - c_read
+
+INPUT:
+| A | X | Y
+|---|---|--
+| - | - | 1
+
+OUTPUT:
+| A         | X | Y | Carry | Error Code
+|-----------|---|---|-------|:----------
+| Character | - | - | -     | -
+
+Waits for a character on the serial interface and returns it in A.
+
+### 2 - c_write
+
+INPUT:
+| A         | X | Y
+|-----------|---|--
+| Character | - | 2
+
+OUTPUT:
+| A         | X | Y | Carry | Error Code
+|-----------|---|---|-------|:----------
+| Character | - | - | -     | -
+
+Writes the character in A to the serial interface.  Character written is
+returned in A.  After sending the character to the serial interface, this
+routine checks for a CTRL+C on the input and jumps to `s_reset` if found.
+Effectively this means that during output to the serial interface a CTRL+C from
+the user will warm boot the system.
+
+### 3 - c_printstr
+
+INPUT:
+| A         | X      | Y
+|-----------|--------|--
+| Lobyte    | Hibyte | 3
+
+OUTPUT:
+| A | X | Y | Carry | Error Code
+|---|---|---|-------|:----------
+| - | - | - | -     | -
+
+Prints the zeroterminated string pointed to by XA to the serial interface.
+Internally, this routine calls c_write to write each character to the serial
+interface.
+
+### 4 - c_readstr
+
+INPUT:
+| A         | X      | Y
+|-----------|--------|--
+| Lobyte    | Hibyte | 4
+
+OUTPUT:
+| A | X | Y | Carry | Error Code
+|---|---|---|-------|:----------
+| - | - | - | -     | -
+
+Reads a line of text from the serial interface terminated by a newline.  The
+characters read are appended to the buffer pointed to by XA.  The first
+character of the buffer pointed to by XA contains the maximum length of the
+input line.  The maximum length of the buffer is 127 characters regardless of
+the value given in the first byte of the buffer.  On exit this routine will
+replace the first byte of the buffer with the actual length of the text entered.
+
+### 5 - c_status
+
+INPUT:
+| A | X | Y
+|---|---|--
+| - | - | 5
+
+OUTPUT:
+| A         | X | Y | Carry | Error Code
+|-----------|---|---|-------|:----------
+| Character | - | - | C/S   | -
+
+- Carry is CLEAR when there is no byte waiting.
+- Carry is SET when a byte was found.
+- A contains the character if one is found else 0
+
+Checks if a character is waiting on the serial interface.  If one is found, the
+carry flag is set and the character is returned in A.  If no data is present on
+the serial interface, then the carry flag is cleared and a 0 is returned in A.
+
+### 6 - d_getsetdrive
+
+INPUT:
+| A             | X | Y
+|---------------|---|--
+| DRIVE or 0xFF | - | 6
+
+OUTPUT:
+| A         | X | Y | Carry | Error Code
+|-----------|---|---|-------|:----------
+| DRIVE or ?| - | - | C/S   | DRIVE ERROR
+
+- Carry is CLEAR when there is no error.
+- Carry is SET when there is an error.
+- A contains the drive if one was requested with input 0xFF
+
+If A = 0xFF on input then return the current logged in drive in A.  Otherwise
+set the drive to the value provided in A.  A DRIVE ERROR can occur if the given
+drive number is out of bounds.  Valid values for the input to this function are
+0x01 (for DRIVE A) to 0x08 (for DRIVE H) for setting the drive or 0xFF to "get"
+the current drive.
+
+When a drive is first logged into, a scan of the drive is carried out to
+determin the position of the last used file on the drive.  This helps to reduce
+the time spent searching for files in `d_findfirst` and `d_findnext` routines.
+
+### 7 - d_createfcb
+
+Unimplimented
+
+### 8 - d_parsefcb
+
+INPUT:
+| A         | X      | Y
+|-----------|--------|--
+| Lobyte    | Hibyte | 8
+
+OUTPUT:
+| A         | X      | Y | Carry   | Error Code
+|-----------|--------|---|---------|:----------
+| Lobyte    | Hibyte | - | C/S     | PARSE ERROR
+
+Parse the string pointed to by XA into an FCB pointed to by the DMA pointer.
+The DMA pointer must be set by a call to `d_setdma` before calling this
+function.  The routine returns with XA pointing at the next character in the
+input buffer after the parsed string.  If there was no error, the carry flag is
+clear on return else it is set and the error code is set to PARSE ERROR.
+
+### 9 - d_findfirst
+
+INPUT:
+| A         | X      | Y
+|-----------|--------|--
+| Lobyte    | Hibyte | 9
+
+OUTPUT:
+| A | X | Y | Carry   | Error Code
+|---|---|---|---------|:-----------------------------------
+| - | - | - | C/S     | DRIVE ERROR or FILE NOT FOUND ERROR
+
+Finds the first filename matching the filename given in the FCB pointed to by
+XA.  The find routine will seach in the drive given by the FCB if a drive number
+is provided.  If the provided drive number is 0 then the current drive is
+searched.  
+
+If the drive number is 0xE5 then d_findfirst will return the first
+available / deleted directory entry.  Use this to find an empty file slot in the
+directory table - used internally by `d_make`
+
+The search is case insenstive as all filenames are normalized to UPPER CASE.
+
+The search begins at the beginning of the drive.
+
+The search ends when the last directory is scanned.  The last directory is that
+recorded in the file table memory structure when the drive was "logged into".
+
+The search will honor the ? wildcard to match on any single characer.  The `*`
+wildcard may also be used which will match on all characters from the position
+of the `*` until the end of the filename or the extension depending on which
+side of the `.` the wildcard is provided.
+
+The results of the serch are stored into the input FCB.  The carry flag is set
+on error and clear on success.
+
+### 10 - d_findnext
+
+INPUT:
+| A         | X      | Y
+|-----------|--------|--
+| Lobyte    | Hibyte | 10
+
+OUTPUT:
+| A | X | Y | Carry   | Error Code
+|---|---|---|---------|:-----------------------------------
+| - | - | - | C/S     | DRIVE ERROR or FILE NOT FOUND ERROR
+
+Finds the next filename matching the filename given in the FCB pointed to by
+XA.  The find routine will seach in the drive given by the FCB if a drive number
+is provided.  If the provided drive number is 0 then the current drive is
+searched.
+
+If the drive number is 0xE5 then d_findfirst will return the first
+available / deleted directory entry.  Use this to find an empty file slot in the
+directory table - used internally by `d_make`
+
+The search is case insenstive as all filenames are normalized to UPPER CASE.
+
+The search begins at the end of a result from a call to `d_findfirst`.
+
+The search will honor the ? wildcard to match on any single characer.  The `*`
+wildcard may also be used which will match on all characters from the position
+of the `*` until the end of the filename or the extension depending on which
+side of the `.` the wildcard is provided.
+
+The results of the serch are stored into the input FCB.  The carry flag is set
+on error and clear on success.  
