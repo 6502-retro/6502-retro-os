@@ -11,6 +11,8 @@ The 6502-Retro computer is a single board computer with the following harware fe
 - F18A or Pico9918 (tms9918a emulator)
 - TMS76489 Sound Generator
 
+Schematic is available [here.](./docs/6502-retro-bank-v3.pdf)
+
 ## Operating System
 
 On powerup the SFM operating system present and ready.  The OS is a CP/M like

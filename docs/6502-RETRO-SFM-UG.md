@@ -11,7 +11,7 @@
 
 ## Chapter 1: Introduction
 
-This document describes the operating system available in Bank 2 of the
+This document describes the operating system available in Bank 0 of the
 6502-Retro! homebrew computer designed and built by David Latham in 2024.
 
 The operating system is less than 6KB in size so fits easily in one of the 16kb
@@ -207,7 +207,7 @@ to work with the filesytem or not.
 SFM Ships with a version of Lee Davidson's Enhanced Basic (ehBasic) with some
 minor enhancemnts to support operation within the SFM environment.
 
-See [Chapter 5: BASIC](Chapter5) for more details.
+See [Chapter 5: BASIC](#chapter-5-basic) for more details.
 
 ### CAT
 
