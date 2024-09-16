@@ -260,28 +260,28 @@ zeropage variable.
 
 |Number|Name
 |-----:|-----------------
-|   0  |s_reset
-|   1  |c_read
-|   2  |c_write
-|   3  |c_printstr
-|   4  |c_readstr
-|   5  |c_status
-|   6  |d_getsetdrive
-|   7  |d_createfcb
-|   8  |d_parsefcb
-|   9  |d_findfirst
-|   10 |d_findnext
-|   11 |d_make
-|   12 |d_open
-|   13 |d_close
-|   14 |d_setdma
-|   15 |d_readseqblock
-|   16 |d_writeseqblock
-|   17 |d_readseqbyte
-|   18 |d_writeseqbyte
-|   19 |d_setlba
-|   20 |d_readrawblock
-|   21 |d_writerawblock
+|   0  |[s_reset](#0---s_reset)
+|   1  |[c_read](#1---c_read)
+|   2  |[c_write](#2---c_write)
+|   3  |[c_printstr](#3---c_printstr)
+|   4  |[c_readstr](#4---c_readstr)
+|   5  |[c_status](#5---c_status)
+|   6  |[d_getsetdrive](#6---d_getsetdrive)
+|   7  |[d_createfcb](#7---d_createfcb)
+|   8  |[d_parsefcb](#8---d_parsefcb)
+|   9  |[d_findfirst](#9---d_findfirst)
+|   10 |[d_findnext](#10---d_findnext)
+|   11 |[d_make](#11---d_make)
+|   12 |[d_open](#12---d_open)
+|   13 |[d_close](#13---d_close)
+|   14 |[d_setdma](#14---d_setdma)
+|   15 |[d_readseqblock](#15---d_readseqblock)
+|   16 |[d_writeseqblock](#16---d_writeseqblock)
+|   17 |[d_readseqbyte](#17---d_readseqbyte)
+|   18 |[d_writeseqbyte](#18---d_writeseqbyte)
+|   19 |[d_setlba](#19---d_setlba)
+|   20 |[d_readrawblock](#20---d_readrawblock)
+|   21 |[d_writerawblock](#21---d_writerawblock)
 
 ### SFOS Routines
 

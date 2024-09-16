@@ -8,7 +8,8 @@ The 6502-Retro computer is a single board computer with the following harware fe
 - SDCARD (Supports SDHC Cards)
 - 4MHz CPU
 - Rockwell ACIA 6551 Serial interface
-- F18A (tms9918a emulator on and FPGA)
+- F18A or Pico9918 (tms9918a emulator)
+- TMS76489 Sound Generator
 
 ## Operating System
 
@@ -19,13 +20,10 @@ programs, upload new programs into the filesystem, copy and erase files, and
 generally manage your data.
 
 A more detailed overview of the SFM Operating System is described
-[here](./docs/SFM.md).
+[here](./docs/6502-RETRO-SFM-UG.md).
 
 ## Built in ROM banks
 
-There are 4 available ROM banks.
+There are 4 available ROM banks.  Only one of them is created by this repository.
 
 - BANK 0: SFM Operating System
-- Bank 1: ehBasic
-- Bank 2: Hopper Runtime Environment
-- Bank 3: System Monitor and legacy (sfs) dos.
