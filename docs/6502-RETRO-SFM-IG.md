@@ -232,6 +232,25 @@ the operating system.
 
 The functions provide access to the Serial interface and the filesystem.
 
+### Errors
+
+SFOS will report errors by setting the carry flag and storing the error
+condition in the [ERROR_CODE memory address](./6502-RETRO-MEMORY-MAP.md).
+
+- **0 OK** Success / no error
+- **1 FILE_NOT_FOUND** File not found
+- **2 FILE_EXISTS** Returned by `d_make` when requested file exists
+- **3 FILE_MAX_REACHED** Returned when file max size is reached (128kb)
+- **4 FILE_EOF** Returned when file end is reached. Usually with carry set.
+- **5 END_OF_DIR** Returned by `d_findfirst` when trying to find an empty directory
+entry.
+- **6 DRIVE_ERROR** Any error encountered with calling low level sdcard routines.
+- **7 DRIVE_FULL** Returned by `d_make` when its internal call to `d_findfirst`
+returns END_OF_DIR
+- **8 PARSE_ERROR** Returned by `d_parsefcb` when the FCB can not be parsed.
+- **9 OUT_OF_MEMORY** Returned by the SFCP when trying to load a file into memory
+and the top of ram is reached.
+
 ### List of SFOS Routines
 
 Each function has a number.  This number is passed by the Y register and any
@@ -268,40 +287,40 @@ zeropage variable.
 
 #### 0 - s_reset
 
-INPUT:
+INPUT: VOID
 | A | X | Y
 |---|---|--
 | - | - | 0
 
-OUTPUT:
+OUTPUT: VOID
 | A | X | Y | Carry | Error Code
 |---|---|---|-------|:----------
 | - | - | - | -     | -
 
 Resets with a warm boot and logs into drive A.
 
-### 1 - c_read
+#### 1 - c_read
 
-INPUT:
+INPUT: VOID
 | A | X | Y
 |---|---|--
 | - | - | 1
 
-OUTPUT:
+OUTPUT: CHAR
 | A         | X | Y | Carry | Error Code
 |-----------|---|---|-------|:----------
 | Character | - | - | -     | -
 
 Waits for a character on the serial interface and returns it in A.
 
-### 2 - c_write
+#### 2 - c_write
 
-INPUT:
+INPUT: CHAR
 | A         | X | Y
 |-----------|---|--
 | Character | - | 2
 
-OUTPUT:
+OUTPUT: CHAR
 | A         | X | Y | Carry | Error Code
 |-----------|---|---|-------|:----------
 | Character | - | - | -     | -
@@ -312,14 +331,14 @@ routine checks for a CTRL+C on the input and jumps to `s_reset` if found.
 Effectively this means that during output to the serial interface a CTRL+C from
 the user will warm boot the system.
 
-### 3 - c_printstr
+#### 3 - c_printstr
 
-INPUT:
+INPUT: POINTER TO STRING
 | A         | X      | Y
 |-----------|--------|--
 | Lobyte    | Hibyte | 3
 
-OUTPUT:
+OUTPUT: VOID
 | A | X | Y | Carry | Error Code
 |---|---|---|-------|:----------
 | - | - | - | -     | -
@@ -328,14 +347,14 @@ Prints the zeroterminated string pointed to by XA to the serial interface.
 Internally, this routine calls c_write to write each character to the serial
 interface.
 
-### 4 - c_readstr
+#### 4 - c_readstr
 
-INPUT:
+INPUT: POINTER TO BUFFER
 | A         | X      | Y
 |-----------|--------|--
 | Lobyte    | Hibyte | 4
 
-OUTPUT:
+OUTPUT: UPDATED BUFFER
 | A | X | Y | Carry | Error Code
 |---|---|---|-------|:----------
 | - | - | - | -     | -
@@ -347,14 +366,14 @@ input line.  The maximum length of the buffer is 127 characters regardless of
 the value given in the first byte of the buffer.  On exit this routine will
 replace the first byte of the buffer with the actual length of the text entered.
 
-### 5 - c_status
+#### 5 - c_status
 
-INPUT:
+INPUT: VOID
 | A | X | Y
 |---|---|--
 | - | - | 5
 
-OUTPUT:
+OUTPUT: CHAR & CARRY FLAG STATUS
 | A         | X | Y | Carry | Error Code
 |-----------|---|---|-------|:----------
 | Character | - | - | C/S   | -
@@ -367,14 +386,14 @@ Checks if a character is waiting on the serial interface.  If one is found, the
 carry flag is set and the character is returned in A.  If no data is present on
 the serial interface, then the carry flag is cleared and a 0 is returned in A.
 
-### 6 - d_getsetdrive
+#### 6 - d_getsetdrive
 
-INPUT:
+INPUT: BYTE
 | A             | X | Y
 |---------------|---|--
 | DRIVE or 0xFF | - | 6
 
-OUTPUT:
+OUTPUT: BYTE & CARRY FLAG STATUS
 | A         | X | Y | Carry | Error Code
 |-----------|---|---|-------|:----------
 | DRIVE or ?| - | - | C/S   | DRIVE ERROR
@@ -393,18 +412,18 @@ When a drive is first logged into, a scan of the drive is carried out to
 determin the position of the last used file on the drive.  This helps to reduce
 the time spent searching for files in `d_findfirst` and `d_findnext` routines.
 
-### 7 - d_createfcb
+#### 7 - d_createfcb
 
 Unimplimented
 
-### 8 - d_parsefcb
+#### 8 - d_parsefcb
 
-INPUT:
+INPUT: POINTER TO BUFFER (PREVIOUSLY SET DMA TO FCB)
 | A         | X      | Y
 |-----------|--------|--
 | Lobyte    | Hibyte | 8
 
-OUTPUT:
+OUTPUT: UPDATED FCB
 | A         | X      | Y | Carry   | Error Code
 |-----------|--------|---|---------|:----------
 | Lobyte    | Hibyte | - | C/S     | PARSE ERROR
@@ -415,14 +434,14 @@ function.  The routine returns with XA pointing at the next character in the
 input buffer after the parsed string.  If there was no error, the carry flag is
 clear on return else it is set and the error code is set to PARSE ERROR.
 
-### 9 - d_findfirst
+#### 9 - d_findfirst
 
-INPUT:
+INPUT: POINTER TO FCB
 | A         | X      | Y
 |-----------|--------|--
 | Lobyte    | Hibyte | 9
 
-OUTPUT:
+OUTPUT: UPDATED FCB
 | A | X | Y | Carry   | Error Code
 |---|---|---|---------|:-----------------------------------
 | - | - | - | C/S     | DRIVE ERROR or FILE NOT FOUND ERROR
@@ -451,14 +470,14 @@ side of the `.` the wildcard is provided.
 The results of the serch are stored into the input FCB.  The carry flag is set
 on error and clear on success.
 
-### 10 - d_findnext
+#### 10 - d_findnext
 
-INPUT:
+INPUT: POINTER TO FCB
 | A         | X      | Y
-|-----------|--------|--
+|-----------|--------|---
 | Lobyte    | Hibyte | 10
 
-OUTPUT:
+OUTPUT: UPDATED FCB
 | A | X | Y | Carry   | Error Code
 |---|---|---|---------|:-----------------------------------
 | - | - | - | C/S     | DRIVE ERROR or FILE NOT FOUND ERROR
@@ -483,3 +502,172 @@ side of the `.` the wildcard is provided.
 
 The results of the serch are stored into the input FCB.  The carry flag is set
 on error and clear on success.  
+
+#### 11 - d_make
+
+INPUT: POINTER TO FCB
+| A         | X      | Y
+|-----------|--------|---
+| Lobyte    | Hibyte | 11
+
+OUTPUT: UPDATED FCB
+| A | X | Y | Carry   | Error Code
+|---|---|---|---------|:------------------------------------
+| - | - | - | C/S     | DRIVE ERROR, FILE_EXISTS, END_OF_DIR
+
+; param points to FCB containing filename to create.
+; Returns updated FCB containing Drive, FN and CR
+; Uses temp_fcb to stash the incomming fcb so the filename can be
+; extracted and restored over the new FCB found.
+
+Finds a free / unused directory entry in the current drive or the drive given in
+the FCB if one is provided.  The provided FCB is updated with the file number
+(`FN`) and the provided filename.  The file attribute (`FA`) is set to 0x40 and
+all other metadata is set to 0.
+
+Carry is set on error, clear on success.  Error condition is recorded in
+ERROR_CODE and can be one of:
+
+- DRIVE_ERROR
+- FILE_EXISTS
+- END_OF_DIR
+
+#### 12 - d_open
+
+INPUT: POINTER TO FCB
+| A         | X      | Y
+|-----------|--------|---
+| Lobyte    | Hibyte | 12
+
+OUTPUT: UPDATED FCB
+| A | X | Y | Carry   | Error Code
+|---|---|---|---------|:---------------------------
+| - | - | - | C/S     | DRIVE ERROR, FILE_NOT_FOUND
+
+XA Points to an FCB containing the drive and file pattern to open.  When a file
+is found, the FCB is updated with the details of the file taken from the
+directory entry on disk.
+
+#### 13 - d_close
+
+INPUT: POINTER TO FCB
+| A         | X      | Y
+|-----------|--------|---
+| Lobyte    | Hibyte | 13
+
+OUTPUT:
+| A | X | Y | Carry   | Error Code
+|---|---|---|---------|:------------------------------------
+| - | - | - | C/S     | DRIVE ERROR
+
+XA points to an FCB to close.  If the FCB is marked as "dirty" meaning there
+could be more data to write to disk, that data is written to disk first.  After
+the dirty sector is flushed, the FCB is flushed back into the directory sector
+containing its directory entry.
+
+#### 14 - d_setdma
+
+INPUT: POINTER TO ADDRESS
+| A         | X      | Y
+|-----------|--------|---
+| Lobyte    | Hibyte | 14
+
+OUTPUT:
+| A | X | Y | Carry   | Error Code
+|---|---|---|---------|:------------------------------------
+| - | - | - | -       | -
+
+XA is a pointer to an address in memory that will be used as the DMA address for
+subsequent disk reads or writes.
+
+#### 15 - d_readseqblock
+
+INPUT: POINTER TO FCB
+| A         | X      | Y
+|-----------|--------|---
+| Lobyte    | Hibyte | 15
+
+OUTPUT: DATA WRITTEN TO DMA ADDRESS
+| A | X | Y | Carry   | Error Code
+|---|---|---|---------|:------------------------------------
+| - | - | - | C/S     | DRIVE ERROR
+
+XA points to the FCB relating to the block read.  The FCB current record (`CR`)
+field is incremented and then the sdcard LBA address is calculated by combining
+the FCB drive (`DD`), file number (`FN`) and current record (`CR`).  The sector
+at that address is read into the DMA address given by a previous call to
+`d_setdma`
+
+#### 16 - d_writeseqblock
+
+INPUT: POINTER TO FCB
+| A         | X      | Y
+|-----------|--------|---
+| Lobyte    | Hibyte | 16
+
+OUTPUT: DATA COPIED FROM DMA TO SDCARD
+| A | X | Y | Carry   | Error Code
+|---|---|---|---------|:------------------------------------
+| - | - | - | C/S     | DRIVE ERROR, FILE_MAX_REACHED
+
+XA points to the FCB relating to the block being written to.  The sdcard LBA is
+calculated by combining the FCB drive (`DD`), file number (`FN`) and current
+record (`CR`).  The sector is written from the DMA address given by a previous
+call to `d_setdma`.  After the sector write is complete, the FCB current record
+(`CR`) is incremented.  If the `CR` increment results in `CR` being equal to 0
+then a FILE_MAX_REACHED error is returned.
+
+#### 17 - d_readseqbyte
+
+INPUT: POINTER TO FCB
+| A         | X      | Y
+|-----------|--------|---
+| Lobyte    | Hibyte | 17
+
+OUTPUT: CHAR
+| A         | X | Y | Carry   | Error Code
+|-----------|---|---|---------|:------------------------------------
+| Character | - | - | C/S     | DRIVE ERROR
+
+#### 18 - d_writeseqbyte
+
+INPUT: POINTER TO FCB, CHAR IN REGA
+| A         | X      | Y
+|-----------|--------|---
+| Lobyte    | Hibyte | 18
+
+OUTPUT: VOID
+| A | X | Y | Carry   | Error Code
+|---|---|---|---------|:------------------------------------
+| - | - | - | C/S     | DRIVE ERROR
+
+#### 19 - d_setlba
+
+INPUT: POINTER TO 32BIT LBA ADDRESS IN LITTLE ENDIAN FORMAT
+| A         | X      | Y
+|-----------|--------|---
+| Lobyte    | Hibyte | 19
+
+OUTPUT: VOID
+| A | X | Y | Carry   | Error Code
+|---|---|---|---------|:------------------------------------
+| - | - | - | C/S     | DRIVE ERROR
+
+#### 20 - d_readrawblock
+
+Unimplimented
+
+#### 21 - d_writerawblock
+
+INPUT: VOID
+| A | X | Y
+|---|---|---
+| - | - | 21
+
+OUTPUT:
+| A | X | Y | Carry   | Error Code
+|---|---|---|---------|:------------------------------------
+| - | - | - | C/S     | DRIVE ERROR
+
+Writes a block of data to the previously set LBA address from the previously set
+DMA address without impacting any FCBs.
