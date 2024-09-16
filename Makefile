@@ -63,4 +63,4 @@ grep:
 	grep bios_boot $(BUILD_DIR)/rom.sym
 
 lines:
-	cloc --exclude-dir=py_sfs_v2,.gitignore,scripts .
+	cloc --exclude-dir=py_sfs_v2,.gitignore,scripts,msbasic,ehbasic .

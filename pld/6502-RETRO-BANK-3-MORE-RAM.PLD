@@ -1,0 +1,40 @@
+Name     6502-ROM-BANK-3-more-ram ;
+PartNo   00 ;
+Date     16/09/2024 ;
+Revision 01 ;
+Designer Engineer ;
+Company  productiondave ;
+Assembly None ;
+Location  ;
+Device   g22v10 ;
+
+/* Input */
+Pin 1        = PHI2;
+Pin 2        = RW;
+Pin [3..10]  = [A15..A8];
+Pin 11       = ACIAIRQB;
+Pin 13       = VIAIRQB;
+Pin 14       = F18AIRQB;
+
+FIELD Address = [A15..A8];
+
+/* Output */
+Pin 15 = MEMWE;
+Pin 16 = MEMOE;
+Pin 17 = IOCS;
+Pin 18 = LOWRAMEN;
+Pin 19 = HIRAMEN;
+Pin 20 = ROMEN;
+Pin 23 = IRQB;
+
+/*  Logic */
+
+!ROMEN       = Address:[E000..FFFF];
+!HIRAMEN     = Address:[C000..DFFF];
+!IOCS        = Address:[BF00..BFFF];
+!LOWRAMEN    = Address:[0000..BEFF];
+
+!MEMWE    	= PHI2 & !RW;
+!MEMOE    	= PHI2 & RW;
+
+IRQB          = ACIAIRQB & VIAIRQB & F18AIRQB;
