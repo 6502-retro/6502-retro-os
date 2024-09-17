@@ -3,7 +3,7 @@
 
 + [x] Figure out why save does not save to drives other than A
 + [x] Remove QUIT SFMCP command
-+ [ ] Impliment renmae
++ [x] Impliment renmae
 + [x] Build DUMP application
 + [x] Free intrinsic command?
 + [x] Burn to ROM

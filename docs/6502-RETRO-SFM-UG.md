@@ -154,11 +154,22 @@ BANK <#> Enter a rom bank number from 1 to 3
 DIR [A:] Enter a drive number to list files
 ERA [A:] FILENAME Delete a file
 FREE Display memory information
-TYPE [A:]FILENAME Display ascii contents of a file
+REN SRC DEST Rename a file in the current drive to the the current drive
 SAVE FILENAME ## Save ## pages of memory starting at TPA to a file
+TYPE [A:]FILENAME Display ascii contents of a file
 ```
 
 Displays a summary of memory usage.
+
+### REN
+
+```text
+A>ren source.txt dest.txt
+```
+
+Renames a file `source.txt` to the destination `dest.txt` if the source file
+does not exist or the destination file does exist, then the comand will fail
+with a `?`
 
 ### SAVE (SFM)
 

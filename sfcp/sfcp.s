@@ -7,7 +7,6 @@
 .autoimport
 
 .globalzp ptr1
-
 SFOS        = $200
 REBOOT      = SFOS      + 3
 WBOOT       = REBOOT    + 3
@@ -17,12 +16,15 @@ CONST       = CONIN     + 3
 CONPUTS     = CONST     + 3
 CONBYTE     = CONPUTS   + 3
 CONBEEP     = CONBYTE   + 3
-ERROR_CODE  = CONBEEP   + 3
-
-RSTFAR      = ERROR_CODE + 1
-
-FSIZE       = RSTFAR + 8
-DIRTY_SECTOR = FSIZE + 4
+SN_START    = CONBEEP   + 3
+SN_SILENCE  = SN_START  + 3
+SN_STOP     = SN_SILENCE + 3
+SN_SEND     = SN_STOP   + 3
+ERROR_CODE  = SN_SEND   + 3
+RSTFAR      = $228
+REGA        = $22E
+REGX        = REGA   + 1
+REGY        = REGX   + 1
 ;
 .zeropage
 debug_ptr:  .word 0
@@ -449,10 +451,53 @@ help:
     jmp prompt
 
 ren:
-    jsr printi
-    .byte 10,13,"===> REN",10,13,0
-    lda #1  ; syntax error for now
-    jmp prompt
+    ldx #0
+    lda #0
+:   sta fcb,x
+    inx
+    cpx #32
+    bne :-
+    ; parse fcb
+    lda #<fcb
+    ldx #>fcb
+    jsr d_setdma
+
+    lda cmdoffset+0
+    ldx cmdoffset+1
+    jsr d_parsefcb
+    jsr newline
+    ; FCB contains the destination copy:
+    ; open the source
+    lda #<fcb
+    ldx #>fcb
+    jsr d_findfirst
+    bcs :+
+    lda #'?'
+    jsr c_write
+    jmp @exit
+:   lda #<fcb2
+    ldx #>fcb2
+    jsr d_findfirst
+    bcc :+
+    lda #'?'
+    jsr c_write
+    jmp @exit
+:   ldy #sfcb::N1
+:   lda fcb,y
+    sta fcb2,y
+    iny
+    cpy #sfcb::T3 + 1
+    bne :-
+@close:
+    stz fcb2 + sfcb::DS
+    lda #<fcb2
+    ldx #>fcb2
+    jsr d_close
+@exit:
+    jsr restore_active_drive
+    lda #0          ; make sure that we don't trigger a syntax error.
+    clc
+    rts
 
 type:
     jsr set_user_drive
@@ -936,13 +981,14 @@ str_banner:     .byte 13,10, "6502-Retro! (SFCP)",0
 str_COM:        .byte "COM"
 str_tab:        .byte "    ",0
 str_sep:        .byte " : ",0
-str_help:
+str_help: .byte 10,13
     .byte 10,13,"BANK <#> Enter a rom bank number from 1 to 3"
     .byte 10,13,"DIR [A:] Enter a drive number to list files"
     .byte 10,13,"ERA [A:]FILENAME Delete a file"
     .byte 10,13,"FREE Display memory information"
-    .byte 10,13,"TYPE [A:]FILENAME Display ascii contents of a file"
+    .byte 10,13,"REN SRC DST Rename a file from SRC to DST in current drive"
     .byte 10,13,"SAVE FILENAME ## Save ## pages of memory starting at TPA to a file"
+    .byte 10,13,"TYPE [A:]FILENAME Display ascii contents of a file"
     .byte 10,13,0
 commands_tbl:
     .byte "BANK",$80

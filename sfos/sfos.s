@@ -551,7 +551,8 @@ sfos_d_open:
 ; param points to FCB that needs to be closed.
 sfos_d_close:
     ; do we have a dirty sector to write before we close?
-    lda dirty_sector
+    ldy #sfcb::DS
+    lda (param),y
     beq @close
 
     lda user_dma+0
@@ -725,7 +726,9 @@ sfos_d_make:
     sta (param),y
     dey
     bne :-
-    stz dirty_sector        ; clear the dirty sector flag
+    ldy #sfcb::DS
+    lda #0
+    sta (param),y
     stz fsize+0
     stz fsize+1
     stz fsize+2
@@ -890,7 +893,9 @@ sfos_d_readseqbyte:
 sfos_d_writeseqbyte:
     lda rega
     sta (zpbufptr)
-    inc dirty_sector
+    ldy #sfcb::DS
+    lda #1
+    sta (param),y
     inc zpbufptr + 0
     bne @incsize
     inc zpbufptr + 1
@@ -910,7 +915,9 @@ sfos_d_writeseqbyte:
     lda (param),y
     inc
     sta (param),y
-    stz dirty_sector
+    ldy #sfcb::DS
+    lda #0
+    sta (param),y 
     jsr clear_internal_buffer   ; XXX : also NOT what was implied by the call to setdma!!!
 @incsize:
     clc
@@ -1004,7 +1011,6 @@ to_upper:
     lba:            .res 4,0
     cmdlen:         .byte 0
     temp_fcb:       .res 32,0
-    dirty_sector:   .byte 0
     fsize:          .dword 0
 
 .rodata

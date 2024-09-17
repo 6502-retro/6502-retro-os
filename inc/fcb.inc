@@ -26,6 +26,7 @@
         S2  ;filesize high
         S3  ;filesize unused
         CR  ;current record
+        DS  ;dirty sector
 .endenum
 
 .struct drvalloc
