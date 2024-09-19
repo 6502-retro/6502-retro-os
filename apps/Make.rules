@@ -14,7 +14,7 @@ LIB = -I $(TOP)/lib
 # Assembler flags
 ASFLAGS += $(INCLUDES) -g --feature labels_without_colons --cpu 65C02 --feature string_escapes
 # Compiler flags
-CCFLAGS = --cpu 65C02 -t none -Ln $(BUILD_DIR)/$(APPNAME).sym -C $(CFG) -m $(BUILD_DIR)/$(APPNAME).map -o $(BUILD_DIR)/$(APPNAME).raw $(LIB) $(INCLUDES) -l $(BUILD_DIR)/$(APPNAME).lst
+CCFLAGS = --cpu 65C02 -t none -O -Ln $(BUILD_DIR)/$(APPNAME).sym -C $(CFG) -m $(BUILD_DIR)/$(APPNAME).map -o $(BUILD_DIR)/$(APPNAME).raw $(LIB) $(INCLUDES) -l $(BUILD_DIR)/$(APPNAME).lst
 
 LOAD_ADDR = 800
 
