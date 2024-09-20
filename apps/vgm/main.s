@@ -101,6 +101,10 @@ incvgmptrh:
     lda rambank        ; show the new rambank to the user.
     jsr CONBYTE
 
+    lda #<str_newline
+    ldx #>str_newline
+    jsr c_printstr
+
     lda #$C0            ; reset the vgmptr to the start of the ram
     sta vgmptr + 1      ; bank
     ldy #0              ; reset y to 0.
