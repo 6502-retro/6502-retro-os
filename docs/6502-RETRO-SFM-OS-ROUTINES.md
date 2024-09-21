@@ -1,6 +1,6 @@
 <!-- vim: set ft=markdown cc=80 tw=80 : -->
 
-# 6502-RETRO-SFM - INTEGRATION GUIDE
+# 6502-RETRO-SFM - OPERATING SYSTEM ROUTINES
 
 ## Table of Contents
 

@@ -1,10 +1,18 @@
+<!-- vim: set ft=markdown ts=4 sw=4 tw=80 cc=80: -->
 # 6502-Retro Operating System
 
-The 6502-Retro computer is a single board computer with the following harware features:
+The 6502-Retro computer is a single board computer with the following harware
+features:
 
-- ROM: 64KB (4 x 16kb banks)
+- ROM: 64KB (4 x 16kb banks) or 4x8kb banks.  Note: the hardware supports the
+SST27SF512 Flash rom.  The pin out is not the same as the popular 28C256 EEPROM
+so don't try to swap it out.
 - RAM: 39.75KB 0x0000 - 0x9EFF
 - EXTENDED RAM: 512KB (64 x 8kb banks 0xA000-0xBFFF)
+
+**NOTE:** Check the [memory map](./docs/6502-RETRO-MEMORY-MAP.md) for the 8k rom
+layout.
+
 - SDCARD (Supports SDHC Cards)
 - 4MHz CPU
 - Rockwell ACIA 6551 Serial interface
@@ -26,6 +34,7 @@ A more detailed overview of the SFM Operating System is described
 
 ## Built in ROM banks
 
-There are 4 available ROM banks.  Only one of them is created by this repository.
+There are 4 available ROM banks.
 
 - BANK 0: SFM Operating System
+- BANK 1: Memory Monitor

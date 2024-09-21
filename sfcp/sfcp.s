@@ -207,7 +207,7 @@ load_transient:
     adc #2
     sta temp+1
     lda temp+1
-    cmp #$9E                    ; hard stop at start of IO
+    cmp #>TPA_END               ; leaves 256 bytes unused.
     bne :+
     lda #ERROR::OUT_OF_MEMORY
     sec
