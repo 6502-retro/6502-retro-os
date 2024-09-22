@@ -3,6 +3,7 @@
 .include "sfos.inc"
 
 .zeropage
+.macpack longbranch
 
 .code
 
@@ -44,31 +45,75 @@ main:
     ; add the filesize to the total
     jsr accumlate_drive_total
 
+    lda #0
+    ldx #3
+:   sta value,x
+    dex
+    bpl :-
+
+    lda #0
+    ldx #8
+:   sta format_buffer,x
+    dex
+    bpl :-
+
+
     ; print file size (in hex)
     jsr newline
     jsr tab
 
-    lda _fcb + sfcb::S2
-    bne :+
+    ldy #0
+@fsvlp1:
+    lda _fcb + sfcb::S0,y
+    sta value,y
+    iny
+    cpy #sfcb::S3
+    bne @fsvlp1
+    lda #3
+    jsr bin2bcd
+    ldx #5
+@fsplp1:
+    lda format_buffer,x
+    bne @fsplp2
+    phy
+    phx
     lda #<str_padding
     ldx #>str_padding
     jsr c_printstr
-    bra :++
-:   jsr prbyte
-:   lda _fcb + sfcb::S1
-    bne :+
-    lda #<str_padding
-    ldx #>str_padding
-    jsr c_printstr
-    bra :++
-:   jsr prbyte
-:   lda _fcb + sfcb::S0
+    plx
+    ply
+    bra @fsplp3
+@fsplp2:
     jsr prbyte
+@fsplp3:
+    dex
+    bpl @fsplp1
+
+;    lda _fcb + sfcb::S2
+;    bne :+
+;    lda #<str_padding
+;    ldx #>str_padding
+;    jsr c_printstr
+;    bra :++
+;:   jsr prbyte
+;:   lda _fcb + sfcb::S1
+;    bne :+
+;    lda #<str_padding
+;    ldx #>str_padding
+;    jsr c_printstr
+;    bra :++
+;:   jsr prbyte
+;:   lda _fcb + sfcb::S0
+;    jsr prbyte
 
     lda #' '
     jsr c_write
 
     lda _fcb + sfcb::SC
+    sta value
+    lda #1
+    jsr bin2bcd
+    lda format_buffer
     jsr prbyte
 
     lda #' '
@@ -101,7 +146,7 @@ main:
     ldx #>_fcb
     jsr d_findnext
 
-    bcc @loop
+    jcc @loop
 
     jsr newline
     jsr newline
@@ -111,26 +156,27 @@ main:
 ;    ldx #>str_hexprefix
 ;    jsr c_printstr
 
-    lda used_space + 3
+    ldx #4
+:   lda used_space-1,x
+    sta value-1,x
+    dex
+    bne :-
+    lda #4
+    jsr bin2bcd
+    tax
+:   lda format_buffer,x
     bne :+
-    lda #' '
-    jsr c_write
+    phx
+    phy
+    lda #<str_padding
+    ldx #>str_padding
+    jsr c_printstr
+    ply
+    plx
     bra :++
 :   jsr prbyte
-:   lda used_space + 2
-    bne :+
-    lda #' '
-    jsr c_write
-    bra :++
-:   jsr prbyte
-:   lda used_space + 1
-    bne :+
-    lda #' '
-    jsr c_write
-    bra :++
-:   jsr prbyte
-:   lda used_space + 0
-    jsr prbyte
+:   dex
+    bpl :---
 
     lda #<str_total_space
     ldx #>str_total_space
@@ -190,6 +236,57 @@ prbyte:
     pla             ;*restore a
     rts             ;*done, over and out...
 
+; bin2bcd
+bin2bcd:
+    phx
+    phy
+
+    ldx #0
+    stx format_buffer
+    inx
+    stx bcd_size
+    tay
+;    iny
+;@skip:
+;    dey
+;    beq @done
+;    lda value-1,y
+;    beq @skip
+    sty num_size
+    sed
+@next_byte:
+    ldy num_size
+    lda value-1,y
+    sta b
+    sec
+    bcs @loop
+@shift_byte:
+    ldy #1
+    ldx bcd_size
+@mul2:
+    lda format_buffer-1,y
+    adc format_buffer-1,y
+    sta format_buffer-1,y
+    iny
+    dex
+    bne @mul2
+    bcc @loop
+    lda #1
+    sta format_buffer-1,y
+    sty bcd_size
+    clc
+@loop:
+    rol b
+    bne @shift_byte
+    dec num_size
+    bne @next_byte
+    cld
+@done:
+    lda bcd_size
+    ply
+    plx
+    rts
+
 newline:
     lda #<str_newline
     ldx #>str_newline
@@ -237,9 +334,15 @@ _fcb:        .res 32,0
 used_space: .dword 0
 active_drive: .byte 0
 saved_active_drive: .byte 0
+bcd_size:   .byte 0
+num_size:   .byte 0
+b:          .byte 0
+format_buffer: .res 8,0
+value:      .res 4,0
+
 .rodata
 
-str_message:     .byte 10,13,"Drive Statistics:",10,13,"(Values shown in HEX)",10,13,0
+str_message:     .byte 10,13,"Drive Statistics:",10,13,0
 str_newline:     .byte 10,13,0
 str_tab:         .byte "        ",0
 str_total_space: .byte " of 2,000,000 bytes",10,13,0

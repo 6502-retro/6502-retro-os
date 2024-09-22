@@ -7,6 +7,7 @@
 .autoimport
 
 .globalzp ptr1
+
 SFOS        = $200
 REBOOT      = SFOS      + 3
 WBOOT       = REBOOT    + 3
