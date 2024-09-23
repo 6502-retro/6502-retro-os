@@ -472,7 +472,7 @@ VEC_SV            = VEC_LD+2  ; save vector
 ;Ibuffs            = IRQ_vec+$14
 Ibuffs            = VEC_SV+$16
                               ; start of input buffer after IRQ/NMI code
-Ibuffe            = Ibuffs+$47; end of input buffer
+Ibuffe            = Ibuffs+$80; end of input buffer
 
 Ram_base          = $3300     ; start of user RAM (set as needed, should be page aligned)
 Ram_top           = $BE00     ; end of user RAM+1 (set as needed, should be page aligned)

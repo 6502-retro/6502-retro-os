@@ -58,6 +58,14 @@ the `sfos_c_readstr()` function.
 The bios functions do not automatically echo text back to the terminal or check
 for CTRL+C.
 
+### Serial Settings
+
+The serial interface does not support hardware flow control.  A future revision
+of the PCB will have a jumper for enabling RTS or not.
+
+Set up your serial terminal to use 115200 BAUD, 8 data bits and 1 stop bit.
+(115200-8N1)
+
 ## Chapter 3: File Headers for XModem
 
 When an application is loaded by the XModem utiltiy it reads the first 2 bytes
