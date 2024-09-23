@@ -42,7 +42,7 @@ VDP_SPRITE_ATTRIBUTE_TABLE  = $1000
 VDP_NAME_TABLE              = $1400
 VDP_G2_NAME_TABLE           = $3800
 VDP_COLOR_TABLE             = $2000
-_vdp_sync                   = $660
+_vdp_sync                   = $65F
 .macro vdp_delay_slow
     jsr delay_slow
 .endmacro
