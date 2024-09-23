@@ -1,7 +1,7 @@
 # Assembler, linker and scripts
 AS = ca65
 LD = ld65
-CC = cl65
+CC = cc65
 AR = ar65
 
 TOP = ..
@@ -34,7 +34,10 @@ SOURCES = \
 	  sfos_d_writeseqbyte.s \
 	  sfos_d_setlba.s \
 	  sfos_d_writerawblock.s \
-	  sfos_s_warmboot.s
+	  sfos_s_warmboot.s \
+	  write.s \
+	  read.s
+
 
 OBJS = $(addprefix $(BUILD_DIR)/, $(SOURCES:.s=.o))
 

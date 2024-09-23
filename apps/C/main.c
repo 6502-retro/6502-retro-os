@@ -1,4 +1,5 @@
 /* vim: set et ts=4 sw=4 */
+#include <stdio.h>
 #include "sfos.h"
 
 char textbuffer[64];
@@ -12,6 +13,9 @@ void main(void) {
     inp ++;
 
     sfos_c_printstr(inp);
+
+
+    printf("\r\nThis is a test : %04X\r\n", 0x5a5a);
     sfos_s_warmboot();
 }
 
