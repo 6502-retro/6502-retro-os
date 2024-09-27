@@ -4,6 +4,8 @@
 ## Table of Contents
 
 - [Chapter 1: Introduction](#chapter-1-introduction)
+- [Chapter 2: Serial IO](#chapter-2-serial-input--output)
+- [Chapter 3: File Headers for XModem](#chapter-3-file-headers-for-xmodem)
 
 ## Chapter 1: Introduction
 

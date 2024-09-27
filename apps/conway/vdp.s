@@ -44,11 +44,11 @@ VDP_G2_NAME_TABLE           = $3800
 VDP_COLOR_TABLE             = $2000
 _vdp_sync                   = $65F
 .macro vdp_delay_slow
-    jsr delay_slow
+;    jsr delay_slow
 .endmacro
 
 .macro vdp_delay_fast
-    jsr delay_fast
+;    jsr delay_fast
 .endmacro
 
 .macro div8
