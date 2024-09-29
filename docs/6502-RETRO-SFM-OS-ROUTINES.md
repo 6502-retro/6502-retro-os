@@ -102,7 +102,7 @@ uniquely identify the file, where to load it into memory when opened, and where
 | 17    | E1  | execute low
 | 18    | E2  | execute high
 | 19    | Z1  | last byte offset low
-| 20    | Z2  | last byte offset hight
+| 20    | Z2  | last byte offset high
 | 21    | S0  | filesize low
 | 22    | S1  | filesize middle
 | 23    | S2  | filesize high
