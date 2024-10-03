@@ -14,6 +14,6 @@ _sfos_d_make:
     ldx #0
     rts
 :   lda #1
-    tax
+    ldx #0
     rts
 

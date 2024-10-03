@@ -11,8 +11,22 @@
 #define fcb (*(_fcb*)FCB)
 #define fcb2 (*(_fcb*)FCB2)
 
+uint8_t argc;
+char *argv[8];
+char *cmd = (char*)0x301;
 
-typedef struct {
+void parse_args(char* cmd) {
+    char *p2;
+    p2 = strtok(cmd, " ");
+
+    while (p2 && argc < 7) {
+        argv[argc++] = p2;
+        p2 = strtok('\0', " ");
+    }
+    argv[argc] = '\0';
+}
+
+typedef struct _FCB{
     uint8_t     DRIVE;
     uint8_t     NAME[8];
     uint8_t     EXT[3];
@@ -21,13 +35,15 @@ typedef struct {
     uint8_t     FILE_NUM;
     uint8_t     ATTRIB;
     uint16_t    EXEC;
-    uint16_t    LAST_BYTE_OFFSET;
+    uint8_t     Z1;
+    uint8_t     Z2;
     uint32_t    SIZE;               // Note we only need 24 bytes for the size.
     uint8_t     CR;
 } _fcb;
 
 extern uint8_t sfos_error_code;
-extern uint16_t sfos_cmdoffset;
+extern uint16_t sfos_cmdline;
+
 extern uint16_t sfos_commandline;
 extern uint16_t sfos_buf;
 extern uint16_t sfos_buf_end;
