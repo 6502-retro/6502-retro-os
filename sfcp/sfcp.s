@@ -43,7 +43,8 @@ main:
 
 prompt:
     jsr newline
-
+    jsr process_submit
+    bcc process_command     ; Skip reading userinput if $$$.sub processed.
 prompt_no_newline:
     jsr show_prompt
 
@@ -54,6 +55,7 @@ prompt_no_newline:
     ldx #>commandline
     jsr c_readstr
 
+process_command:
     jsr clear_fcb
     jsr clear_fcb2
     lda #<fcb
@@ -165,6 +167,97 @@ decode_command:
     jmp (sfcpcmd)               ; return from command
 @no_match:
     sec
+    rts
+
+process_submit:
+    ; safe to use fcb here.
+    ldx #31                     ; set up fcb for open
+:   lda str_submit_fcb,x
+    sta submit_fcb,x
+    dex
+    bpl :-
+
+    lda #<submit_fcb
+    ldx #>submit_fcb
+    jsr d_open
+    bcc @read_file              ; file was opened so read it.
+    rts
+@read_file:
+    ; copy sector count into CR
+    lda submit_fcb + sfcb::SC
+    dec
+    bpl :+                      ; if SC-1 < 0 then delete file
+    jmp @delete_file
+:   sta temp+0
+
+    stz temp+3                  ; set up LBA to read last block of the file
+    lda submit_fcb + sfcb::DD
+    sta temp+2
+    lda submit_fcb + sfcb::FN
+    sta temp+1
+
+    lda #<temp
+    ldx #>temp
+    jsr d_setlba
+
+    lda #<sfos_buf
+    ldx #>sfos_buf
+    jsr d_setdma
+
+    lda #<submit_fcb                   ; read the block, do not adjust CR
+    ldx #>submit_fcb
+    jsr d_readrawblock
+    bcc @find_record
+    rts
+@find_record:
+    lda submit_fcb + sfcb::Z1
+    dec
+    bpl :+
+    jmp @delete_file
+:   sta submit_fcb + sfcb::Z1          ; save updated Z1
+    and #$03                    ; mod 4
+    pha
+    ; decide to decrement SC
+    bne :+
+    dec submit_fcb + sfcb::SC
+:   pla
+    sta ptr1 + 0
+    stz ptr1 + 1
+
+    ldx #7
+:   asl ptr1
+    rol ptr1+1
+    dex
+    bne :-
+    clc
+    lda ptr1+0
+    adc #0
+    sta ptr1+0
+    lda ptr1+1
+    adc #>sfos_buf
+    sta ptr1+1
+
+    ; ptr1 now points to start of command in buffer
+    ; copy it to the commanline
+    ldy #0
+:   lda (ptr1),y
+    sta commandline,y
+    phy
+    jsr c_write
+    ply
+    iny
+    bpl :-
+    ; save fcb back to disk
+    lda submit_fcb + sfcb::Z1
+    bne @save
+@delete_file:
+    lda #$E5
+    sta submit_fcb + sfcb::FA
+@save:
+    lda #<submit_fcb
+    ldx #>submit_fcb
+    jsr d_close
+    clc
     rts
 
 load_transient:
@@ -742,7 +835,15 @@ d_writeseqblock:
 d_make:
     ldy #esfos::sfos_d_make
     jmp SFOS
-
+d_setlba:
+    ldy #esfos::sfos_d_setlba
+    jmp SFOS
+d_readrawblock:
+    ldy #esfos::sfos_d_readrawblock
+    jmp SFOS
+d_writerawblock:
+    ldy #esfos::sfos_d_writerawblock
+    jmp SFOS
 
 ; ---- local helper functions ------------------------------------------------
 
@@ -967,6 +1068,7 @@ print_word:
     rts
 
 .bss
+
 commandline:        .res 128
 fcb:                .res 32
 fcb2:               .res 32
@@ -974,6 +1076,7 @@ cmdoffset:          .word 0
 temp:               .res 4,0
 active_drive:       .byte 0
 saved_active_drive: .byte 0
+submit_fcb:         .res 32,0
 
 .rodata
 
@@ -982,6 +1085,9 @@ str_banner:     .byte 13,10, "6502-Retro! (SFCP)",0
 str_COM:        .byte "COM"
 str_tab:        .byte "    ",0
 str_sep:        .byte " : ",0
+str_submit_fcb: .byte 0, "$$$     SUB"
+                .res 20,0
+
 str_help: .byte 10,13
     .byte 10,13,"BANK <#> Enter a rom bank number from 1 to 3"
     .byte 10,13,"DIR [A:] Enter a drive number to list files"

@@ -60,11 +60,14 @@ $(BUILD_DIR)/rom.raw: $(SFCP_OBJS) $(SFOS_OBJS) $(BIOS_OBJS)
 
 $(BUILD_DIR)/ram.bin: $(SFCP_OBJS) $(SFOS_OBJS) $(BIOS_OBJS)
 	@mkdir -p $$(dirname $@)
-	$(LD) -C config/$(RAM_CFG) $^ -o $@ -m $(BUILD_DIR)/ram.map -Ln $(BUILD_DIR)/ram.sym
-	$(LOADTRIM) $< $@ $(SFM_LOAD_ADDR)
+	$(LD) -C config/$(RAM_CFG) $^ -o $(BUILD_DIR)/ram.raw -m $(BUILD_DIR)/ram.map -Ln $(BUILD_DIR)/ram.sym
+	$(LOADTRIM) $(BUILD_DIR)/ram.raw $@ $(SFM_LOAD_ADDR)
 
 grep:
-	grep bios_boot $(BUILD_DIR)/rom.sym
+	grep bios_boot $(BUILD_DIR)/ram.sym
 
 lines:
 	cloc --exclude-dir=py_sfs_v2,.gitignore,scripts,msbasic,ehbasic .
+minipro:
+	cat build/rom.raw ../6502-retro-banked-monitor/build/bankmon.raw > build/rom.img
+	minipro -s -p SST27SF512@DIP28 -w build/rom.img

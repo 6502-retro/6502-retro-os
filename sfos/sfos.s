@@ -752,7 +752,7 @@ sfos_d_setdma:
     stx zpbufptr + 1
     jmp bios_setdma
 
-; XA is a pointer to the 32bit word containing the DMA address
+; XA is a pointer to the 32bit word containing the LBA address
 sfos_d_setlba:
     lda param + 0
     ldx param + 1
@@ -936,8 +936,22 @@ sfos_d_writeseqbyte:
     rts
 
 ; DMA is set already, LBA is set already, do not increment LBA
+; Convert carry to clear on success, set on failure
 sfos_d_writerawblock:
-    jmp bios_sdwrite
+    jsr bios_sdwrite
+    bcc :+
+    clc
+    rts
+:   sec
+    rts
+
+sfos_d_readrawblock:
+    jsr bios_sdread
+    bcc :+
+    clc
+    rts
+:   sec
+    rts
 
 ; sets the dma to the sfos_buf
 internal_setdma:
@@ -963,10 +977,6 @@ dispatch:
 ; ----------------------------------------------------------------------------
 sfos_d_createfcb:
     jmp unimplimented
-
-sfos_d_readrawblock:
-    jmp unimplimented
-
 ; ----------------------------------------------------------------------------
 ; ---- HELPER FUNCTIONS ------------------------------------------------------
 ; ----------------------------------------------------------------------------

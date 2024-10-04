@@ -3,6 +3,7 @@
 #define SFOS_H
 
 #include <stdint.h>
+#include <string.h>
 
 //hard coded addresses that SFCP uses
 #define FCB          0x380

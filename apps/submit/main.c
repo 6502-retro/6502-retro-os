@@ -41,7 +41,6 @@ static void process_byte(uint8_t b) {
 
     if (b=='\n') {
         record_ptr[0] = record_fill;
-        printf("\r\nL: %d, RP:%p",lineno, record_ptr);
         while (record_fill != 127) {
             record_ptr[1 + record_fill] = '\0';
             record_fill ++;
@@ -65,9 +64,9 @@ static void process_byte(uint8_t b) {
             } else {
                 fatal("bad escape character");
             }
-        } /*else {
-            b = toupper(b) - '@';
-        }*/
+        } else {
+            b = toupper(b);
+        }
         record_ptr[1 + record_fill] = b;
         record_fill ++;
     }
@@ -101,17 +100,13 @@ void main(void) {
     if (sys) {
         printf("\r\nError opening %s", argv[1]);
         sfos_s_warmboot();
-    } else {
-        printf("\r\nOpened %s", argv[1]);
     }
-
     sys = sfos_d_make(&fcb);
 
     if (sys) {
         printf("\r\nError creating A:$$$.SUB");
         sfos_s_warmboot();
     } else {
-        printf("\r\nCreated $$$.SUB");
         (&fcb)->CR = 0;
     }
 
@@ -125,7 +120,6 @@ void main(void) {
             printf("\r\nERR: %d", sys);
             fatal("READ IO ERROR");
         }
-        else printf("\r\nRead first block of source file");
         for (i = 0; i<128; i++) {
             b = src_buf[i];
             if (escaped && b == 'Z') goto eof;
@@ -134,13 +128,10 @@ void main(void) {
     }
     eof:
         /* The last line gets written to the front of the file */
-        printf("\r\nDone processing - writing file now...");
         dstbufidx = 0;
         empty_dst_buf();
         while(record_ptr != (uint8_t*)extram) {
             // Copy 128 bytes from record_pointer to record_ptr - 128 into end of dst_buf
-
-            printf("\r\nBI: %d, RP:%p",dstbufidx, record_ptr-128);
             memcpy(&dst_buf[dstbufidx], record_ptr-128 ,128);
             record_ptr -= 128;
             dstbufidx += 128;
@@ -161,7 +152,6 @@ void main(void) {
     (&fcb)->LOAD = 0;
     (&fcb)->EXEC = 0;
     (&fcb)->SC = (&fcb)->CR;
-    sfos_c_printstr("\r\nClosing $$$.SUB");
     sfos_d_close(&fcb);
     sfos_d_getsetdrive(current_drive);
     sfos_s_warmboot();
