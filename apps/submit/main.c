@@ -96,6 +96,8 @@ void main(void) {
     parse_args(cmd);
     if (argc < 2) fatal("NO SUBMIT FILE PROVIDED");
 
+    if ((&fcb2)->EXT[0] == 0x20)
+        strcpy((char*)(&fcb2)->EXT, "SUB");
     sys = sfos_d_open(&fcb2);
     if (sys) {
         printf("\r\nError opening %s", argv[1]);
