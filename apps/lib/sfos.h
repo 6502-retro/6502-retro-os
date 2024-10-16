@@ -45,7 +45,6 @@ typedef struct _FCB{
 extern uint8_t sfos_error_code;
 extern uint16_t sfos_cmdline;
 
-extern uint16_t sfos_commandline;
 extern uint16_t sfos_buf;
 extern uint16_t sfos_buf_end;
 
