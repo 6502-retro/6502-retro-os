@@ -1,7 +1,6 @@
 # Sources and objects
 C_SOURCES = \
 	  bios.s \
-	  itoa.c \
 	  ansi.c \
 	  main.c
 APPNAME = sfmvi

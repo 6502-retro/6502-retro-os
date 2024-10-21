@@ -1,0 +1,20 @@
+## Load File
+Loads all the text of a file into buffer start.  Uses the
+gap_start ptr to place the text incrementing it all the way
+
+After Load File
+
+buffer_start => start of ram
+buffer_end   => end of ram
+gap_start    => end of text
+gap_end	     => end of ram
+
+
+## Goto Line (line number)
+First walk the gap back to buffer_start
+gap_start   => buffer_start
+gap_end     => end of text
+
+Set current_line to buffer_start
+
+???

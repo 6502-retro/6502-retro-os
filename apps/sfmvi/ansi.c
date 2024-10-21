@@ -1,7 +1,7 @@
 #include <stdint.h>
+#include <stdlib.h>
 #include "bios.h"
 #include "ansi.h"
-#include "itoa.h"
 
 uint8_t ansix, ansiy, ansi_width, ansi_height;
 
@@ -33,10 +33,10 @@ void ansi_set_cursor(uint8_t x, uint8_t y)
 	char buffer[10];
 
 	bios_puts("\033[");
-	itoa(y, buffer);
+	itoa(y, buffer, 10);
 	bios_puts(buffer);
 	bios_putc(';');
-	itoa(x, buffer);
+	itoa(x, buffer, 10);
 	bios_puts(buffer);
 	bios_putc('H');
 
@@ -60,6 +60,10 @@ void ansi_rev_off(void)
 	bios_puts(ANSI_REV_OFF);
 }
 
+uint8_t ansi_getc(void)
+{
+	return bios_getc();
+}
 void ansi_putc(uint8_t c)
 {
 	if (c < 31)
@@ -70,7 +74,7 @@ void ansi_putc(uint8_t c)
 	}
 	else
 	{
-		ansi_putc(c);
+		bios_putc(c);
 		ansix++;
 	}
 }
@@ -99,7 +103,7 @@ void ansi_puts(char* str)
 void ansi_puti(uint16_t i)
 {
 	char buffer[10];
-	itoa(i, buffer);
+	itoa(i, buffer, 10);
 	ansi_puts(buffer);
 }
 
@@ -113,3 +117,8 @@ void ansi_restore_cursor(void)
 	bios_puts(ANSI_RESTORE_CURSOR);
 }
 
+void ansi_get_size(uint8_t* x, uint8_t* y)
+{
+	*x = ansi_width;
+	*y = ansi_height;
+}

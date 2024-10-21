@@ -32,6 +32,7 @@ void ansi_get_cursor(uint8_t* x, uint8_t* y);
 void ansi_rev_on(void);
 void ansi_rev_off(void);
 
+uint8_t ansi_getc(void);
 void ansi_putc(uint8_t c);
 void ansi_puts(char* str);
 void ansi_puti(uint16_t i);
@@ -39,4 +40,5 @@ void ansi_puti(uint16_t i);
 void ansi_save_cursor(void);
 void ansi_restore_cursor(void);
 
+void ansi_get_size(uint8_t* x, uint8_t* y);
 #endif
