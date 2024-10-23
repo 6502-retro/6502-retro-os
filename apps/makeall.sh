@@ -11,7 +11,8 @@ cd format; make; cd ..
 cd hello; make; cd ..
 cd stat; make; cd ..
 cd submit; make; cd ..
+cd sfmvi; make; cd ..
 cd vgm; make; cd ..
 cd xm; make; cd ..
-cd msbasic; ./make.sh; cd tmp; ../../../scripts/loadtrim.py retro.bin retro.com 800; cd ../..
+cd msbasic; ./make.sh; cd ../..
 

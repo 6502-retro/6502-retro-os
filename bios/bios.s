@@ -184,18 +184,24 @@ jmptables:
     jmp sn_silence  ; 21E
     jmp sn_stop     ; 221
     jmp sn_send     ; 224
-error_code: .byte 0 ; 225
+    jmp led_on      ; 227
+    jmp led_off     ; 22A
+    jmp get_button  ; 22D
+error_code: .byte 0 ; 230
 
-.assert * = $228, error, "rstfar should be at $228"
+.assert * = $231, error, "rstfar should be at $231"
 rstfar:
-    sta rombankreg
-    jmp ($FFFC)
+    lda via_porta   ; 231
+    ora #%01000000  ; 234
+    sta via_porta   ; 236
+    sta rombankreg  ; 239
+    jmp ($FFFC)     ; 23c
 
-.assert * = $22E, error, "REG A should be at $22E"
+.assert * = $23F, error, "REG A should be at $23F"
 rega:       .res 1
 regx:       .res 1
 regy:       .res 1
-.assert * = $231, error, "end of system should be at $231"
+.assert * = $242, error, "end of system should be at $242"
 
 
 .bss

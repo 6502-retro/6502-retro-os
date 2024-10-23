@@ -28,6 +28,7 @@ BIOS_SOURCES = \
 	       bios/sdcard.s \
 	       bios/sn76489.s \
 	       bios/zerobss.s \
+	       bios/via.s \
 	       bios/vectors.s \
 
 BIOS_OBJS = $(addprefix $(BUILD_DIR)/, $(BIOS_SOURCES:.s=.o))

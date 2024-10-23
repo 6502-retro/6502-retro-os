@@ -12,11 +12,14 @@ SN_START    = CONBEEP   + 3
 SN_SILENCE  = SN_START  + 3
 SN_STOP     = SN_SILENCE + 3
 SN_SEND     = SN_STOP   + 3
-ERROR_CODE  = SN_SEND   + 3
+LED_ON      = SN_SEND   + 3
+LED_OFF     = LED_ON    + 3
+GET_BUTTON  = LED_OFF   + 3
+ERROR_CODE  = GET_BUTTON + 3
 
-RSTFAR      = $228
+RSTFAR      = $231
 
-REGA        = $22E
+REGA        = $23F
 REGX        = REGA   + 1
 REGY        = REGX   + 1
 ;
