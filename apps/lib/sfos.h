@@ -77,4 +77,8 @@ extern void __fastcall__ sfos_d_writeseqbyte(volatile _fcb * f, char c);
 extern void sfos_s_warmboot();
 extern void sfos_s_reboot();
 
+extern void led_on();
+extern void led_off();
+extern uint8_t get_button();
+
 #endif

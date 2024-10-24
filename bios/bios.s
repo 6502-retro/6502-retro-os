@@ -28,6 +28,7 @@ bios_boot:
     cld
     sei
 
+    jsr via_init
     jsr acia_init
     jsr sn_start
 
