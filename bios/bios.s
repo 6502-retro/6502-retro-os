@@ -192,17 +192,19 @@ error_code: .byte 0 ; 230
 
 .assert * = $231, error, "rstfar should be at $231"
 rstfar:
-    lda via_porta   ; 231
-    ora #%01000000  ; 234
-    sta via_porta   ; 236
+    pha
+    lda via_ddra    ; 231
+    and #%10111111  ; 234
+    sta via_ddra    ; 236
+    pla
     sta rombankreg  ; 239
     jmp ($FFFC)     ; 23c
 
-.assert * = $23F, error, "REG A should be at $23F"
+.assert * = $241, error, "REG A should be at $241"
 rega:       .res 1
 regx:       .res 1
 regy:       .res 1
-.assert * = $242, error, "end of system should be at $242"
+.assert * = $244, error, "end of system should be at $244"
 
 
 .bss
