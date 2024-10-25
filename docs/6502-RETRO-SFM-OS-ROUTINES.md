@@ -141,7 +141,7 @@ with your hardware.  The two primary harware drives you need to write are:
 
 ### Serial Interface Driver
 
-The 6502-Retro! has an ACIA6551 on board but you can use any serial interface
+The 6502-Retro! has an ACIA 6551 on board but you can use any serial interface
 you like so long as you impliment these 3 main functions:
 
 #### Get Character - Blocking
@@ -184,15 +184,44 @@ into memory at the current DMA address.
 The Operating system will call the SETDMA and SETLBA routines to save this
 information so your BIOS needs to provide them.
 
-#### SET DMA
+#### Set DMA
 
 Sets the RAM address that will be used by the next call to a Write Sector or
 Read Sector SD Card operation.
 
-#### SET LBA
+#### Set LBA
 
 Sets the LBA address that will be used by the next call to a Write Sector or
 Read Sector SD Card operation.
+
+### LED and user button routines
+
+#### LED on
+
+Turns on the LED
+
+#### LED off
+
+Turns off the LED
+
+#### Get Button
+
+Returns 1 if button is pressed.  Note the user button is pulled high through a
+10kohm resistor while open and pressing the button connects it to ground.  This
+routine inverts the value read by the VIA so that a `1` means pressed and a `0`
+means released.
+
+### Tick Counter
+
+The Pico9918 interrupts 60 times a second.  The 32bit _tick variable is used to
+record the number of ticks since the last reset.  It's not an exact science but
+it should give an approximation of time.  The number of elapsed ticks can be
+used to measure a second of time for example.  Just wait until (long) ticks has
+increased by 60.
+
+This is by no means accurate.
+
+The bios sets up the pico9918 to trigger the interrupts.
 
 ### Other drive hardware routines
 

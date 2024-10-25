@@ -7,7 +7,7 @@
 .export bios_boot, bios_wboot, bios_conin, bios_conout, bios_const
 .export bios_setdma, bios_setlba, bios_sdread, bios_sdwrite, bios_puts
 .export bios_prbyte
-.export _vdp_sync, _vdp_status
+.export _vdp_sync, _vdp_status, _ticks
 .export error_code, rega, regx, regy
 
 .if DEBUG=1
@@ -50,6 +50,17 @@ bios_boot:
     jsr zerobss
     jsr zero_lba
     jsr sn_beep
+
+    stz _ticks+0
+    stz _ticks+1
+    stz _ticks+2
+    stz _ticks+3
+
+    ; enable VDP interrupts (gives us a 60hz clock)
+    lda #$F0    ; r1 16kb ram + M1, interrupts enabled, text mode
+    sta vdp_reg
+    lda #$81
+    sta vdp_reg
 
     cli
     jmp sfos_s_reset
@@ -211,7 +222,7 @@ regy:       .res 1
 bdma:       .word 0
 _vdp_status:.res 1
 _vdp_sync:  .res 1
-
+_ticks:     .res 4
 
 .segment "SYSTEM"
 .rodata

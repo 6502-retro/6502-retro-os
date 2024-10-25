@@ -81,4 +81,6 @@ extern void led_on();
 extern void led_off();
 extern uint8_t get_button();
 
+extern uint32_t ticks;
+
 #endif

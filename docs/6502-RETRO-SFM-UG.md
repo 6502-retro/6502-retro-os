@@ -383,8 +383,8 @@ list
 
 ### SAVE (BASIC)
 
-Saves a file to disk.  Filename must be unique on D Drive.  You can not overwrite an
-existing file this way.
+Saves a file to disk.  Filename must be unique on D Drive.  You can not
+overwrite an existing file this way.
 
 ```text
 Ready

@@ -370,7 +370,7 @@ void recompute_screen_position(void)
     for (;;)
     {
         inp = first_line;
-        current_line_y = 0;
+        current_line_y = 1;
         while (current_line_y < viewheight)
         {
             if (inp == current_line)

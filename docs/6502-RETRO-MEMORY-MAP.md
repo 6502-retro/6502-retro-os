@@ -55,12 +55,12 @@ is created by the build scripts.
 |-----------|------------------------------|-----------------------------------
 |**BIOS**   |                              |.
 | 200       | JUMP TABLE                   | NO
-| 227       | ERROR_CODE                   | READ ONLY
-| 228       | RSTFAR (Reset into rom bank) | EXEC ONLY
-| 22E       | REG A                        | YES (USED BY BASIC)
-| 22F       | REG X                        | YES
-| 230       | REG Y                        | YES
-| 231 - 2FF | RESERVED                     | YES
+| 230       | ERROR_CODE                   | READ ONLY
+| 231       | RSTFAR (Reset into rom bank) | EXEC ONLY
+| 241       | REG A                        | YES (USED BY BASIC)
+| 242       | REG X                        | YES
+| 243       | REG Y                        | YES
+| 244 - 2FF | RESERVED                     | YES
 |**SFCP**   |                              |.
 | 300       | COMMANDLINE                  | YES
 | 380       | FCB                          | YES COMMAND (CAN BE REUSED IN TPA)

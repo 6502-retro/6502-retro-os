@@ -1,7 +1,7 @@
 ; vim: ft=asm_ca65
-.export _bios_getc	:= $EEC5
-.export _bios_getc_nw	:= $EED0
-.export _bios_putc	:= $EEDE
+.export _bios_getc	:= $EEDB
+.export _bios_getc_nw	:= $EEE6
+.export _bios_putc	:= $EEF4
 .export _bios_puts
 
 .autoimport

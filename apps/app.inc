@@ -31,6 +31,8 @@ CMDOFFSET    = $3C0    ; pointer into CMDLINE
 SFOS_BUF     = $400
 SFOS_BUF_END = $600
 
+TICKS        = $660    ; 32bit value holding number of 60hz periods since boot
+
 .code
 ;
 ; ---- SFOS functions ------------------------------------------------------
