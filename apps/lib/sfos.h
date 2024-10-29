@@ -40,6 +40,7 @@ typedef struct _FCB{
     uint8_t     Z2;
     uint32_t    SIZE;               // Note we only need 24 bytes for the size.
     uint8_t     CR;
+    uint8_t     DS;
 } _fcb;
 
 extern uint8_t sfos_error_code;

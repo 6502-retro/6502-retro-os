@@ -9,7 +9,7 @@
 _sfos_d_close:
     ldy #esfos::sfos_d_close
     jsr SFOS
-    bcc :+
+    bcs :+
     lda #0
     ldx #0
     rts

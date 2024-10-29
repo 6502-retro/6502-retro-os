@@ -176,7 +176,7 @@ void screen_puti(uint16_t i)
 
 void goto_status_line(void)
 {
-    ansi_set_cursor(0, viewheight);
+    ansi_set_cursor(1, viewheight);
 }
 
 void set_status_line(const char* message)
@@ -305,7 +305,7 @@ uint8_t* draw_line(uint8_t* startp)
 
     if (x != width)
         ansi_clear_eol();
-    ansi_set_cursor(0, y+1);
+    ansi_set_cursor(1, y+1);
 
 bottom_of_screen:
     display_height[starty] = y - starty + 1;
@@ -355,7 +355,7 @@ void adjust_scroll_position(void)
         first_line = line_start;
     }
 
-    ansi_set_cursor(0, 0);
+    ansi_set_cursor(1, 1);
     render_screen(first_line);
 }
 
@@ -392,7 +392,7 @@ void recompute_screen_position(void)
     }
 
     length = compute_length(current_line, gap_start, NULL);
-    ansi_set_cursor(length % width, current_line_y + (length / width));
+    ansi_set_cursor((length % width) + 1, current_line_y + (length / width));
 }
 
 void redraw_current_line(void)
@@ -401,7 +401,7 @@ void redraw_current_line(void)
     uint8_t oldheight;
 
     oldheight = display_height[current_line_y];
-    ansi_set_cursor(0, current_line_y);
+    ansi_set_cursor(1, current_line_y);
     nextp = draw_line(current_line);
     if (oldheight != display_height[current_line_y])
         render_screen(nextp);
@@ -414,16 +414,23 @@ void redraw_current_line(void)
 /* ======================================================================= */
 uint8_t sfos_d_delete(_fcb* f)
 {
-    f->ATTRIB = 0xE5;
-    sfos_d_close(f);
+    while (sfos_d_findfirst(f) == 0) {
+        sfos_c_printstr("\r\nDeleting file...");
+        f->ATTRIB = 0xE5;
+        sfos_d_close(f);
+    }
     return 0;
 }
 
 uint8_t sfos_d_rename(_fcb* f, char* name)
 {
-    memcpy(f->NAME, name, 11);
-    sfos_d_close(f);
-    return 0;
+    if (sfos_d_findfirst(f) == 0) {
+        memcpy(f->NAME, name, 11);
+        f->DS = 0;
+        sfos_d_close(f);
+        return 0;
+    } else
+        return 1;
 }
 
 void insert_file(void)
@@ -493,6 +500,8 @@ uint8_t really_save_file(_fcb* f)
     print_status(buffer);
 
     f->SC = 0;
+    f->SIZE = 0;
+
     if (sfos_d_make(f))
         return 0xff;
     f->CR = 0;
@@ -526,6 +535,8 @@ uint8_t really_save_file(_fcb* f)
         {
             sfos_d_setdma((uint16_t*)0xC000);
             sfos_d_writeseqblock(f);
+            f->SC ++;
+            f->SIZE += 512;
             outp = 0;
         }
     }
@@ -557,8 +568,12 @@ bool save_file(void)
 
     /* Write to a temporary file. */
 
-    strcpy((char*)tempfcb.NAME, "QETEMP  $$$");
     tempfcb.DRIVE = fcb2.DRIVE;
+    strcpy((char*)tempfcb.NAME, "QETEMP  $$$");
+    sfos_d_delete(&tempfcb);
+    if (sfos_d_make(&tempfcb) )
+        goto tempfile;
+
     if (really_save_file(&tempfcb))
         goto tempfile;
 
@@ -575,7 +590,6 @@ bool save_file(void)
     render_fcb(&fcb2);
     print_status(buffer);
 
-    memcpy(((uint8_t*)&tempfcb) + 16, &fcb2, 16);
     if (sfos_d_rename(&tempfcb, (char*)(&fcb2)->NAME))
         goto cant_commit;
     return true;
@@ -724,7 +738,7 @@ void insert_newline(void)
     if (gap_start != gap_end)
     {
         *gap_start++ = '\n';
-        ansi_set_cursor(0, current_line_y);
+        ansi_set_cursor(1, current_line_y);
         current_line = draw_line(current_line);
 
         ansi_get_cursor(&x, &current_line_y);
@@ -897,7 +911,7 @@ void join(uint16_t count)
             *ptr = ' ';
     }
 
-    ansi_set_cursor(0, current_line_y);
+    ansi_set_cursor(1, current_line_y);
     render_screen(current_line);
     dirty = true;
 }
@@ -911,7 +925,7 @@ void open_above(uint16_t count)
     *--gap_end = '\n';
 
     recompute_screen_position();
-    ansi_set_cursor(0, current_line_y);
+    ansi_set_cursor(1, current_line_y);
     render_screen(current_line);
     recompute_screen_position();
 
@@ -1242,7 +1256,7 @@ void main(void)
     sfos_d_setdma((uint16_t*)sd_buf);
     load_file();
 
-    ansi_set_cursor(0, 0);
+    ansi_set_cursor(1, 1);
     render_screen(first_line);
     bindings = &normal_bindings;
 
