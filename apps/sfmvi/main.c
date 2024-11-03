@@ -605,7 +605,7 @@ cant_commit:
 
 void quit(void)
 {
-    goto_status_line();
+    //goto_status_line();
     cpm_printstring0("Goodbye!\r\n");
     sfos_s_warmboot();
 }
@@ -765,7 +765,7 @@ void insert_mode(bool replacing)
         dirty = true;
         
             
-        if (c == 127)
+        if (c == 8 || c == 127)
         {
             if (gap_start != current_line)
                 gap_start--;
