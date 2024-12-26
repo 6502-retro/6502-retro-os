@@ -45,9 +45,7 @@ applications.
 A Files can be up to 128kb in size and consume one of 256 available slots within
 a drive.
 
-You can use the included `COPY.COM` utility to copy files between drives.  There
-is no rename functionality.  A rename is acheived by first copying a file to a
-new name or optionally new drive.  Then erasing the original.
+You can use the included `COPY.COM` utility to copy files between drives.
 
 When working with filenames the `*` and `?` wildcard is also supported.  For
 example, to run basic you could run:
@@ -89,10 +87,16 @@ Use the `bank` command to switch between physical rom banks on the 6502-Retro!
 homebrew computer.
 
 ```text
-A>bank 0
+A>bank 1
 ```
 
-Switching to BANK 0 will take you back to the 6502-Retro! monitor.
+Switching to BANK 1 will take you to the 6502-Retro! monitor.
+
+```text
+> b 0
+```
+
+From in the memory monitor you can switch back to the Retro-OS with `b 0`
 
 ### DIR (SFM)
 
