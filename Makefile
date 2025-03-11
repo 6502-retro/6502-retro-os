@@ -17,6 +17,7 @@ CFG = rom_8k.cfg
 
 RAM_CFG = ram.cfg
 SFM_LOAD_ADDR = 8000
+SDDEVICE = /dev/sdd
 
 # Where should the builds be placed
 BUILD_DIR = build
@@ -70,3 +71,5 @@ grep:
 lines:
 	cloc --exclude-dir=py_sfs_v2,.gitignore,scripts,msbasic,ehbasic .
 
+burn:
+	sudo dd if=$(BUILD_DIR)/rom.raw skip=16 seek=1 bs=512 count=16 of=$(SDDEVICE)
