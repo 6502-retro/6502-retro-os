@@ -274,12 +274,10 @@ sdcard_init:
         ; SR shift in, External clock on CB1
         lda #%00001100
         sta via_acr
-        ; disable VIA interrupts
-        lda #%01111111                   ; bit 7 "0", to clear all int sources
         ; sta via_ier
         ; Port a bits 7, 2, 1, 0 are output, rest are high impedence
-        lda #%10000111
-        sta via_ddra
+        ;lda #%10000111
+        ;sta via_ddra
 
         lda     #(SD_CS|SD_MOSI|SN_WE)        ; toggle clock 160 times
         ldx     #160

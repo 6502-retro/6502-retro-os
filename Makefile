@@ -69,6 +69,4 @@ grep:
 
 lines:
 	cloc --exclude-dir=py_sfs_v2,.gitignore,scripts,msbasic,ehbasic .
-minipro:
-	cat build/rom.raw ../6502-retro-banked-monitor/build/bankmon.raw > build/rom.img
-	minipro -s -p SST27SF512@DIP28 -w build/rom.img
+
