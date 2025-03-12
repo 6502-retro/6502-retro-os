@@ -74,9 +74,8 @@ class SFS(object):
 
         idx = Index(
             block[
-                (self.idx_file_num % 16) * INDEX_SIZE : (
-                    (self.idx_file_num % 16) * INDEX_SIZE
-                )
+                (self.idx_file_num % 16)
+                * INDEX_SIZE : ((self.idx_file_num % 16) * INDEX_SIZE)
                 + INDEX_SIZE
             ]
         )
@@ -149,3 +148,16 @@ class SFS(object):
         seekpos_lba = (self.idx.drive * 0x10000) + (self.idx.file_num * 0x100)
         self.fd.seek(seekpos_lba * SECTOR_SIZE)
         return self.fd.read(self.idx.file_size)
+
+    """ Given a path to an 8k binary file copies the file into the SDCARD image
+    at sector 1 up to sector 17 """
+
+    def copy_os(self, path):
+        with open(path, "rb") as src:
+            src.seek(8192)
+            data = src.read()
+            if len(data) != 8192:
+                print("OS BINARY FILE AFTER SKIPPING 8192 IS NOT 8192 BYTES long")
+                return
+            self.fd.seek(512, 0)
+            self.fd.write(data)

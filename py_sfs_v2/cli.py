@@ -55,12 +55,6 @@ import click
 import os
 import sys
 
-from config import SECTOR_SIZE
-from config import INDEX_SECTOR_START
-from config import DATA_SECTOR_START
-from config import DATA_SECTOR_COUNT
-from config import INDEX_SIZE
-
 from sfs import SFS
 
 
@@ -74,6 +68,12 @@ def cli():
     "-i", "--image", type=str, help="Path to local SDCARD image", required=True
 )
 def format(image):
+    """
+    Formats an existing SDCARD image.
+
+    <-i|--image> Path to new SDCARD Image file.
+    """
+
     sfs = SFS(image)
     sfs.format()
 
@@ -99,6 +99,10 @@ def format(image):
 def cp(image, source, destination):
     """
     Copies a file from SOURCE to DESTINATION.
+
+    <-i|--image> Path to new SDCARD Image file.
+    <-s|--source> Source file to copy
+    <-d|--destination> Destination of copy
 
     PATHS on the SFS Volume must be prefixed with c://hello.com
     LOCAL PATHS must be either full or relative paths.  Relies on python open() to access.
@@ -170,7 +174,7 @@ def new(image):
     """
     Creates a new SFS Disk <IMAGE> and formats it.
 
-    The volume name is "SFS.DISK"
+    <-i|--image> Path to new SDCARD Image file.
     """
     with open(image, "wb") as fd:
         fd.write(b"\0" * 0x90000 * 0x200)
@@ -184,6 +188,12 @@ def new(image):
 )
 @click.argument("drive")
 def ls(image, drive="A"):
+    """
+    List files on SDCARD image in provided drive letter.
+
+    <-i|--image> Path to new SDCARD Image file.
+    <drive=?> Drive letter to list files from.
+    """
     _drive = ord(drive) - 0x41
     sfs = SFS(image)
     while True:
@@ -199,6 +209,30 @@ def ls(image, drive="A"):
         print(f" {chr(idx.drive + 0x40)}:{filename:<11} {idx.file_size:>7} bytes")
 
     print()
+
+
+@cli.command()
+@click.option(
+    "-i", "--image", type=str, help="Path to local SDCARD image.", required=True
+)
+@click.option(
+    "-o",
+    "--os",
+    type=str,
+    help="Path to OS binary image to write to SDCARD",
+    required=True,
+)
+def installos(image, os):
+    """
+    Copy 8kb of OS Binary into SDCARD image immediately after the superblock.
+
+    <-i|--image> Path to new SDCARD Image file.
+    <-o|--os> Path to the rom image.  Expects image to be 16kb as per OS Makefiles.
+    """
+    print(f"Installing OS [{os}] into SDCARD Image [{image}]...")
+    sfs = SFS(image)
+    sfs.copy_os(os)
+    print("Done.")
 
 
 if __name__ == "__main__":
