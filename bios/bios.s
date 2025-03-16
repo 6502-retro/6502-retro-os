@@ -182,7 +182,7 @@ zero_lba:
 
 .segment "SYSTEM"
 ; dispatch function, will be relocated on boot into SYSRAM
-jmptables:
+jmptable:
     jmp dispatch    ; 200
     jmp bios_boot   ; 203
     jmp bios_wboot  ; 206

@@ -19,7 +19,7 @@ class Index(object):
     | Sn   | 15-17  | File size. 24 bits                                                 |
     | xx   | 18-18  | Unused. Allows for C to evaluate 32 bit number                     |
     | CR   | 19-19  | Current record. Used by DISK IO to track current sector.           |
-    | xx   | 18-1F  | Unused                                                             |
+    | xx   | 1A-1F  | Unused                                                             |
     """
 
     def __init__(self, barray):
@@ -33,6 +33,7 @@ class Index(object):
         self.exec_addr = int.from_bytes(barray[17:19], byteorder="little")
         self.last_offset = int.from_bytes(barray[19:21], byteorder="little")
         self.file_size = int.from_bytes(barray[21:24], byteorder="little")
+        self.cur_rec = barray[26]
 
     @staticmethod
     def name2filename(filename: str):
@@ -57,7 +58,8 @@ class Index(object):
                 bytearray(0xE5.to_bytes(1, "little")),  # 1 = 17
                 bytearray(0x00.to_bytes(2, "little")),  # 2 = 19
                 bytearray(0x00.to_bytes(2, "little")),  # 2 = 21
-                bytearray(0x00.to_bytes(3, "little")),  # 3 = 24
+                bytearray(0x00.to_bytes(4, "little")),  # 4 = 25
+                bytearray(0x00.to_bytes(1, "little")),  # 1 = 26
             ]
         )
 
@@ -74,6 +76,7 @@ class Index(object):
                 bytearray(self.exec_addr.to_bytes(2, "little")),
                 bytearray(self.last_offset.to_bytes(2, "little")),
                 bytearray(self.file_size.to_bytes(3, "little")),
+                bytearray(self.cur_rec.to_bytes(1, "little")),
             ]
         )
 

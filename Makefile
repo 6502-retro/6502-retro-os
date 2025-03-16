@@ -13,7 +13,7 @@ ASFLAGS += -I inc -g --feature labels_without_colons --cpu 65C02 --feature strin
 DEBUG = -D DEBUG=0
 
 # Set CFG to the config for size of rom
-CFG = rom_8k.cfg
+CFG = rom.cfg
 
 RAM_CFG = ram.cfg
 SFM_LOAD_ADDR = 8000
@@ -59,6 +59,7 @@ $(BUILD_DIR)/rom.raw: $(SFCP_OBJS) $(SFOS_OBJS) $(BIOS_OBJS)
 	$(RELIST) $(BUILD_DIR)/rom.map $(BUILD_DIR)/bios
 	$(RELIST) $(BUILD_DIR)/rom.map $(BUILD_DIR)/sfos
 	$(RELIST) $(BUILD_DIR)/rom.map $(BUILD_DIR)/sfcp
+	$(LOADTRIM) $(BUILD_DIR)/rom.raw $(BUILD_DIR)/rom.bin E000
 
 $(BUILD_DIR)/ram.bin: $(SFCP_OBJS) $(SFOS_OBJS) $(BIOS_OBJS)
 	@mkdir -p $$(dirname $@)

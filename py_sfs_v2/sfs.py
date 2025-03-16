@@ -154,10 +154,9 @@ class SFS(object):
 
     def copy_os(self, path):
         with open(path, "rb") as src:
-            src.seek(8192)
             data = src.read()
             if len(data) != 8192:
-                print("OS BINARY FILE AFTER SKIPPING 8192 IS NOT 8192 BYTES long")
+                print("OS BINARY FILE IS NOT 8192 BYTES long")
                 return
             self.fd.seek(512, 0)
             self.fd.write(data)

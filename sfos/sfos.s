@@ -127,6 +127,8 @@ get_drvmax:
     lda drvtbl + drvalloc::maxdrv
     rts
 
+; A=0xFF forces new scan of drive, else check if already logged in
+; if yes, then return else scan drive.
 login_drive:
     cmp #$FF
     beq :+
