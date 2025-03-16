@@ -19,7 +19,7 @@ ERROR_CODE  = GET_BUTTON + 3
 
 RSTFAR      = $231
 
-REGA        = $23F
+REGA        = $241
 REGX        = REGA   + 1
 REGY        = REGX   + 1
 ;

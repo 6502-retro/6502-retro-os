@@ -110,10 +110,6 @@ main:
     jsr c_write
 
     lda _fcb + sfcb::SC
-    sta value
-    lda #1
-    jsr bin2bcd
-    lda format_buffer
     jsr prbyte
 
     lda #' '
@@ -345,6 +341,6 @@ value:      .res 4,0
 str_message:     .byte 10,13,"Drive Statistics:",10,13,0
 str_newline:     .byte 10,13,0
 str_tab:         .byte "        ",0
-str_total_space: .byte " of 2,000,000 bytes",10,13,0
+str_total_space: .byte " of 33554432 bytes",10,13,0
 str_current_drive:.byte 10,13,"Drive: ",0
 str_padding:    .byte "  ",0
