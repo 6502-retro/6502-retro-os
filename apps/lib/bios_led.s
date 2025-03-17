@@ -7,13 +7,7 @@
 
 .code
 _led_on:
-        lda via_ddra
-        ora #%00010000
-        sta via_porta
-        jmp LED_ON
+    jmp LED_ON
 
 _led_off:
-        lda via_ddra
-        ora #%00010000
-        sta via_ddra
-        jmp LED_OFF
+    jmp LED_OFF

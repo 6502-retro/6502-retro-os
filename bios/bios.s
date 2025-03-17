@@ -32,6 +32,9 @@ bios_boot:
     jsr acia_init
     jsr sn_start
 
+    lda #%11010111
+    sta via_ddra
+
     ldx #3
 @L1:
     phx

@@ -7,10 +7,7 @@
 
 .code
 _get_button:
-        lda via_ddra
-        and #%11010111
-        sta via_ddra
-        jsr GET_BUTTON
-        ldx #0
-        rts
+    jsr GET_BUTTON
+    ldx #0
+    rts
 
