@@ -66,6 +66,7 @@ extern void __fastcall__ sfos_d_setlba(uint32_t * lba);
 extern uint8_t __fastcall__ sfos_d_getsetdrive(uint8_t d);
 extern uint8_t __fastcall__ sfos_d_parsefcb(uint16_t * buf);
 extern uint8_t __fastcall__ sfos_d_findfirst(volatile _fcb * f);
+extern uint8_t __fastcall__ sfos_d_findnext(volatile _fcb * f);
 extern uint8_t __fastcall__ sfos_d_make(volatile _fcb * f);
 extern uint8_t __fastcall__ sfos_d_open(volatile _fcb * f);
 extern uint8_t __fastcall__ sfos_d_close(volatile _fcb * f);

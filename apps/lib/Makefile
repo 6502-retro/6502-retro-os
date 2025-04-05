@@ -25,6 +25,7 @@ SOURCES = \
 	  sfos_d_setdma.s \
 	  sfos_d_parsefcb.s \
 	  sfos_d_findfirst.s \
+	  sfos_d_findnext.s \
 	  sfos_d_make.s \
 	  sfos_d_open.s \
 	  sfos_d_close.s \
