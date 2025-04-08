@@ -45,6 +45,12 @@ LAB_signon
       INY                     ; increment index
       BNE   LAB_signon        ; loop, branch always
 
+        lda USERNMIVEC + 0
+        sta NMI_vec + 0
+        lda USERNMIVEC + 1
+        sta NMI_vec + 1
+
+
 :
       JMP   LAB_COLD          ; do EhBASIC cold start
 
@@ -74,7 +80,7 @@ IRQ_CODE
       ORA   IrqBase           ; OR the original back in
       STA   IrqBase           ; save the new IRQ flag byte
       PLA                     ; restore A
-      RTI
+      RTS
 
 ; EhBASIC NMI support
 
@@ -85,7 +91,7 @@ NMI_CODE
       ORA   NmiBase           ; OR the original back in
       STA   NmiBase           ; save the new NMI flag byte
       PLA                     ; restore A
-      RTI
+      RTS
 
 END_CODE
 

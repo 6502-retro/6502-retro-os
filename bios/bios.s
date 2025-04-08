@@ -9,6 +9,7 @@
 .export bios_prbyte
 .export _vdp_sync, _vdp_status, _ticks
 .export error_code, rega, regx, regy
+.export user_nmi_vector, user_irq_vector
 
 .if DEBUG=1
 .export bios_printlba
@@ -183,6 +184,16 @@ zero_lba:
     stz sector_lba + 3 ; always zero
     rts
 
+;---- STUB IRQ / NMI Handlers ------------------------------------------------
+stub_user_irq_handler:
+    lda #'i'
+    jsr acia_putc
+    rts
+stub_user_nmi_handler:
+    lda #'n'
+    jsr acia_putc
+    rts
+
 .segment "SYSTEM"
 ; dispatch function, will be relocated on boot into SYSRAM
 jmptable:
@@ -220,6 +231,13 @@ regx:       .res 1
 regy:       .res 1
 .assert * = $244, error, "end of system should be at $244"
 
+user_irq_vector:
+    .lobytes stub_user_irq_handler
+    .hibytes stub_user_irq_handler
+user_nmi_vector:
+    .lobytes stub_user_nmi_handler
+    .hibytes stub_user_nmi_handler
+.assert * = $248, error, "via_irq_handler at 246"
 
 .bss
 bdma:       .word 0

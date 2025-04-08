@@ -60,7 +60,9 @@ is created by the build scripts.
 | 241       | REG A                        | YES (USED BY BASIC)
 | 242       | REG X                        | YES
 | 243       | REG Y                        | YES
-| 244 - 2FF | RESERVED                     | YES
+| 244       | IRQ_VECTOR_LO                | YES
+| 245       | IRQ_VECTOR_HI                | YES
+| 246 - 2FF | RESERVED                     | YES
 |**SFCP**   |                              |.
 | 300       | COMMANDLINE                  | YES
 | 380       | FCB                          | YES COMMAND (CAN BE REUSED IN TPA)

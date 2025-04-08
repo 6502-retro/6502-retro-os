@@ -2,28 +2,45 @@
 .include "io.inc"
 .autoimport
 .code
-nmi:
+
+user_irq_jumper:
+    jmp (user_irq_vector)
+
+user_nmi_jumper:
+    jmp (user_nmi_vector)
+
+nmi_handler:
+    pha
+    phx
+    phy
+    cld
+    jsr user_nmi_jumper
+    ply
+    plx
+    pla
     rti
 
 irq_handler:
-        pha
-        phx
-        phy
-        cld
+    pha
+    phx
+    phy
+    cld
 @vdp_irq:
-        bit     vdp_reg
-        bpl     @exit
-        lda     vdp_reg
-        sta     _vdp_status
-        lda     #$80
-        sta     _vdp_sync
-        inc     _ticks+0
-        bne     @exit
-        inc     _ticks+1
-        bne     @exit
-        inc     _ticks+2
-        bne     @exit
-        inc     _ticks+3
+    bit vdp_reg
+    bpl @exit
+    lda vdp_reg
+    sta _vdp_status
+    lda #$80
+    sta _vdp_sync
+    inc _ticks+0
+    bne @exit
+    inc _ticks+1
+    bne @exit
+    inc _ticks+2
+    bne @exit
+    inc _ticks+3
+
+    jsr user_irq_jumper
 @exit
     ply
     plx
@@ -31,7 +48,7 @@ irq_handler:
     rti
 
 .segment "VECTORS"
-    .addr nmi
+    .addr nmi_handler
     .addr bios_boot
     .addr irq_handler
 

@@ -28,6 +28,12 @@ void print_at_xy(uint8_t x, uint8_t y, char * s) {
         } while (*s != 0);
 }
 
+void __fastcall__ delay(uint8_t ticks) {
+        while (--ticks > 0) {
+                vdp_wait();
+        }
+}
+
 void main(void) {
         seed = 0;
         vdp_init_g2();
@@ -125,6 +131,7 @@ void main(void) {
                         } else if (ch==0x1b) {
                                 seed = 100; // will break out of outer loop.
                         }
+                        delay(15);
                 }
                 sprintf(tb, " - %d iterations.", counter);
                 sfos_c_printstr(tb);

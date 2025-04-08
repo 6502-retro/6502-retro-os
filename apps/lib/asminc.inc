@@ -22,6 +22,9 @@ RSTFAR      = $231
 REGA        = $241
 REGX        = REGA   + 1
 REGY        = REGX   + 1
+
+USERIRQVEC  = $244
+USERNMIVEC  = $246
 ;
 ; hard coded addresses that SFCP uses
 FCB          = $380
