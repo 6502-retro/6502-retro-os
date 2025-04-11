@@ -242,12 +242,12 @@ bin2bcd:
     inx
     stx bcd_size
     tay
-;    iny
-;@skip:
-;    dey
-;    beq @done
-;    lda value-1,y
-;    beq @skip
+    iny
+@skip:
+    dey
+    beq @done
+    lda value-1,y
+    beq @skip
     sty num_size
     sed
 @next_byte:

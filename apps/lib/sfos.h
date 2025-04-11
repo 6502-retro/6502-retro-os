@@ -27,10 +27,10 @@ void parse_args(char* cmd) {
     argv[argc] = '\0';
 }
 
-typedef struct _FCB{
+typedef struct {
     uint8_t     DRIVE;
-    uint8_t     NAME[8];
-    uint8_t     EXT[3];
+    char        NAME[8];
+    char        EXT[3];
     uint16_t    LOAD;
     uint8_t     SC;
     uint8_t     FILE_NUM;
@@ -49,10 +49,10 @@ extern uint16_t sfos_cmdline;
 extern uint16_t sfos_buf;
 extern uint16_t sfos_buf_end;
 
-extern void __fastcall__ sfos_c_printstr(const char * text);
-extern void __fastcall__ sfos_c_write(const uint8_t c);
+extern void    __fastcall__ sfos_c_printstr(const char * text);
+extern void    __fastcall__ sfos_c_write(const uint8_t c);
 extern uint8_t __fastcall__ sfos_c_read();
-extern void __fastcall__ sfos_c_readstr(uint8_t len, char * buf);
+extern void    __fastcall__ sfos_c_readstr(uint8_t len, char * buf);
 extern uint8_t __fastcall__ sfos_c_status();
 
 /* set dma, takes a pointer to the buffer to set the DMA to */
@@ -73,8 +73,8 @@ extern uint8_t __fastcall__ sfos_d_close(volatile _fcb * f);
 extern uint8_t __fastcall__ sfos_d_readseqblock(volatile _fcb * f);
 extern uint8_t __fastcall__ sfos_d_readseqbyte(volatile _fcb * f);
 extern uint8_t __fastcall__ sfos_d_writeseqblock(volatile _fcb * f);
-extern void sfos_d_writerawblock();
-extern void __fastcall__ sfos_d_writeseqbyte(volatile _fcb * f, char c);
+extern void                 sfos_d_writerawblock();
+extern void    __fastcall__ sfos_d_writeseqbyte(volatile _fcb * f, char c);
 
 extern void sfos_s_warmboot();
 extern void sfos_s_reboot();

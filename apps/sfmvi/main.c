@@ -100,7 +100,7 @@ void print_newline(void)
 /* Appends a string representation of the FCB to buffer. */
 void render_fcb(_fcb* f)
 {
-    uint8_t* inp;
+    char* inp;
     char* outp = buffer;
     uint8_t c;
 
