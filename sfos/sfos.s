@@ -138,9 +138,9 @@ login_drive:
     lda drvtbl + drvalloc::is_logged_in,x
     bne @exit
 :
-    lda #<str_scanning
-    ldx #>str_scanning
-    jsr bios_puts
+    ;lda #<str_scanning
+    ;ldx #>str_scanning
+    ;jsr bios_puts
     jsr compute_drive_index_lba
 @sector_lp:
     jsr internal_setdma
