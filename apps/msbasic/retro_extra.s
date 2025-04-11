@@ -15,3 +15,5 @@ LOAD:
 SAVE:
         rts
 
+BYE:
+        jmp WBOOT

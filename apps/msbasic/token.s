@@ -40,6 +40,9 @@
 .ifndef CONFIG_NO_POKE
 		keyword_rts "WAIT", WAIT
 .endif
+.ifdef RETRO
+		keyword_rts "BYE", BYE
+.endif
 .ifndef KBD
 		keyword_rts "LOAD", LOAD
 		keyword_rts "SAVE", SAVE

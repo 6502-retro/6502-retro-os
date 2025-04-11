@@ -10,7 +10,6 @@ cd ehbasic; make; cd ..
 cd format; make; cd ..
 cd hello; make; cd ..
 cd shadowrom; make; cd ..
-cd stat; make; cd ..
 cd statc; make; cd ..
 cd submit; make; cd ..
 cd sfmvi; make; cd ..
