@@ -72,8 +72,8 @@ bios_boot:
 
 bios_wboot:
     ; usually this is where we need to check if the SFCP needs to be
-    ; reloaded, but as our sfcp will be residing in rom, we don't care.
-    jmp prompt 
+    ; reloaded.
+    jmp prompt
 
 bios_conin:
     jmp acia_getc
@@ -186,13 +186,9 @@ zero_lba:
 
 ;---- STUB IRQ / NMI Handlers ------------------------------------------------
 stub_user_irq_handler:
-    lda #'i'
-    jsr acia_putc
     rts
 stub_user_nmi_handler:
-    lda #'n'
-    jsr acia_putc
-    rts
+    jmp bios_wboot
 
 .segment "SYSTEM"
 ; dispatch function, will be relocated on boot into SYSRAM
