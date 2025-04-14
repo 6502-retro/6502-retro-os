@@ -3,7 +3,7 @@
  * This library is distributable under the terms of the 2-clause BSD license.
  * See COPYING.cpmish in the distribution root directory for more information.
  *
- * Ported to SFM by David Latham - 2024
+ * Ported to SFOS by David Latham - 2024
  */
 
 #include <stdio.h>
