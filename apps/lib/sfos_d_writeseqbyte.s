@@ -7,7 +7,7 @@
 
 .code
 _sfos_d_writeseqbyte:
-    pha
+    sta REGA
     jsr popax
     ldy #esfos::sfos_d_writeseqbyte
     jmp SFOS

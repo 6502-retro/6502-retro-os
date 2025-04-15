@@ -11,6 +11,7 @@
 
 #define fcb (*(_fcb*)FCB)
 #define fcb2 (*(_fcb*)FCB2)
+#define TPA  0x800
 
 uint8_t argc;
 char *argv[8];
