@@ -75,7 +75,8 @@ extern uint8_t __fastcall__ sfos_d_readseqbyte(volatile _fcb * f);
 extern uint8_t __fastcall__ sfos_d_writeseqblock(volatile _fcb * f);
 extern void                 sfos_d_writerawblock();
 extern void    __fastcall__ sfos_d_writeseqbyte(volatile _fcb * f, char c);
-
+extern void    __fastcall__ sfos_s_settpa(uint8_t p);
+extern uint16_t             sfos_s_gettpa();
 extern void sfos_s_warmboot();
 extern void sfos_s_reboot();
 

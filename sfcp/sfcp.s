@@ -322,7 +322,9 @@ load_transient:
     sta sfcpcmd+0
     lda fcb + sfcb::E2
     sta sfcpcmd+1
-
+    ; Set TPA
+    lda temp+1
+    jsr s_settpa
 call:
     jsr restore_active_drive
     jmp (sfcpcmd)
@@ -850,6 +852,14 @@ d_readrawblock:
 d_writerawblock:
     ldy #esfos::sfos_d_writerawblock
     jmp SFOS
+s_settpa:
+    ldy #esfos::sfos_s_settpa
+    jmp SFOS
+s_gettpa:
+    ldy #esfos::sfos_s_gettpa
+    jmp SFOS
+
+
 
 ; ---- local helper functions ------------------------------------------------
 

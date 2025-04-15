@@ -36,6 +36,8 @@ SOURCES = \
 	  sfos_d_setlba.s \
 	  sfos_d_writerawblock.s \
 	  sfos_s_warmboot.s \
+	  sfos_s_settpa.s \
+	  sfos_s_gettpa.s \
 	  write.s \
 	  read.s \
 	  bios_led.s \

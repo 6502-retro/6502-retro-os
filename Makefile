@@ -15,8 +15,6 @@ DEBUG = -D DEBUG=0
 # Set CFG to the config for size of rom
 CFG = rom.cfg
 
-RAM_CFG = ram.cfg
-SFM_LOAD_ADDR = 8000
 SDDEVICE = /dev/sdd
 
 # Where should the builds be placed
@@ -44,7 +42,7 @@ SFCP_SOURCES = \
 
 SFCP_OBJS = $(addprefix $(BUILD_DIR)/, $(SFCP_SOURCES:.s=.o))
 
-all: clean $(BUILD_DIR)/rom.raw $(BUILD_DIR)/ram.bin
+all: clean $(BUILD_DIR)/rom.raw
 
 clean:
 	rm -fr $(BUILD_DIR)/*
@@ -60,11 +58,6 @@ $(BUILD_DIR)/rom.raw: $(SFCP_OBJS) $(SFOS_OBJS) $(BIOS_OBJS)
 	$(RELIST) $(BUILD_DIR)/rom.map $(BUILD_DIR)/sfos
 	$(RELIST) $(BUILD_DIR)/rom.map $(BUILD_DIR)/sfcp
 	$(LOADTRIM) $(BUILD_DIR)/rom.raw $(BUILD_DIR)/rom.bin E000
-
-$(BUILD_DIR)/ram.bin: $(SFCP_OBJS) $(SFOS_OBJS) $(BIOS_OBJS)
-	@mkdir -p $$(dirname $@)
-	$(LD) -C config/$(RAM_CFG) $^ -o $(BUILD_DIR)/ram.raw -m $(BUILD_DIR)/ram.map -Ln $(BUILD_DIR)/ram.sym
-	$(LOADTRIM) $(BUILD_DIR)/ram.raw $@ $(SFM_LOAD_ADDR)
 
 grep:
 	grep bios_boot $(BUILD_DIR)/ram.sym

@@ -955,6 +955,22 @@ sfos_d_readrawblock:
 :   sec
     rts
 
+; given the number of pages in A, set tpa to first free block
+; of ram.  - this will be called by sfcp when it's done loading
+; an application into the TPA.  It will pass in the pages used.
+sfos_s_settpa:
+    lda param+0
+    sta tpa
+    clc
+    rts
+
+; return the tpa in pages.
+sfos_s_gettpa:
+    lda tpa
+    ldx #0
+    clc
+    rts
+
 ; sets the dma to the sfos_buf
 internal_setdma:
     lda #<sfos_buf
@@ -1015,15 +1031,16 @@ to_upper:
 .align $100
     sfos_buf:       .res 512
     sfos_buf_end:
-    drive:          .byte 0
-    current_filenum:.byte 0
-    current_dirent: .res 32, 0
-    current_dirpos: .byte 0
+    drive:          .res 1
+    current_filenum:.res 1
+    current_dirent: .res 32
+    current_dirpos: .res 1
     drvtbl:         .res 16
-    lba:            .res 4,0
-    cmdlen:         .byte 0
-    temp_fcb:       .res 32,0
-    fsize:          .dword 0
+    lba:            .res 4
+    cmdlen:         .res 1
+    temp_fcb:       .res 32
+    fsize:          .res 2
+    tpa:            .res 1
 
 .rodata
 
@@ -1050,6 +1067,8 @@ sfos_jmp_tbl_lo:
     .lobytes sfos_d_setlba
     .lobytes sfos_d_readrawblock
     .lobytes sfos_d_writerawblock
+    .lobytes sfos_s_settpa
+    .lobytes sfos_s_gettpa
 sfos_jmp_tbl_hi:
     .hibytes sfos_s_reset
     .hibytes sfos_c_read
@@ -1073,6 +1092,8 @@ sfos_jmp_tbl_hi:
     .hibytes sfos_d_setlba
     .hibytes sfos_d_readrawblock
     .hibytes sfos_d_writerawblock
+    .hibytes sfos_s_settpa
+    .hibytes sfos_s_gettpa
 
 banner:             .byte "6502-Retro! (SFOS)", 13, 10, 0
 str_unimplimented:  .byte 13, 10, "!!! UNIMPLIMENTED !!!", 13, 10, 0

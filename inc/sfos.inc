@@ -22,5 +22,7 @@
     sfos_d_setlba           = 19
     sfos_d_readrawblock     = 20
     sfos_d_writerawblock    = 21
+    sfos_s_settpa           = 22
+    sfos_s_gettpa           = 23
 .endenum
 
