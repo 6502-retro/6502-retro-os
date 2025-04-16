@@ -1,7 +1,7 @@
 //vim: set ts=4 sw=4 et: 
 #include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
+//#include <stdlib.h>
+//#include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 #include <sfos.h>
@@ -9,9 +9,9 @@
 #include <stddef.h>
 
 
-static void __fastcall__ dumpfcb(char* f);
+//static void __fastcall__ dumpfcb(char* f);
 
-#define ramtop (uint8_t*)0xb600
+#define ramtop (uint8_t*)&sfos_ram_top
 
 struct  SymbolRecord;
 
@@ -75,7 +75,7 @@ static char currentByte;
 static uint16_t inputBufferPos = 512;
 static _fcb destFcb = {0};
 static uint16_t outputBufferPos;
-#define parseBuffer ((char*)0xA200)
+#define parseBuffer ((char*)0xA000)
 
 static uint16_t lineNumber = 0;
 
@@ -95,8 +95,6 @@ static uint16_t textUsage = 0;
 
 static uint8_t* cpm_ram;
 static uint8_t* top;
-
-static int8_t relocationBuffer;
 
 enum
 {
@@ -237,7 +235,6 @@ static void flushOutputBuffer()
 {
     sfos_d_setdma((uint16_t*)&outputBuffer);
     sfos_d_writeseqblock(&destFcb);
-    dumpfcb((char*)&destFcb);
     destFcb.DS = 0;
 
 }
@@ -250,7 +247,6 @@ static void writeByte(uint8_t b)
         outputBufferPos = 0;
     }
     destFcb.DS = 1;
-    printf("%02x ",b);
     outputBuffer[outputBufferPos++] = b;
 }
 
@@ -416,7 +412,7 @@ static void consumeToken()
             parseBuffer[tokenLength++] = c;
         }
 
-                parseBuffer[tokenLength] = 0;
+        parseBuffer[tokenLength] = 0;
         token = TOKEN_STRING;
         return;
     }
@@ -1043,7 +1039,6 @@ static void parse()
     SymbolRecord* r;
     top = cpm_ram;
 
-    printf("%s\n",tokenVariable->name);
     for (;;)
     {
         switch (token)
@@ -1339,159 +1334,10 @@ static void writeCode()
 exit:;
 }
 
-static void writeHeader()
-{
-    writeByte(zpUsage);
-    writeByte((textUsage + 255) >> 8);
-    writeByte(textUsage & 0xff);
-    writeByte(textUsage >> 8);
-    writeByte(0x4c);
-    writeByte(0);
-    writeByte(0);
-}
-
-static void resetRelocationWriter()
-{
-    relocationBuffer = -1;
-}
-
-static void writeRelocation(uint8_t nibble)
-{
-    if (relocationBuffer == -1)
-        relocationBuffer = nibble << 4;
-    else
-    {
-        writeByte(relocationBuffer | nibble);
-        relocationBuffer = -1;
-    }
-}
-
-static void writeRelocationFor(uint16_t delta)
-{
-    while (delta >= 0xe)
-    {
-        writeRelocation(0xe);
-        delta -= 0xe;
-    }
-    writeRelocation(delta);
-}
-
-static void flushRelocations()
-{
-    if (relocationBuffer != -1)
-        writeRelocation(0);
-}
-
-static void writeTextRelocations()
-{
-    uint8_t* r = cpm_ram;
-    uint16_t pc = START_ADDRESS;
-    uint16_t lastRelocation = 0;
-    resetRelocationWriter();
-
-    for (;;)
-    {
-        uint8_t type = *r & 0xe0;
-        uint8_t len = *r & 0x1f;
-
-        switch (type)
-        {
-            case RECORD_BYTES:
-                pc += len - offsetof(ByteRecord, bytes);
-                break;
-
-            case RECORD_EXPR:
-            {
-                ExpressionRecord* s = (ExpressionRecord*)r;
-                uint8_t len = s->length;
-                if ((s->postprocessing != PP_LSB) && s->variable &&
-                    ((s->variable->type == SYMBOL_TEXT) ||
-                        (s->variable->type == SYMBOL_BSS)))
-                {
-                    uint8_t bprops = getInsnProps(s->opcode);
-                    if (!(bprops & BPROP_RELATIVE) || (len != 2))
-                    {
-                        uint16_t address = pc + len - 1;
-                        if (s->postprocessing == PP_MSB)
-                        {
-                            if (!(bprops & BPROP_IMM))
-                                address--;
-                        }
-
-                        writeRelocationFor(address - lastRelocation);
-                        lastRelocation = address;
-                    }
-                }
-                pc += len;
-                break;
-            }
-
-            case RECORD_EOF:
-                goto exit;
-        }
-
-        r += len;
-    }
-
-exit:
-    writeRelocation(0xf);
-    flushRelocations();
-}
-
-static void writeZPRelocations()
-{
-    uint8_t* r = cpm_ram;
-    uint16_t pc = START_ADDRESS;
-    uint16_t lastRelocation = 0;
-    resetRelocationWriter();
-
-    for (;;)
-    {
-        uint8_t type = *r & 0xe0;
-        uint8_t len = *r & 0x1f;
-
-        switch (type)
-        {
-            case RECORD_BYTES:
-                pc += len - offsetof(ByteRecord, bytes);
-                break;
-
-            case RECORD_EXPR:
-            {
-                ExpressionRecord* s = (ExpressionRecord*)r;
-                uint8_t length = s->length;
-                if (s->variable && (s->variable->type == SYMBOL_ZP))
-                {
-                    uint16_t address;
-                    if ((s->opcode == 0x00) || (s->opcode == 0xff))
-                        address = pc;
-                    else
-                        address = pc + 1;
-
-                    if (s->postprocessing != PP_MSB)
-                    {
-                        writeRelocationFor(address - lastRelocation);
-                        lastRelocation = address;
-                    }
-                }
-                pc += length;
-                break;
-            }
-
-            case RECORD_EOF:
-                goto exit;
-        }
-
-        r += len;
-    }
-
-exit:
-    writeRelocation(0xf);
-    flushRelocations();
-}
 
 /* --- Main program ------------------------------------------------------ */
 
+/*
 static void __fastcall__ dumpfcb(char* f)
 {
     uint8_t i;
@@ -1504,7 +1350,6 @@ static void __fastcall__ dumpfcb(char* f)
         i++;
     } while (i<27);
 }
-
 
 void __fastcall__ print_fcb(volatile _fcb *f) {
     uint8_t i=0;
@@ -1522,6 +1367,8 @@ void __fastcall__ print_fcb(volatile _fcb *f) {
         putc(f->NAME[i++], stdout);
     }
 }
+*/
+
 int main()
 {
 
@@ -1534,10 +1381,10 @@ int main()
 
     cpm_ram = (uint8_t*)sfos_s_gettpa();
 
-    printf("RAMTOP: %04x [%p] // CPM_RAM: %04x [%p]\r\n",ramtop, ramtop, cpm_ram, cpm_ram);
+    //printf("RAMTOP: %04x [%p] // CPM_RAM: %04x [%p]\r\n",ramtop, ramtop, cpm_ram, cpm_ram);
 
     sfos_c_printstr("ASM; ");
-    printf("%u", ramtop-cpm_ram);
+    //printf("%u", ramtop-cpm_ram);
     printnl(" bytes free");
     memset(cpm_ram, 0, ramtop-cpm_ram);
 
@@ -1570,6 +1417,7 @@ int main()
     crlf();
     printi(zpUsage);
     printnl(" bytes zero page used");
+    textUsage -= 0x800;
     printi(textUsage);
     printnl(" bytes TPA used");
 
@@ -1599,7 +1447,6 @@ int main()
     destFcb.SIZE = (uint32_t)(destFcb.CR * 512);
     sfos_d_setdma((uint16_t*)&outputBuffer);
     sfos_d_close(&destFcb);
-    dumpfcb((char*)&destFcb);
     printnl("Done.");
 
     sfos_d_getsetdrive(current_drive);
