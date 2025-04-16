@@ -8,6 +8,11 @@
 #include <ctype.h>
 #include <stddef.h>
 
+
+static void __fastcall__ dumpfcb(char* f);
+
+#define ramtop (uint8_t*)0xb600
+
 struct  SymbolRecord;
 
 typedef struct 
@@ -64,14 +69,13 @@ typedef struct
 #define lengthof(a) (sizeof(a) / sizeof(*a))
 
 #define srcFcb fcb2
-#define inputBuffer ((char*)sfos_buf)
+static char inputBuffer[512] = {0};
+static char outputBuffer[512] = {0};
 static char currentByte;
-static uint8_t inputBufferPos = 128;
-static volatile _fcb* destFcb;
-static uint8_t outputBuffer[128];
+static uint16_t inputBufferPos = 512;
+static _fcb destFcb = {0};
 static uint16_t outputBufferPos;
-static uint8_t* ramtop;
-#define parseBuffer ((char*)outputBuffer)
+#define parseBuffer ((char*)0xA200)
 
 static uint16_t lineNumber = 0;
 
@@ -87,7 +91,7 @@ static uint8_t zpUsage = 0;
 static uint16_t bssUsage = 0;
 static uint16_t textUsage = 0;
 
-#define START_ADDRESS 0
+#define START_ADDRESS 0x800
 
 static uint8_t* cpm_ram;
 static uint8_t* top;
@@ -217,9 +221,9 @@ static void fatal(const char* msg)
 static void consumeByte()
 {
     int i;
-    if (inputBufferPos == 128)
+    if (inputBufferPos == 512)
     {
-        sfos_d_setdma((uint16_t*)inputBuffer);
+        sfos_d_setdma((uint16_t*)&inputBuffer);
         i = sfos_d_readseqblock(&srcFcb);
         if (i != 0)
             currentByte = 26;
@@ -231,20 +235,22 @@ static void consumeByte()
 
 static void flushOutputBuffer()
 {
-    sfos_d_setdma((uint16_t*)outputBuffer);
-    sfos_d_writeseqblock(destFcb);
+    sfos_d_setdma((uint16_t*)&outputBuffer);
+    sfos_d_writeseqblock(&destFcb);
+    dumpfcb((char*)&destFcb);
+    destFcb.DS = 0;
+
 }
 
 static void writeByte(uint8_t b)
 {
     if (outputBufferPos == 512)
     {
-        //flushOutputBuffer();
+        flushOutputBuffer();
         outputBufferPos = 0;
     }
-
+    destFcb.DS = 1;
     printf("%02x ",b);
-    sfos_d_writeseqbyte(destFcb, b);
     outputBuffer[outputBufferPos++] = b;
 }
 
@@ -1037,6 +1043,7 @@ static void parse()
     SymbolRecord* r;
     top = cpm_ram;
 
+    printf("%s\n",tokenVariable->name);
     for (;;)
     {
         switch (token)
@@ -1485,6 +1492,20 @@ exit:
 
 /* --- Main program ------------------------------------------------------ */
 
+static void __fastcall__ dumpfcb(char* f)
+{
+    uint8_t i;
+    i = 0;
+    crlf();
+    do
+    {
+        printf("%02x ", *f);
+        f++;
+        i++;
+    } while (i<27);
+}
+
+
 void __fastcall__ print_fcb(volatile _fcb *f) {
     uint8_t i=0;
     uint16_t total_bytes = 0;
@@ -1507,18 +1528,18 @@ int main()
     uint8_t i;
     uint8_t current_drive = sfos_d_getsetdrive(0xFF);
 
+    parse_args(cmd);
+
     crlf();
 
     cpm_ram = (uint8_t*)sfos_s_gettpa();
-    ramtop = (uint8_t*)0xBE00;
 
-    printf("%04x [%p]\r\n",cpm_ram, cpm_ram);
+    printf("RAMTOP: %04x [%p] // CPM_RAM: %04x [%p]\r\n",ramtop, ramtop, cpm_ram, cpm_ram);
 
     sfos_c_printstr("ASM; ");
-    printi(ramtop - cpm_ram);
+    printf("%u", ramtop-cpm_ram);
     printnl(" bytes free");
-    memset(cpm_ram, 0, ramtop - cpm_ram);
-
+    memset(cpm_ram, 0, ramtop-cpm_ram);
 
     /* Open input file */
 
@@ -1528,16 +1549,6 @@ int main()
     }
     consumeByte();
     consumeToken();
-
-    /* Open output file */
-    //sfos_d_delete(destFcb);
-
-//    if (sfos_d_make((_fcb*)destFcb))
-//    {
-//        crlf();
-//        fatal("cannot create destination file");
-//    }
-
 
     /* Parse file into memory. */
 
@@ -1564,16 +1575,31 @@ int main()
 
     /* Code emission */
 
+    /* Open output file */
+    sfos_d_setdma((uint16_t*)&destFcb);
+    if (!sfos_d_parsefcb((uint16_t*)argv[2]))
+        fatal("Could not parse destination FCB");
+
+
+    sfos_d_setdma((uint16_t*)&outputBuffer);
+    sfos_d_make(&destFcb);
+    sfos_d_open(&destFcb);
+
     printnl("Writing...");
     //writeHeader();
     writeCode();
     //writeZPRelocations();
     //writeTextRelocations();
 
-    /* Flush and close the output file */
+    /* Close the output file */
 
-    //flushOutputBuffer();
-//    sfos_d_close((_fcb*)destFcb);
+    destFcb.LOAD = 0x800;
+    destFcb.EXEC = 0x800;
+    destFcb.DS = 1;
+    destFcb.SIZE = (uint32_t)(destFcb.CR * 512);
+    sfos_d_setdma((uint16_t*)&outputBuffer);
+    sfos_d_close(&destFcb);
+    dumpfcb((char*)&destFcb);
     printnl("Done.");
 
     sfos_d_getsetdrive(current_drive);
