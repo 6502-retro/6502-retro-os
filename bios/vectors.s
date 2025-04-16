@@ -27,7 +27,7 @@ irq_handler:
     cld
 @vdp_irq:
     bit vdp_reg
-    bpl @exit
+    bpl @user_irq
     lda vdp_reg
     sta _vdp_status
     lda #$80
@@ -39,7 +39,7 @@ irq_handler:
     inc _ticks+2
     bne @exit
     inc _ticks+3
-
+@user_irq:
     jsr user_irq_jumper
 @exit
     ply

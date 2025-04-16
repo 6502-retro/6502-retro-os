@@ -236,7 +236,6 @@ static void flushOutputBuffer()
     sfos_d_setdma((uint16_t*)&outputBuffer);
     sfos_d_writeseqblock(&destFcb);
     destFcb.DS = 0;
-
 }
 
 static void writeByte(uint8_t b)
@@ -1443,9 +1442,11 @@ int main()
 
     destFcb.LOAD = 0x800;
     destFcb.EXEC = 0x800;
-    destFcb.DS = 1;
-    destFcb.SIZE = (uint32_t)(destFcb.CR * 512);
-    sfos_d_setdma((uint16_t*)&outputBuffer);
+
+    flushOutputBuffer();
+    destFcb.SIZE = 512UL * destFcb.CR;
+    destFcb.SC = destFcb.CR;
+
     sfos_d_close(&destFcb);
     printnl("Done.");
 

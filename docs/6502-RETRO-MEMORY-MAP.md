@@ -75,23 +75,9 @@ is created by the build scripts.
 |**SFOS**   |                              |.
 | 400       | SFOS_BUF                     | YES
 | 600       | SFOS_BUF_END (WASTED BYTE)   | READONLY
-| 601       | CURRENT FILENUM              | NO
-| 602       | CURRENT DIRENT               | NO
-| 622       | CURENT DIRPOS                | NO
-| 623       | DRIVE TABLE                  | NO
-| 633       | LBA (32 BIT)                 | NO
-| 637       | COMMAND LENGTH               | READONLY
-| 638       | TEMP FCB                     | YES
-| 658       | DIRTY SECTOR                 | NO
-| 659       | FILE SIZE                    | NO
-|**BIOS**   |                              |.
-| 65D       | BDMA                         | NO
-| 65F       | VDP STATUS                   | READONLY
-| 660       | VDP SYNC                     | READONLY
-| 661       | SDCARD PARAM                 | NO
-| 662       | SECTOR LBA                   | NO
-| 667       | TIMEOUT COUNT                | NO
-| 668       | SPI SHIFT RESULT             | NO
+| 65D       | VDP_STATUS                   | READONLY
+| 65E       | VDP_SYNC                     | READONLY
+| 65F       | VDP_TICKS                    | READONLY
 |**USER**   |                              |.
 | 800       | TPA                          | YES
 | BEFF      | TPA END                      | YES

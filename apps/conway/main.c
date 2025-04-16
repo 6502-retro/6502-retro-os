@@ -131,7 +131,7 @@ void main(void) {
                         } else if (ch==0x1b) {
                                 seed = 100; // will break out of outer loop.
                         }
-                        delay(15);
+                        //delay(15);
                 }
                 sprintf(tb, " - %d iterations.", counter);
                 sfos_c_printstr(tb);
