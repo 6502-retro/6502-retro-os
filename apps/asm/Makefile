@@ -1,6 +1,6 @@
 # Sources and objects
 C_SOURCES = \
-	  main.c
+	  asm.c
 APPNAME = asm
 
 # DO NOT EDIT THIS

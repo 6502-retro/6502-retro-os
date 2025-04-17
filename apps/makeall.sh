@@ -1,5 +1,6 @@
 #!/bin/bash
 cd lib; make; cd ..
+cd asm; make; cd ..
 cd bytetst; make; cd ..
 cd C; make; cd ..
 cd cat; make; cd ..
