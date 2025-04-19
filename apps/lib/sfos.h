@@ -82,10 +82,6 @@ extern uint16_t             sfos_s_gettpa();
 extern void sfos_s_warmboot();
 extern void sfos_s_reboot();
 
-extern void led_on();
-extern void led_off();
-extern uint8_t get_button();
-
 extern uint32_t ticks;
 
 #endif

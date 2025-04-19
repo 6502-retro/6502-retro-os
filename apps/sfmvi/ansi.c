@@ -36,10 +36,10 @@ void ansi_set_cursor(uint8_t x, uint8_t y)
 	bios_puts("\033[");
 	itoa(y, buffer, 10);
 	bios_puts(buffer);
-	bios_putc(';');
+	bios_conout(';');
 	itoa(x, buffer, 10);
 	bios_puts(buffer);
-	bios_putc('H');
+	bios_conout('H');
 
 	ansix = x;
 	ansiy = y;
@@ -63,19 +63,19 @@ void ansi_rev_off(void)
 
 uint8_t ansi_getc(void)
 {
-	return bios_getc();
+	return bios_conin();
 }
 void ansi_putc(uint8_t c)
 {
 	if (c < 31)
 	{
-		bios_putc('^');
-		bios_putc('@' + c);
+		bios_conout('^');
+		bios_conout('@' + c);
 		ansix+=2;
 	}
 	else
 	{
-		bios_putc(c);
+		bios_conout(c);
 		ansix++;
 	}
 }

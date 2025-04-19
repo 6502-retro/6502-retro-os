@@ -39,9 +39,7 @@ SOURCES = \
 	  sfos_s_settpa.s \
 	  sfos_s_gettpa.s \
 	  write.s \
-	  read.s \
-	  bios_led.s \
-	  bios_button.s
+	  read.s
 
 
 OBJS = $(addprefix $(BUILD_DIR)/, $(SOURCES:.s=.o))

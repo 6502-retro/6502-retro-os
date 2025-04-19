@@ -197,7 +197,7 @@ jmptable:
     jmp bios_boot   ; 203
     jmp bios_wboot  ; 206
     jmp bios_conout ; 209
-    jmp bios_conin  ; 20B
+    jmp bios_conin  ; 20C
     jmp bios_const  ; 20F
     jmp bios_puts   ; 212
     jmp bios_prbyte ; 215

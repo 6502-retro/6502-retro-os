@@ -1,6 +1,7 @@
 /* vim: set et ts=4 sw=4 */
 #include <stdio.h>
 #include "sfos.h"
+#include "bios.h"
 
 char textbuffer[64];
 
