@@ -1,4 +1,4 @@
-//vim: set ts=4 sw=4 et: 
+//vim: set ts=4 sw=4 et:
 /*
  * Ported to SFOS by David Latham from:
  *
@@ -13,16 +13,13 @@
 //#include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
-#include <sfos.h>
 #include <ctype.h>
 #include <stddef.h>
 
+#include "sfos.h"
 
-//static void __fastcall__ dumpfcb(char* f);
 
-#define ramtop (uint8_t*)&sfos_ram_top
-
-struct  SymbolRecord;
+struct SymbolRecord;
 
 typedef struct 
 {
@@ -34,6 +31,12 @@ typedef struct
     Record record;
     uint8_t bytes[];
 } ByteRecord;
+
+typedef struct 
+{
+    Record record;
+    uint16_t length;
+} FillRecord;
 
 typedef struct 
 {
@@ -75,18 +78,31 @@ typedef struct
     uint16_t addressingModes;
 } Instruction;
 
+typedef struct
+{
+    const char* string;
+    void (*callback)();
+} SymbolCallbackEntry;
+
+typedef struct
+{
+    uint16_t pos;
+    uint16_t lineNumber;
+    _fcb f;
+    uint8_t buffer[512];
+} InputStream;
+
 #define lengthof(a) (sizeof(a) / sizeof(*a))
 
-#define srcFcb fcb2
-static char inputBuffer[512] = {0};
-static char outputBuffer[512] = {0};
 static char currentByte;
-static uint16_t inputBufferPos = 512;
-static _fcb destFcb = {0};
-static uint16_t outputBufferPos;
-#define parseBuffer ((char*)0xA000)
+static _fcb destFcb;
+static char outputBuffer[512] = {0};
+static uint16_t outputBufferPos = 0;
+#define parseBuffer ((char*)outputBuffer)
 
-static uint16_t lineNumber = 0;
+static InputStream* firstFile;
+static InputStream* currentFile;
+static uint8_t includes = 0;
 
 static char token = 0;
 static uint8_t tokenLength;
@@ -95,14 +111,35 @@ static SymbolRecord* tokenVariable;
 static uint8_t tokenPostProcessing;
 
 static SymbolRecord* lastSymbol;
+static uint8_t defaultBranchSize = 5;
 
+static bool badProgram = false;
 static uint8_t zpUsage = 0;
 static uint16_t bssUsage = 0;
 static uint16_t textUsage = 0;
 
+#define ZMACRO_STACK_SIZE 8
+static uint8_t scopePointer = 0;
+static SymbolRecord* scopePointers[ZMACRO_STACK_SIZE];
+static SymbolRecord* startLabels[ZMACRO_STACK_SIZE];
+static SymbolRecord* endLabels[ZMACRO_STACK_SIZE];
+
+static uint8_t breakPointer = 0xff;
+static SymbolRecord* breakLabels[ZMACRO_STACK_SIZE];
+
+static uint8_t continuePointer = 0xff;
+static SymbolRecord* continueLabels[ZMACRO_STACK_SIZE];
+
+#define EXPR_STACK_SIZE 8
+static uint16_t exprValue[EXPR_STACK_SIZE];
+static SymbolRecord* exprVariable[EXPR_STACK_SIZE];
+
 #define START_ADDRESS 0x800
 
 static uint8_t* cpm_ram;
+static uint8_t* top;
+#define ramtop (uint8_t*)&sfos_ram_top
+
 static uint8_t* top;
 
 enum
@@ -120,6 +157,7 @@ enum
     RECORD_EXPR = 2 << 5,
     RECORD_SYMBOL = 3 << 5,
     RECORD_LABELDEF = 4 << 5,
+    RECORD_FILL = 5 << 5,
 };
 
 enum
@@ -131,6 +169,7 @@ enum
     SYMBOL_TEXT,
     SYMBOL_COMPUTED,
 };
+static const char symbolTypeChars[] = "URZBTC";
 
 typedef enum
 {
@@ -178,7 +217,22 @@ enum
 
 #define ILLEGAL 0xff
 
+static void createLabelDefinition(SymbolRecord* r);
+static void consumeExpressionNode(uint8_t sp);
+static void consumeExpression();
+static void printSymbol(SymbolRecord* r);
+
 /* --- I/O --------------------------------------------------------------- */
+
+uint8_t sfos_d_delete(_fcb* f)
+{
+    while (sfos_d_findfirst(f) == 0) {
+        sfos_c_printstr("\r\nDeleting file...");
+        f->ATTRIB = 0xE5;
+        sfos_d_close(f);
+    }
+    return 0;
+}
 
 static void printi(int n)
 { 
@@ -192,7 +246,8 @@ static void printi(int n)
     sfos_c_write('0'+n);
 }
 
-static void crlf(void)
+
+static void cr(void)
 {
     sfos_c_write('\n');
     sfos_c_write('\r');
@@ -201,41 +256,108 @@ static void crlf(void)
 static void printnl(const char* msg)
 {
     sfos_c_printstr(msg);
-    crlf();
+    cr();
+}
+
+static void errormessage(const char* msg)
+{
+    sfos_d_delete(&destFcb);
+    sfos_c_printstr("Error: ");
+    if (currentFile && currentFile->lineNumber)
+    {
+        printi(currentFile->lineNumber);
+        sfos_c_printstr(": ");
+    }
+    sfos_c_printstr(msg);
 }
 
 static void fatal(const char* msg)
 {
-    sfos_c_printstr("Error: ");
-    if (lineNumber)
-    {
-        printi(lineNumber);
-        sfos_c_printstr(": ");
-    }
-    printnl(msg);
+    errormessage(msg);
+    cr();
     sfos_s_warmboot();
+}
+
+static void printFcb(_fcb* f)
+{
+    const char* inp;
+    if (f->DRIVE)
+    {
+        sfos_c_write('@' + f->DRIVE);
+        sfos_c_write(':');
+    }
+
+    inp = &f->NAME[0];
+    while (inp != &f->NAME[11])
+    {
+        uint8_t c;
+        if (inp == &f->NAME[8])
+            sfos_c_write('.');
+        c = *inp++;
+        if (c != ' ')
+            sfos_c_write(c);
+    }
+}
+
+static void indent()
+{
+    uint8_t i;
+    for (i = 0; i < includes; i++)
+        sfos_c_printstr("  ");
+}
+
+static void openFile(const char* filename)
+{
+    currentFile--;
+    currentFile->pos = 512;
+    currentFile->lineNumber = 1;
+    currentFile->f.CR = 0;
+
+    sfos_d_setdma((uint16_t*)&currentFile->f);
+    if (!sfos_d_parsefcb((uint16_t*)filename))
+        fatal("invalid filename");
+
+    indent();
+    sfos_c_printstr("> ");
+    printFcb(&currentFile->f);
+    cr();
+    includes++;
+
+    if (sfos_d_open(&currentFile->f))
+        fatal("cannot open source file");
 }
 
 static void consumeByte()
 {
     int i;
-    if (inputBufferPos == 512)
+    if (currentFile->pos == 512)
     {
-        sfos_d_setdma((uint16_t*)&inputBuffer);
-        i = sfos_d_readseqblock(&srcFcb);
+        sfos_d_setdma((uint16_t*)currentFile->buffer);
+        i = sfos_d_readseqblock(&currentFile->f);
         if (i != 0)
             currentByte = 26;
-        inputBufferPos = 0;
+        currentFile->pos = 0;
     }
 
-    currentByte = inputBuffer[inputBufferPos++];
+    currentByte = currentFile->buffer[currentFile->pos++];
+    if (currentByte == 0)
+        currentByte = 26;
+
+    if ((currentByte == 26) && (currentFile != firstFile))
+    {
+        includes--;
+        indent();
+        sfos_c_printstr("<\r\n");
+
+        currentFile++;
+        currentByte = '\n';
+    }
 }
 
 static void flushOutputBuffer()
 {
     sfos_d_setdma((uint16_t*)&outputBuffer);
     sfos_d_writeseqblock(&destFcb);
-    destFcb.DS = 0;
 }
 
 static void writeByte(uint8_t b)
@@ -245,7 +367,7 @@ static void writeByte(uint8_t b)
         flushOutputBuffer();
         outputBufferPos = 0;
     }
-    destFcb.DS = 1;
+
     outputBuffer[outputBufferPos++] = b;
 }
 
@@ -260,17 +382,17 @@ static int ishex(int c)
 
 static void badEscape()
 {
-        fatal("bad escape");
+    fatal("bad escape");
 }
 
-static void consumeToken()
+static char consumeToken()
 {
     tokenLength = 0;
 
     if (currentByte == 26)
     {
         token = currentByte;
-        return;
+        return token;
     }
 
     for (;;)
@@ -290,46 +412,53 @@ static void consumeToken()
 
     if (currentByte == '\n')
     {
-        lineNumber++;
+        currentFile->lineNumber++;
         currentByte = ';';
     }
 
     switch (currentByte)
     {
         case 26:
+		case '&':
+		case '^':
+		case '|':
+		case '~':
         case '#':
-        case ':':
-        case ';':
-        case ',':
-        case '+':
-        case '-':
         case '(':
         case ')':
-        case '<':
-        case '>':
+        case '*':
+        case '+':
+        case ',':
+        case '-':
         case '.':
+        case '/':
+        case ':':
+        case ';':
+        case '<':
         case '=':
+        case '>':
         {
             token = currentByte;
             consumeByte();
-            return;
+            return token;
         }
     }
 
-    if (isalpha(currentByte) || (currentByte == '$'))
+    if (isalpha(currentByte))
     {
         do
         {
             parseBuffer[tokenLength++] = currentByte;
             consumeByte();
-        } while (isdigit(currentByte) || isalpha(currentByte));
+        } while (isdigit(currentByte) || isalpha(currentByte) ||
+                 (currentByte == '_'));
 
         parseBuffer[tokenLength] = 0;
         token = TOKEN_ID;
-        return;
+        return token;
     }
 
-    if (isdigit(currentByte))
+    if (isdigit(currentByte) || (currentByte == '$'))
     {
         uint8_t base = 10;
         tokenValue = 0;
@@ -355,6 +484,11 @@ static void consumeToken()
                     break;
             }
         }
+        else if (currentByte == '$')
+        {
+            consumeByte();
+            base = 16;
+        }
 
         for (;;)
         {
@@ -379,17 +513,17 @@ static void consumeToken()
         }
 
         token = TOKEN_NUMBER;
-        return;
+        return token;
     }
 
     if (currentByte == '"')
     {
-                consumeByte();
+        consumeByte();
         tokenLength = 0;
         for (;;)
         {
             char c = currentByte;
-                        consumeByte();
+            consumeByte();
             if (c == '"')
                 break;
             if (c == '\n')
@@ -404,8 +538,8 @@ static void consumeToken()
                     c = 13;
                 else if (c == 't')
                     c = 9;
-                else
-                                        badEscape();
+                else if (c != '\\')
+                    badEscape();
             }
 
             parseBuffer[tokenLength++] = c;
@@ -413,40 +547,43 @@ static void consumeToken()
 
         parseBuffer[tokenLength] = 0;
         token = TOKEN_STRING;
-        return;
+        return token;
     }
 
-        if (currentByte == '\'')
+    if (currentByte == '\'')
+    {
+        consumeByte();
+        if (currentByte == '\\')
         {
-                consumeByte();
-                if (currentByte == '\\')
-                {
-                        consumeByte();
-                        switch (currentByte)
-                        {
-                                case 'n':
-                                        currentByte = 10;
-                                        break;
+            consumeByte();
+            switch (currentByte)
+            {
+                case 'n':
+                    currentByte = 10;
+                    break;
 
-                                case 'r':
-                                        currentByte = 13;
-                                        break;
+                case 'r':
+                    currentByte = 13;
+                    break;
 
-                                case 't':
-                                        currentByte = 9;
-                                        break;
+                case 't':
+                    currentByte = 9;
+                    break;
 
-                                default:
-                                        badEscape();
-                        }
-                }
+                case '\\':
+                    break;
 
-                tokenValue = currentByte;
-                consumeByte();
-                consumeByte();
-                token = TOKEN_NUMBER;
-                return;
+                default:
+                    badEscape();
+            }
         }
+
+        tokenValue = currentByte;
+        consumeByte();
+        consumeByte();
+        token = TOKEN_NUMBER;
+        return token;
+    }
 
     fatal("bad parse");
 }
@@ -463,11 +600,11 @@ static const Instruction simpleInsns[] = {
     {"BCC", 0x90, AM_ABS},
     {"BCS", 0xb0, AM_ABS},
     {"BEQ", 0xf0, AM_ABS},
-    {"BIT", 0x24, AM_ZP | AM_ABS},
+    {"BIT", 0x20, AM_ZP | AM_ABS},
     {"BMI", 0x30, AM_ABS},
     {"BNE", 0xd0, AM_ABS},
     {"BPL", 0x10, AM_ABS},
-    {"BRK", 0x00, AM_ABS},
+    {"BRK", 0x00, AM_IMP},
     {"BVC", 0x50, AM_ABS},
     {"BVS", 0x70, AM_ABS},
     {"CLC", 0x18, AM_IMP},
@@ -477,9 +614,11 @@ static const Instruction simpleInsns[] = {
     {"CMP", 0xc1, AM_ALU},
     {"CPX", 0xe0, AM_IMMS | AM_ZP | AM_ABS},
     {"CPY", 0xc0, AM_IMMS | AM_ZP | AM_ABS},
+    {"DEC", 0xc2, AM_ZP | AM_ABS | AM_XOFZ | AM_XOFF},
     {"DEX", 0xca, AM_IMP},
     {"DEY", 0x88, AM_IMP},
     {"EOR", 0x41, AM_ALU},
+    {"INC", 0xe2, AM_ZP | AM_ABS | AM_XOFZ | AM_XOFF},
     {"INX", 0xe8, AM_IMP},
     {"INY", 0xc8, AM_IMP},
     {"JMP", 0x40, AM_ABS | AM_WIND},
@@ -526,14 +665,14 @@ static const uint8_t bOfAm[] = {
     0,            /* AM_IMP */
     2 << 2,       /* AM_A */
     0 << 2,       /* AM_IMMS */
-    0x20 | B_ABS, /* AM_WIND */
+    0x20 | B_ABS, /* AM_WIND: 0x20 bumps the opcode from 0x4c to 0x6c */
     B_XOFZ,       /* AM_YOFZ */
 };
 
 static const Instruction* findInstruction(const Instruction* insn)
 {
     char opcode[3];
-    int i;
+    uint8_t i;
     for (i = 0; i < 3; i++)
         opcode[i] = toupper(parseBuffer[i]);
 
@@ -630,6 +769,11 @@ static uint8_t getBProps(uint8_t b)
 
 static uint8_t getInsnProps(uint8_t opcode)
 {
+    /* JMP is special. */
+
+    if ((opcode == 0x4c) || (opcode == 0x6c))
+        return (3 << BPROP_SIZE_SHIFT) | BPROP_ABS;
+
     return getBProps(getB(opcode));
 }
 
@@ -657,8 +801,8 @@ static void* addRecord(uint8_t descr)
 
 static void emitByte(uint8_t byte)
 {
-    uint8_t len;
     ByteRecord* r = (ByteRecord*)top;
+    uint8_t len;
     if (((r->record.descr & 0xe0) != RECORD_BYTES) ||
         ((r->record.descr & 0x1f) == 0x1f))
     {
@@ -669,6 +813,12 @@ static void emitByte(uint8_t byte)
     len = r->record.descr & 0x1f;
     r->bytes[len - 1] = byte;
     r->record.descr++;
+}
+
+static void emitFill(uint16_t len)
+{
+    FillRecord* r = addRecord(sizeof(FillRecord) | RECORD_FILL);
+    r->length = len;
 }
 
 static void addExpressionRecord(uint8_t op)
@@ -726,6 +876,15 @@ static SymbolRecord* appendSymbol()
     return r;
 }
 
+static SymbolRecord* appendAnonymousSymbol()
+{
+    uint8_t oldLength = tokenLength;
+    SymbolRecord* r;
+    r = appendSymbol();
+    tokenLength = oldLength;
+    return r;
+}
+
 static SymbolRecord* addOrFindSymbol()
 {
     SymbolRecord* r = lookupSymbol();
@@ -737,7 +896,10 @@ static SymbolRecord* addOrFindSymbol()
 
 static void symbolExists()
 {
-    fatal("symbol exists");
+    errormessage("symbol exists: ");
+    sfos_c_printstr(parseBuffer);
+    cr();
+    sfos_s_warmboot();
 }
 
 static SymbolRecord* addSymbol()
@@ -753,6 +915,24 @@ static SymbolRecord* addSymbol()
 static void syntaxError()
 {
     fatal("syntax error");
+}
+
+static void pushScope()
+{
+    if (scopePointer == (ZMACRO_STACK_SIZE - 1))
+        fatal("too many nested scopes");
+
+    scopePointers[scopePointer] = lastSymbol;
+    scopePointer++;
+}
+
+static void popScope()
+{
+    if (scopePointer == 0)
+        fatal("scope underflow");
+
+    scopePointer--;
+    lastSymbol = scopePointers[scopePointer];
 }
 
 static void expect(char t)
@@ -781,27 +961,182 @@ static char consumeXorY()
     fatal("expected X or Y");
 }
 
-static void postProcessConstant()
+//static uint16_t postProcess(uint16_t value)
+//{
+//    switch (tokenPostProcessing)
+//    {
+//        case PP_LSB:
+//            value = value & 0xff;
+//            break;
+//
+//        case PP_MSB:
+//            value = value >> 8;
+//            break;
+//    }
+//    tokenPostProcessing = PP_NONE;
+//    return value;
+//}
+
+static void checkNodeConstant(uint8_t sp)
 {
-    if (tokenVariable)
-        return;
+    if (exprVariable[sp])
+        fatal("operation requires non-constant value");
+}
 
-    switch (tokenPostProcessing)
+static void consumeTokenThenConstant(uint8_t sp)
+{
+    consumeToken();
+    consumeExpressionNode(sp + 1);
+    checkNodeConstant(sp + 1);
+}
+
+static void checkConstantThenConsumeTokenThenConstant(uint8_t sp)
+{
+    checkNodeConstant(sp);
+    consumeTokenThenConstant(sp);
+}
+
+static void checkDivisionByZero(uint8_t sp)
+{
+    if (!exprValue[sp])
+        fatal("division by zero");
+}
+
+static void consumeExpressionNode(uint8_t sp)
+{
+    if (sp == EXPR_STACK_SIZE)
+        fatal("expression too complex");
+
+    exprVariable[sp] = NULL;
+
+    /* Prefix operators. */
+
+    switch (token)
     {
-        case PP_LSB:
-            tokenValue = tokenValue & 0xff;
+        case '<':
+            consumeTokenThenConstant(sp);
+            exprValue[sp] = exprValue[sp + 1] & 0xff;
             break;
 
-        case PP_MSB:
-            tokenValue = tokenValue >> 8;
+        case '>':
+            consumeTokenThenConstant(sp);
+            exprValue[sp] = exprValue[sp + 1] >> 8;
             break;
+
+        case '-':
+            consumeTokenThenConstant(sp);
+            exprValue[sp] *= -1;
+            break;
+
+        case '~':
+            consumeTokenThenConstant(sp);
+            exprValue[sp] ^= 0xff;
+            break;
+
+        case '(':
+            consumeToken();
+            consumeExpressionNode(sp);
+            expect(')');
+            break;
+
+        case TOKEN_NUMBER:
+            consumeToken();
+            exprValue[sp] = tokenValue;
+            break;
+
+        case '*':
+        case TOKEN_ID:
+        {
+            SymbolRecord* r;
+            if (token == '*')
+            {
+                r = appendAnonymousSymbol();
+                createLabelDefinition(r);
+            }
+            else
+            {
+                r = addOrFindSymbol();
+                if (r->type == SYMBOL_UNINITIALISED)
+                    r->type = SYMBOL_REFERENCE;
+            }
+
+            if (r->type == SYMBOL_COMPUTED)
+            {
+                exprVariable[sp] = r->variable;
+                exprValue[sp] = r->offset;
+            }
+            else
+            {
+                exprVariable[sp] = r;
+                exprValue[sp] = 0;
+            }
+
+			consumeToken();
+            break;
+        }
+
+        default:
+            syntaxError();
     }
-    tokenPostProcessing = PP_NONE;
+
+    /* Infix operators, if any. */
+
+    switch (token)
+    {
+        case ')':
+        case ';':
+        case ',':
+            return;
+
+        case '+':
+            consumeTokenThenConstant(sp);
+            exprValue[sp] += exprValue[sp + 1];
+            break;
+
+        case '-':
+            consumeTokenThenConstant(sp);
+            exprValue[sp] -= exprValue[sp + 1];
+            break;
+
+        case '*':
+            checkConstantThenConsumeTokenThenConstant(sp);
+            exprValue[sp] *= exprValue[sp + 1];
+            break;
+
+        case '|':
+            checkConstantThenConsumeTokenThenConstant(sp);
+            exprValue[sp] |= exprValue[sp + 1];
+            break;
+
+        case '^':
+            checkConstantThenConsumeTokenThenConstant(sp);
+            exprValue[sp] ^= exprValue[sp + 1];
+            break;
+
+        case '&':
+            checkConstantThenConsumeTokenThenConstant(sp);
+            exprValue[sp] &= exprValue[sp + 1];
+            break;
+
+        case '/':
+            checkConstantThenConsumeTokenThenConstant(sp);
+            checkDivisionByZero(sp + 1);
+            exprValue[sp] /= exprValue[sp + 1];
+            break;
+
+        case '%':
+            checkConstantThenConsumeTokenThenConstant(sp);
+            checkDivisionByZero(sp + 1);
+            exprValue[sp] %= exprValue[sp + 1];
+            break;
+
+        default:
+            syntaxError();
+    }
 }
 
 static void consumeExpression()
 {
-    tokenVariable = NULL;
     tokenPostProcessing = PP_NONE;
 
     if (token == '<')
@@ -815,50 +1150,18 @@ static void consumeExpression()
         tokenPostProcessing = PP_MSB;
     }
 
-    switch (token)
-    {
-        case TOKEN_NUMBER:
-            consumeToken();
-            postProcessConstant();
-            return;
+    consumeExpressionNode(0);
+    tokenVariable = exprVariable[0];
+    tokenValue = exprValue[0];
 
-        case TOKEN_ID:
-        {
-            SymbolRecord* r = addOrFindSymbol();
-            uint16_t offset;
-            if (r->type == SYMBOL_UNINITIALISED)
-                r->type = SYMBOL_REFERENCE;
-
-            if (r->type == SYMBOL_COMPUTED)
-            {
-                tokenVariable = r->variable;
-                offset = r->offset;
-            }
-            else
-            {
-                tokenVariable = r;
-                offset = 0;
-            }
-
-            consumeToken();
-            if ((token == '+') || (token == '-'))
-            {
-                consumeToken();
-                expect(TOKEN_NUMBER);
-                if (token == '+')
-                    offset += tokenValue;
-                else
-                    offset -= tokenValue;
-                consumeToken();
-            }
-            tokenValue = offset;
-
-            return;
-        }
-
-        default:
-            syntaxError();
-    }
+	if (!tokenVariable)
+	{
+		if (tokenPostProcessing == PP_LSB)
+			tokenValue &= 0xff;
+		else if (tokenPostProcessing == PP_MSB)
+			tokenValue >>= 8;
+		tokenPostProcessing = PP_NONE;
+	}
 }
 
 static void consumeConstExpression()
@@ -915,6 +1218,7 @@ static AddressingMode consumeArgument()
                 return AM_A;
             }
             /* fall through */
+        case '*':
         case TOKEN_NUMBER:
             consumeExpression();
             if (token == ',')
@@ -953,17 +1257,16 @@ static SymbolRecord* consumeSymbolCommaNumber()
     SymbolRecord* r;
     expect(TOKEN_ID);
     r = addSymbol();
+    consumeToken();
 
-    expect(',');
+    consume(',');
     consumeConstExpression();
     return r;
 }
 
 static void consumeDotZp()
 {
-    SymbolRecord* r;
-    consumeToken();
-    r = consumeSymbolCommaNumber();
+    SymbolRecord* r = consumeSymbolCommaNumber();
     if ((zpUsage + tokenValue) < zpUsage)
         fatal("ran out of zero page");
 
@@ -974,9 +1277,7 @@ static void consumeDotZp()
 
 static void consumeDotBss()
 {
-    SymbolRecord* r;
-    consumeToken();
-    r = consumeSymbolCommaNumber();
+    SymbolRecord* r = consumeSymbolCommaNumber();
     if ((bssUsage + tokenValue) < bssUsage)
         fatal("ran out of BSS");
 
@@ -987,13 +1288,12 @@ static void consumeDotBss()
 
 static void consumeDotByte()
 {
-        consumeToken();
     for (;;)
     {
         if (token == TOKEN_STRING)
         {
             const char* p = parseBuffer;
-                        while (tokenLength--)
+            while (tokenLength--)
                 emitByte(*p++);
 
             consumeToken();
@@ -1015,7 +1315,6 @@ static void consumeDotByte()
 
 static void consumeDotWord()
 {
-        consumeToken();
     for (;;)
     {
         consumeExpression();
@@ -1033,8 +1332,203 @@ static void consumeDotWord()
     }
 }
 
+static void consumeDotFill()
+{
+    consumeConstExpression();
+    emitFill(tokenValue);
+}
+
+static void consumeDotExpand()
+{
+    consumeConstExpression();
+    defaultBranchSize = tokenValue ? 5 : 2;
+}
+
+static void consumeDotLabel()
+{
+    consumeExpression();
+}
+
+static void createLabelDefinition(SymbolRecord* r)
+{
+    LabelDefinitionRecord* r2;
+    if ((r->type != SYMBOL_UNINITIALISED) && (r->type != SYMBOL_REFERENCE))
+        symbolExists();
+    r->type = SYMBOL_TEXT;
+
+    r2 = addRecord(sizeof(LabelDefinitionRecord) | RECORD_LABELDEF);
+    r2->variable = r;
+}
+
+static void consumeZproc()
+{
+    SymbolRecord* r;
+    expect(TOKEN_ID);
+
+    r = addOrFindSymbol();
+    createLabelDefinition(r);
+
+    pushScope();
+    consumeToken();
+}
+
+static void consumeZendproc()
+{
+    popScope();
+    consumeToken();
+}
+
+static void consumeZloop()
+{
+    SymbolRecord* r;
+    pushScope();
+
+    r = appendAnonymousSymbol();
+    createLabelDefinition(r);
+    startLabels[scopePointer] = r;
+    continueLabels[++continuePointer] = r;
+
+    r = appendAnonymousSymbol();
+    endLabels[scopePointer] = r;
+    breakLabels[++breakPointer] = r;
+}
+
+static void consumeZendloop()
+{
+    tokenVariable = startLabels[scopePointer];
+    tokenValue = 0;
+    addExpressionRecord(0x4c); /* JMP */
+
+    createLabelDefinition(endLabels[scopePointer]);
+    continuePointer--;
+    breakPointer--;
+
+    popScope();
+}
+
+static void emitConditionalJump(uint8_t xor)
+{
+    if (token == ';')
+        addExpressionRecord(0x4c); /* JMP */
+    else
+    {
+        const Instruction* insn;
+        if (tokenLength != 2)
+            syntaxError();
+
+        parseBuffer[2] = parseBuffer[1];
+        parseBuffer[1] = parseBuffer[0];
+        parseBuffer[0] = 'b';
+        tokenLength = 3;
+
+        insn = findInstruction(simpleInsns);
+        if (!insn || !(getInsnProps(insn->opcode) & BPROP_RELATIVE))
+            syntaxError();
+
+        addExpressionRecord(insn->opcode ^ xor);
+        consumeToken();
+    }
+}
+
+static void consumeZbreak()
+{
+    if (breakPointer == 0xff)
+        fatal("nowhere to break to");
+
+    tokenVariable = breakLabels[breakPointer];
+    tokenValue = 0;
+    emitConditionalJump(0);
+}
+
+static void consumeZcontinue()
+{
+    if (continuePointer == 0xff)
+        fatal("nowhere to continue to");
+
+    tokenVariable = continueLabels[continuePointer];
+    tokenValue = 0;
+    emitConditionalJump(0);
+}
+
+static void consumeZuntil()
+{
+    tokenVariable = startLabels[scopePointer];
+    tokenValue = 0;
+    emitConditionalJump(0b00100000);
+
+    createLabelDefinition(endLabels[scopePointer]);
+    breakPointer--;
+
+    popScope();
+}
+
+static void consumeZif()
+{
+    SymbolRecord* r;
+    pushScope();
+
+    r = appendAnonymousSymbol();
+    endLabels[scopePointer] = r;
+
+    tokenVariable = r;
+    tokenValue = 0;
+    emitConditionalJump(0b00100000);
+}
+
+static void consumeZendif()
+{
+    createLabelDefinition(endLabels[scopePointer]);
+    popScope();
+}
+
+static void consumeInclude()
+{
+    expect(TOKEN_STRING);
+    openFile(parseBuffer);
+    token = currentByte = ';';
+}
+
+static void lookupAndCall(const SymbolCallbackEntry* entries)
+{
+    for (;;)
+    {
+        if (strcmp(entries->string, parseBuffer) == 0)
+        {
+            consumeToken();
+            entries->callback();
+            return;
+        }
+        entries++;
+
+        if (!entries->string)
+            fatal("unknown pseudo-op");
+    }
+}
+
 static void parse()
 {
+
+    static const SymbolCallbackEntry dotEntries[] = {
+        {"zp", consumeDotZp},
+        {"bss", consumeDotBss},
+        {"byte", consumeDotByte},
+        {"word", consumeDotWord},
+        {"fill", consumeDotFill},
+        {"expand", consumeDotExpand},
+        {"label", consumeDotLabel},
+        {"zproc", consumeZproc},
+        {"zendproc", consumeZendproc},
+        {"zloop", consumeZloop},
+        {"zendloop", consumeZendloop},
+        {"zbreak", consumeZbreak},
+        {"zcontinue", consumeZcontinue},
+        {"zrepeat", consumeZloop},
+        {"zuntil", consumeZuntil},
+        {"zif", consumeZif},
+        {"zendif", consumeZendif},
+        {"include", consumeInclude},
+        {}
+    };
     SymbolRecord* r;
     top = cpm_ram;
 
@@ -1052,21 +1546,11 @@ static void parse()
             case '.':
                 consumeToken();
                 expect(TOKEN_ID);
-                if (strcmp(parseBuffer, "zp") == 0)
-                    consumeDotZp();
-                else if (strcmp(parseBuffer, "bss") == 0)
-                    consumeDotBss();
-                else if (strcmp(parseBuffer, "byte") == 0)
-                    consumeDotByte();
-                else if (strcmp(parseBuffer, "word") == 0)
-                    consumeDotWord();
-                else
-                    fatal("unknown pseudo-op");
+                lookupAndCall(dotEntries);
                 break;
 
             case TOKEN_ID:
                 /* Process instructions. */
-
 
                 if (tokenLength == 3)
                 {
@@ -1094,6 +1578,8 @@ static void parse()
                             am = AM_ABS;
                         if (!(insn->addressingModes & am))
                             fatal("invalid addressing mode");
+                        if ((insn->opcode == 0xa2) && (am == AM_YOFF))
+                            am = AM_XOFF; /* ldx abs,y is special */
 
                         op = insn->opcode;
                         if (!(getInsnProps(op) & BPROP_RELATIVE))
@@ -1109,17 +1595,9 @@ static void parse()
                 consumeToken();
                 if (token == ':')
                 {
-                    LabelDefinitionRecord* r2;
-                    if ((r->type != SYMBOL_UNINITIALISED) &&
-                        (r->type != SYMBOL_REFERENCE))
-                        symbolExists();
-                    r->type = SYMBOL_TEXT;
-
-                    r2 = addRecord(
-                        sizeof(LabelDefinitionRecord) | RECORD_LABELDEF);
-                    r2->variable = r;
+                    createLabelDefinition(r);
                     consumeToken();
-                    break;
+                    continue;
                 }
                 else if (token == '=')
                 {
@@ -1154,6 +1632,14 @@ exit:
 
 /* --- Code placement ---------------------------------------------------- */
 
+static void printSymbol(SymbolRecord* r)
+{
+    uint8_t namelen = (r->record.descr & 0x1f) - offsetof(SymbolRecord, name);
+    uint8_t i = 0;
+    while (namelen--)
+        sfos_c_write(r->name[i++]);
+}
+
 static bool placeCode(uint8_t pass)
 {
     bool changed = false;
@@ -1170,13 +1656,25 @@ static bool placeCode(uint8_t pass)
             {
                 SymbolRecord* s = (SymbolRecord*)r;
                 if (s->type == SYMBOL_REFERENCE)
-                    fatal("unresolved forward reference");
+                {
+                    errormessage("unresolved forward reference: ");
+                    printSymbol(s);
+                    cr();
+                    badProgram = 1;
+                }
                 break;
             }
 
             case RECORD_BYTES:
                 pc += len - offsetof(ByteRecord, bytes);
                 break;
+
+            case RECORD_FILL:
+            {
+                FillRecord* s = (FillRecord*)r;
+                pc += s->length;
+                break;
+            }
 
             case RECORD_EXPR:
             {
@@ -1205,16 +1703,25 @@ static bool placeCode(uint8_t pass)
                 }
                 else if (bprops & BPROP_RELATIVE)
                 {
-                    if (!s->variable || (s->variable->type != SYMBOL_TEXT))
-                        fatal("branch to non-text address");
+                    if (!s->variable)
+                        fatal("relative branch to constant");
+                    if (s->variable->type != SYMBOL_TEXT)
+                    {
+                        errormessage("branch to non-text label: ");
+                        printSymbol(s->variable);
+                        cr();
+                        sfos_s_warmboot();
+                    }
 
                     if (pass == 0)
-                        len = 5;
+                        len = defaultBranchSize;
                     else
                     {
-                        int delta = (s->variable->offset + s->offset) - pc;
+                        int delta = (s->variable->offset + s->offset) - pc - 2;
                         if ((delta >= -128) && (delta <= 127))
                             len = 2;
+                        else if (defaultBranchSize == 2)
+                            fatal("out of range branch");
                         else
                             len = 5;
                     }
@@ -1254,6 +1761,7 @@ static void writeCode()
 {
     uint8_t* r = cpm_ram;
     uint8_t pc = START_ADDRESS;
+    uint8_t i;
     for (;;)
     {
         uint8_t type = *r & 0xe0;
@@ -1265,10 +1773,19 @@ static void writeCode()
             {
                 ByteRecord* s = (ByteRecord*)r;
                 uint8_t count = len - offsetof(ByteRecord, bytes);
-                uint8_t i;
                 for (i = 0; i < count; i++)
                     writeByte(s->bytes[i]);
                 pc += count;
+                break;
+            }
+
+            case RECORD_FILL:
+            {
+                FillRecord* s = (FillRecord*)r;
+                uint16_t len = s->length;
+                while (len--)
+                    writeByte(0);
+                pc += s->length;
                 break;
             }
 
@@ -1333,73 +1850,112 @@ static void writeCode()
 exit:;
 }
 
+static void writeSymbols()
+{
+    bool changed = false;
+    uint8_t* r = cpm_ram;
+    uint16_t pc = START_ADDRESS;
+    for (;;)
+    {
+        uint8_t type = *r & 0xe0;
+        uint8_t len = *r & 0x1f;
+
+        switch (type)
+        {
+            case RECORD_SYMBOL:
+            {
+                SymbolRecord* s = (SymbolRecord*)r;
+                uint8_t type;
+                uint16_t address;
+                uint8_t i,n;
+                uint8_t namelen =
+                    (s->record.descr & 0x1f) - offsetof(SymbolRecord, name);
+                if (namelen == 0)
+                    break;
+
+                type = s->type;
+                if (s->variable)
+                    type = s->variable->type;
+                writeByte(symbolTypeChars[type]);
+                writeByte(' ');
+
+                address = s->offset;
+                if (s->variable)
+                    address += s->variable->offset;
+                if (type == SYMBOL_BSS)
+                    address += textUsage;
+
+                for (i = 0; i < 4; i++)
+                {
+                    n = (address >> 12) & 0xf;
+                    writeByte("0123456789abcdef"[n]);
+                    address <<= 4;
+                }
+
+                writeByte(' ');
+                i = 0;
+                while (namelen--)
+                    writeByte(s->name[i++]);
+
+                writeByte(13);
+                writeByte(10);
+                break;
+            }
+
+            case RECORD_EOF:
+                goto exit;
+
+            default:
+                break;
+        }
+
+        r += len;
+    }
+exit:
+    writeByte(0x1a);
+}
 
 /* --- Main program ------------------------------------------------------ */
 
-/*
-static void __fastcall__ dumpfcb(char* f)
-{
-    uint8_t i;
-    i = 0;
-    crlf();
-    do
-    {
-        printf("%02x ", *f);
-        f++;
-        i++;
-    } while (i<27);
-}
-
-void __fastcall__ print_fcb(volatile _fcb *f) {
-    uint8_t i=0;
-    uint16_t total_bytes = 0;
-
-    crlf();
-    total_bytes += f->SIZE;
-
-    putc('\t', stdout);
-    printf("%6lu", f->SIZE);
-    putc(' ', stdout);
-    printf("%3d", f->SC);
-    putc(' ', stdout);
-    while (i<11) {
-        putc(f->NAME[i++], stdout);
-    }
-}
-*/
-
 int main()
 {
-
     uint8_t i;
     uint8_t current_drive = sfos_d_getsetdrive(0xFF);
 
-    parse_args(cmd);
-
-    crlf();
-
+    cr();
     cpm_ram = (uint8_t*)sfos_s_gettpa();
-
-    //printf("RAMTOP: %04x [%p] // CPM_RAM: %04x [%p]\r\n",ramtop, ramtop, cpm_ram, cpm_ram);
-
+    parse_args(cmd);
     sfos_c_printstr("ASM; ");
-    printf("%u", ramtop-cpm_ram);
+    printi(ramtop - cpm_ram);
     printnl(" bytes free");
-    memset(cpm_ram, 0, ramtop-cpm_ram);
+    memset(cpm_ram, 0, ramtop - cpm_ram);
 
-    /* Open input file */
+    destFcb = fcb2;
 
-    if (sfos_d_open(&fcb2))
+    /* Open output file */
+
+    destFcb.SC = 0;
+    destFcb.CR = 0;
+    sfos_d_delete(&destFcb);
+    destFcb.SC = 0;
+    destFcb.CR = 0;
+    if (sfos_d_make(&destFcb))
     {
-        fatal("cannot open source file");
+        cr();
+        fatal("cannot create destination file");
     }
+
+    /* Open the first input file. */
+
+    printnl("Parsing...");
+    firstFile = (InputStream*)(ramtop - sizeof(InputStream));
+    currentFile = firstFile + 1;
+    openFile(argv[2]);
     consumeByte();
     consumeToken();
 
     /* Parse file into memory. */
 
-    printnl("Parsing...");
-    lineNumber++;
     parse();
     printi(top - cpm_ram);
     printnl(" bytes memory used");
@@ -1410,44 +1966,60 @@ int main()
     i = 0;
     while (placeCode(i))
     {
+        if (badProgram)
+            sfos_s_warmboot();
+
         i++;
         sfos_c_write('.');
     }
-    crlf();
+    cr();
     printi(zpUsage);
     printnl(" bytes zero page used");
-    textUsage -= 0x800;
     printi(textUsage);
     printnl(" bytes TPA used");
 
     /* Code emission */
 
-    /* Open output file */
-    sfos_d_setdma((uint16_t*)&destFcb);
-    if (!sfos_d_parsefcb((uint16_t*)argv[2]))
-        fatal("Could not parse destination FCB");
-
-
-    sfos_d_setdma((uint16_t*)&outputBuffer);
-    sfos_d_make(&destFcb);
-    sfos_d_open(&destFcb);
-
-    printnl("Writing...");
-    //writeHeader();
+    printnl("Writing binary...");
     writeCode();
-    //writeZPRelocations();
-    //writeTextRelocations();
 
-    /* Close the output file */
-
-    destFcb.LOAD = 0x800;
-    destFcb.EXEC = 0x800;
+    /* Flush and close the output file */
 
     flushOutputBuffer();
+    destFcb.LOAD = 0x800;
+    destFcb.EXEC = 0x800;
     destFcb.SIZE = 512UL * destFcb.CR;
     destFcb.SC = destFcb.CR;
 
     sfos_d_close(&destFcb);
+
+    /* Symbol table */
+
+    printnl("Writing symbols...");
+
+    destFcb.EXT[0] = 'S';
+    destFcb.EXT[1] = 'Y';
+    destFcb.EXT[2] = 'M';
+    destFcb.SC = 0;
+    destFcb.CR = 0;
+    sfos_d_delete(&destFcb);
+    destFcb.SC = 0;
+    destFcb.CR = 0;
+    if (sfos_d_make(&destFcb))
+    {
+        cr();
+        fatal("cannot create symbol file");
+    }
+
+    outputBufferPos = 0;
+    writeSymbols();
+    flushOutputBuffer();
+    destFcb.LOAD = 0x0;
+    destFcb.EXEC = 0x0;
+    destFcb.SIZE = 512UL * destFcb.CR;
+    destFcb.SC = destFcb.CR;
+    sfos_d_close(&destFcb);
+
     printnl("Done.");
 
     sfos_d_getsetdrive(current_drive);
