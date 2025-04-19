@@ -40,8 +40,7 @@ uint8_t viewheight;
 uint8_t status_line_length;
 void (*print_status)(const char*);
 
-char buffer[0x80];
-
+char* buffer = (char*)0xc000;
 uint8_t* buffer_start;
 uint8_t* gap_start;
 uint8_t* gap_end;
@@ -1114,14 +1113,14 @@ void colon(uint16_t count)
     {
         goto_status_line();
         sfos_c_write(':');
-        buffer[0] = 126;
-        buffer[1] = 0;
-        sfos_c_readstr(126, (char*)buffer);
+        //buffer[0] = 126;
+        //buffer[1] = 0;
+        sfos_c_readstr(126, buffer);
         print_newline();
 
-        buffer[buffer[1] + 2] = '\0';
+        //buffer[buffer[1] + 2] = '\0';
 
-        w = strtok(buffer + 2, " ");
+        w = strtok(buffer + 1, " ");
         if (!w)
             break;
         arg = strtok(NULL, " ");
@@ -1132,7 +1131,7 @@ void colon(uint16_t count)
                 quitting = w[1] == 'q';
                 if (arg)
                     set_current_filename(arg);
-                if (!fcb2.NAME[0])
+                if (!(&fcb2)->NAME[0])
                     print_no_filename();
                 else if (save_file())
                 {
@@ -1149,7 +1148,7 @@ void colon(uint16_t count)
                     memcpy(&backupfcb, &fcb2, sizeof(_fcb));
                     sfos_d_setdma((uint16_t*)&fcb2);
                     sfos_d_parsefcb((uint16_t*)arg);
-                    if (fcb2.NAME[0])
+                    if ((&fcb2)->NAME[0])
                         insert_file();
                     memcpy(&fcb2, &backupfcb, sizeof(_fcb));
                 }
@@ -1167,7 +1166,7 @@ void colon(uint16_t count)
                 else
                 {
                     set_current_filename(arg);
-                    if (fcb2.NAME[0])
+                    if ((&fcb2)->NAME[0])
                         load_file();
                 }
                 break;
@@ -1185,7 +1184,7 @@ void colon(uint16_t count)
                 else
                 {
                     new_file();
-                    fcb2.NAME[0] = 0; /* no filename */
+                    (&fcb2)->NAME[0] = 0; /* no filename */
                 }
                 break;
             }
@@ -1205,8 +1204,10 @@ void colon(uint16_t count)
     }
 
     ansi_clear();
-    print_status = set_status_line;
+
+    ansi_set_cursor(1, 1);
     render_screen(first_line);
+    print_status = set_status_line;
 }
 
 /* ======================================================================= */
@@ -1241,7 +1242,7 @@ void main(void)
     *buffer_end = '\n';
     print_status = set_status_line;
 
-    sprintf(buffer,"%u bytes free", buffer_end-buffer_start);
+    sprintf(buffer,"%u bytes free", (uint16_t)(buffer_end-buffer_start));
     print_status(buffer);
 
     sfos_d_setdma((uint16_t*)sd_buf);
