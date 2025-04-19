@@ -56,6 +56,9 @@ save:
     sec
     jsr LAB_14BD            ; LIST
 
+    lda #$1A
+    jsr fwrite
+
     lda #<ACIAout
     sta VEC_OUT + 0
     lda #>ACIAout
