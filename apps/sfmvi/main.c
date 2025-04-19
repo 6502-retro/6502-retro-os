@@ -7,7 +7,7 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
+//#include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -19,6 +19,8 @@
 
 #undef bool
 #define bool uint8_t
+
+#define ramtop (uint8_t*)&sfos_ram_top
 
 enum ERRORS {
         OK               = 0,
@@ -38,10 +40,13 @@ uint8_t viewheight;
 uint8_t status_line_length;
 void (*print_status)(const char*);
 
+char buffer[0x80];
+
 uint8_t* buffer_start;
 uint8_t* gap_start;
 uint8_t* gap_end;
 uint8_t* buffer_end;
+uint8_t* sd_buf;
 uint8_t dirty;
 
 uint8_t* first_line;   /* <= gap_start */
@@ -67,16 +72,11 @@ extern const struct bindings delete_bindings;
 extern const struct bindings zed_bindings;
 extern const struct bindings change_bindings;
 
-#define buffer ((char*)0xC200)
-#define sd_buf ((uint8_t*)0xC000)
-
 extern void colon(uint16_t count);
 extern void goto_line(uint16_t lineno);
 
-//extern uint16_t* sfm_ram_base;
-//extern uint16_t* sfm_ram_top;
-#define sfm_ram_base = 0x3000;
-#define sfm_ram_top  = 0xB700;
+extern uint16_t* sfm_ram_top;
+
 /* ======================================================================= */
 /*                                MISCELLANEOUS                            */
 /* ======================================================================= */
@@ -126,7 +126,7 @@ void render_fcb(_fcb* f)
 
     *outp++ = '\0';
 }
-
+/*
 char* strcat(char* dest, const char* src)
 {
     while (*dest++)
@@ -136,11 +136,12 @@ char* strcat(char* dest, const char* src)
     strcpy(dest, src);
     return NULL;
 }
-#if 0
+
 static void my_strrev(char *str)
 {
     size_t len = strlen(str);
-    size_t i,j;
+    size_t i;
+    size_t j;
     uint8_t a;
     for (i = 0, j = len - 1; i < j; i++, j--)
     {
@@ -162,15 +163,14 @@ void itoa(uint16_t val, char* buf)
     buf[i] = '\0';
     my_strrev(buf);
 }
-#endif
-
+*/
 /* ======================================================================= */
 /*                                SCREEN DRAWING                           */
 /* ======================================================================= */
 
 void screen_puti(uint16_t i)
 {
-    itoa(i, buffer, 10);
+    sprintf(buffer,"%u",i);
     ansi_puts(buffer);
 }
 
@@ -437,7 +437,7 @@ void insert_file(void)
 {
     uint16_t inptr;
     uint8_t c;
-    uint8_t sc = fcb2.SC;
+    uint8_t sc = (&fcb2)->SC;
 
     strcpy(buffer, "Reading ");
     render_fcb(&fcb2);
@@ -448,7 +448,7 @@ void insert_file(void)
 
     for (;;)
     {
-        sfos_d_setdma((uint16_t*)0xC000);
+        sfos_d_setdma((uint16_t*)sd_buf);
         sfos_d_readseqblock(&fcb2);
 
         inptr = 0;
@@ -481,7 +481,7 @@ done:
 void load_file(void)
 {
     new_file();
-    if (fcb2.NAME[0])
+    if ((&fcb2)->NAME[0])
         insert_file();
 
     dirty = false;
@@ -533,7 +533,7 @@ uint8_t really_save_file(_fcb* f)
 
         if (outp == 512)
         {
-            sfos_d_setdma((uint16_t*)0xC000);
+            sfos_d_setdma((uint16_t*)sd_buf);
             sfos_d_writeseqblock(f);
             f->SC ++;
             f->SIZE += 512;
@@ -568,7 +568,7 @@ bool save_file(void)
 
     /* Write to a temporary file. */
 
-    tempfcb.DRIVE = fcb2.DRIVE;
+    tempfcb.DRIVE = (&fcb2)->DRIVE;
     strcpy((char*)tempfcb.NAME, "QETEMP  $$$");
     sfos_d_delete(&tempfcb);
     if (sfos_d_make(&tempfcb) )
@@ -1220,16 +1220,11 @@ void main(void)
     command_t* cmd;
     uint16_t count;
 
-#if 0
-    if (!screen_init())
-    {
-        cpm_printstring0("No SCREEN");
-        print_newline();
-        return;
-    }
-#else
+    buffer_start = (uint8_t*)sfos_s_gettpa();
+    buffer_end = ramtop-1;
+    sd_buf = (uint8_t*)sfos_buf;
+
     ansi_init(80, 30);
-#endif
 
     if (fcb2.NAME[0] == ' ')
         fcb2.NAME[0] = 0;
@@ -1241,16 +1236,12 @@ void main(void)
     viewheight = height;
     height++;
 
-    buffer_start = (uint8_t*)0x3000;
-    buffer_end = (uint8_t*)0xb700 - 1;
-
     ansi_clear();
 
     *buffer_end = '\n';
     print_status = set_status_line;
 
-    itoa((uint16_t)(buffer_end - buffer_start), buffer, 10);
-    strcat(buffer, " bytes free");
+    sprintf(buffer,"%u bytes free", buffer_end-buffer_start);
     print_status(buffer);
 
     sfos_d_setdma((uint16_t*)sd_buf);
@@ -1271,8 +1262,7 @@ void main(void)
             if (isdigit(c))
             {
                 command_count = (command_count * 10) + (c - '0');
-                itoa(command_count, buffer, 10);
-                strcat(buffer, " repeat");
+                sprintf(buffer, "%d repeat", command_count);
                 set_status_line(buffer);
             }
             else

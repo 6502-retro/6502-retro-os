@@ -1383,7 +1383,7 @@ int main()
     //printf("RAMTOP: %04x [%p] // CPM_RAM: %04x [%p]\r\n",ramtop, ramtop, cpm_ram, cpm_ram);
 
     sfos_c_printstr("ASM; ");
-    //printf("%u", ramtop-cpm_ram);
+    printf("%u", ramtop-cpm_ram);
     printnl(" bytes free");
     memset(cpm_ram, 0, ramtop-cpm_ram);
 
