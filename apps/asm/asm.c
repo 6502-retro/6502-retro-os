@@ -330,6 +330,7 @@ static void consumeByte()
     int i;
     if (currentFile->pos == 512)
     {
+        sfos_c_write('.');
         sfos_d_setdma((uint16_t*)currentFile->buffer);
         i = sfos_d_readseqblock(&currentFile->f);
         if (i != 0)
