@@ -24,6 +24,7 @@ main:
     inx
     cpx #32
     bne :-
+
     ; parse fcb
     lda #<FCB
     ldx #>FCB
@@ -33,6 +34,7 @@ main:
     ldx CMDOFFSET+1
     jsr d_parsefcb
     jsr newline
+
     ; FCB contains the destination copy:
     ; open the source
     lda #<FCB2
@@ -60,7 +62,6 @@ main:
     lda FCB2+sfcb::S2
     sta FCB+sfcb::S2
 
-
     lda FCB+sfcb::DD
     jsr d_getsetdrive
 
@@ -71,8 +72,6 @@ main:
 
     lda FCB2+sfcb::SC
     sta temp
-    jsr prbyte
-    jsr newline
 
     ; if the source file is empty, we just close and complete the copy.
     lda FCB2 + sfcb::SC
@@ -87,13 +86,17 @@ loop:
     ldx #>FCB2
     jsr d_readseqblock
 
+    lda #'r'
+    jsr c_write
+
     lda #<SFOS_BUF
     ldx #>SFOS_BUF
     jsr d_setdma
     lda #<FCB
     ldx #>FCB
     jsr d_writeseqblock
-    lda #'.'
+
+    lda #'w'
     jsr c_write
 
     dec temp
@@ -108,57 +111,11 @@ close:
     jmp exit
 
 ; ---- HELPER FUNCTIONS ------------------------------------------------------
-
-prbyte:
-    pha             ;save a for lsd.
-    lsr
-    lsr
-    lsr             ;msd to lsd position.
-    lsr
-    jsr @prhex      ;output hex digit.
-    pla             ;restore a.
-@prhex:
-    and #$0f        ;mask lsd for hex print.
-    ora #$b0        ;add "0".
-    cmp #$ba        ;digit?
-    bcc @echo       ;yes, output it.
-    adc #$06        ;add offset for letter.
-@echo:
-    pha             ;*save a
-    and #$7f        ;*change to "standard ascii"
-    jsr c_write
-    pla             ;*restore a
-    rts             ;*done, over and out...
-;
-print_fcb:
-    lda FCB + sfcb::DD
-    jsr prbyte
-    lda #':'
-    jsr c_write
-    ldx #sfcb::N1
-:   lda FCB,x
-    cmp #' '
-    beq :+
-    jsr c_write
-    inx
-    cpx #(sfcb::N8+1)
-    bne :-
-:   lda #'.'
-    jsr c_write
-    ldx #sfcb::T1
-:   lda FCB,x
-    jsr c_write
-    inx
-    cpx #(sfcb::T3+1)
-    bne :-
-    rts
-
 newline:
     lda #<str_newline
     ldx #>str_newline
     jmp c_printstr
 
-;
 restore_active_drive:
     lda FCB2
     bne :+

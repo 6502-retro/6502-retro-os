@@ -96,3 +96,9 @@ d_writerawblock:
 d_setlba:
     ldy #esfos::sfos_d_setlba
     jmp SFOS
+d_gettpa:
+    ldy #esfos::sfos_s_gettpa
+    jmp SFOS
+d_settpa:
+    ldy #esfos::sfos_s_settpa
+    jmp SFOS

@@ -25,7 +25,7 @@ REGY        = REGX   + 1
 
 USERIRQVEC  = $244
 USERNMIVEC  = $246
-;
+
 ; hard coded addresses that SFCP uses
 FCB          = $380
 FCB2         = $3A0
