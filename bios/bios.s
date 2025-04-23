@@ -2,7 +2,7 @@
 .include "io.inc"
 
 .autoimport
-.globalzp ptr1, bdma_ptr, lba_ptr
+.globalzp ptr1, bdma_ptr
 
 .export bios_boot, bios_wboot, bios_conin, bios_conout, bios_const
 .export bios_setdma, bios_setlba, bios_sdread, bios_sdwrite, bios_puts
@@ -197,35 +197,41 @@ jmptable:
     jmp bios_boot   ; 203
     jmp bios_wboot  ; 206
     jmp bios_conout ; 209
-    jmp bios_conin  ; 20C
-    jmp bios_const  ; 20F
+    jmp bios_conin  ; 20c
+    jmp bios_const  ; 20f
     jmp bios_puts   ; 212
     jmp bios_prbyte ; 215
-    jmp sn_beep     ; 218
-    jmp sn_start    ; 21B
-    jmp sn_silence  ; 21E
-    jmp sn_stop     ; 221
-    jmp sn_send     ; 224
-    jmp led_on      ; 227
-    jmp led_off     ; 22A
-    jmp get_button  ; 22D
-error_code: .byte 0 ; 230
 
-.assert * = $231, error, "rstfar should be at $231"
+    jmp bios_setdma ; 218
+    jmp bios_setlba ; 21b
+    jmp bios_sdread ; 21e
+    jmp bios_sdwrite; 221
+
+    jmp sn_beep     ; 224
+    jmp sn_start    ; 227
+    jmp sn_silence  ; 22a
+    jmp sn_stop     ; 22d
+    jmp sn_send     ; 230
+    jmp led_on      ; 233
+    jmp led_off     ; 236
+    jmp get_button  ; 239
+error_code: .byte 0 ; 23c
+
+.assert * = $23d, error, "rstfar should be at $23d"
 rstfar:
     pha
-    lda via_ddra    ; 231
-    and #%10111111  ; 234
-    sta via_ddra    ; 236
+    lda via_ddra
+    and #%10111111
+    sta via_ddra
     pla
-    sta rombankreg  ; 239
-    jmp ($FFFC)     ; 23c
+    sta rombankreg
+    jmp ($FFFC)
 
-.assert * = $241, error, "REG A should be at $241"
+.assert * = $24d, error, "REG A should be at $24d"
 rega:       .res 1
 regx:       .res 1
 regy:       .res 1
-.assert * = $244, error, "end of system should be at $244"
+.assert * = $250, error, "end of system should be at $250"
 
 user_irq_vector:
     .lobytes stub_user_irq_handler
@@ -233,7 +239,7 @@ user_irq_vector:
 user_nmi_vector:
     .lobytes stub_user_nmi_handler
     .hibytes stub_user_nmi_handler
-.assert * = $248, error, "via_irq_handler at 246"
+.assert * = $254, error, "via_irq_handler at 244"
 
 .bss
 bdma:       .word 0
