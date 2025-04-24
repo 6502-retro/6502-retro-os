@@ -3,6 +3,7 @@
 .include "fcb.inc"
 .include "io.inc"
 .include "errors.inc"
+.include "bios.inc"
 
 .autoimport
 .export sfos_buf, sfos_s_reset, dispatch
@@ -683,6 +684,7 @@ sfos_d_make:
     jsr sfos_d_findfirst
     bcc @allocate
     cmp #ERROR::END_OF_DIR
+    ; BUG: We do nothing with this comparrison.
     sta error_code
     bne :+
     lda #ERROR::DRIVE_FULL
@@ -981,7 +983,7 @@ internal_setdma:
     stx zpbufptr + 1
     jmp bios_setdma
 
-dispatch:
+sfos:
     sta param + 0
     stx param + 1
     lda sfos_jmp_tbl_hi,y

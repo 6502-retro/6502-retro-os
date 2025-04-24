@@ -1,12 +1,13 @@
 ; vim: ft=asm_ca65
 .include "io.inc"
+.include "bios.inc"
 
 .autoimport
 .globalzp ptr1, bdma_ptr
 
-.export bios_boot, bios_wboot, bios_conin, bios_conout, bios_const
-.export bios_setdma, bios_setlba, bios_sdread, bios_sdwrite, bios_puts
-.export bios_prbyte
+;.export bios_boot, bios_wboot, bios_conin, bios_conout, bios_const
+;.export bios_setdma, bios_setlba, bios_sdread, bios_sdwrite, bios_puts
+;.export bios_prbyte
 .export _vdp_sync, _vdp_status, _ticks
 .export error_code, rega, regx, regy
 .export user_nmi_vector, user_irq_vector
@@ -23,7 +24,7 @@ blba_ptr:   .word 0
 
 .code
 
-bios_boot:
+cboot:
     ldx #$ff
     txs
     cld
@@ -70,21 +71,21 @@ bios_boot:
     jmp sfos_s_reset
    ;
 
-bios_wboot:
+wboot:
     ; usually this is where we need to check if the SFCP needs to be
     ; reloaded.
     jmp prompt
 
-bios_conin:
+conin:
     jmp acia_getc
 
-bios_conout:
+conout:
     jmp acia_putc
 
-bios_const:
+const:
     jmp acia_getc_nw
 
-bios_setdma:
+setdma:
     sta bdma_ptr + 0
     sta bdma + 0
     stx bdma_ptr + 1
@@ -92,7 +93,7 @@ bios_setdma:
     clc
     rts
 
-bios_setlba:
+setlba:
     sta blba_ptr + 0
     stx blba_ptr + 1
     ldy #3
@@ -104,51 +105,30 @@ bios_setlba:
     clc
     rts
 
-bios_sdread:
+sdread:
     jsr set_sdbuf_ptr
     jsr sdcard_read_sector
     rts
 
-bios_sdwrite:
+sdwrite:
     jsr set_sdbuf_ptr
     jsr sdcard_write_sector
     rts
 
-bios_puts:
+puts:
     sta ptr1 + 0
     stx ptr1 + 1
     ldy #0
 :   lda (ptr1),y
     beq @done
-    jsr acia_putc
+    jsr bios_conout
     iny
     beq @done
     bra :-
 @done:
     rts
 
-.if DEBUG=1
-bios_printlba:
-    pha
-    phx
-    phy
-
-    lda sector_lba + 3
-    jsr bios_prbyte
-    lda sector_lba + 2
-    jsr bios_prbyte
-    lda sector_lba + 1
-    jsr bios_prbyte
-    lda sector_lba + 0
-    jsr bios_prbyte
-
-    ply
-    plx
-    pla
-    rts
-.endif
-
-bios_prbyte:
+prbyte:
     pha             ;Save A for LSD.
     lsr
     lsr
@@ -165,7 +145,7 @@ prhex:
 echo:
     pha             ;*Save A
     and #$7F        ;*Change to "standard ASCII"
-    jsr acia_putc
+    jsr bios_conout
     pla             ;*Restore A
     rts             ;*Done, over and out...
 
@@ -194,18 +174,18 @@ stub_user_nmi_handler:
 ; dispatch function, will be relocated on boot into SYSRAM
 jmptable:
     jmp dispatch    ; 200
-    jmp bios_boot   ; 203
-    jmp bios_wboot  ; 206
-    jmp bios_conout ; 209
-    jmp bios_conin  ; 20c
-    jmp bios_const  ; 20f
-    jmp bios_puts   ; 212
-    jmp bios_prbyte ; 215
+    jmp cboot       ; 203
+    jmp wboot       ; 206
+    jmp conout      ; 209
+    jmp conin       ; 20c
+    jmp const       ; 20f
+    jmp puts        ; 212
+    jmp prbyte      ; 215
 
-    jmp bios_setdma ; 218
-    jmp bios_setlba ; 21b
-    jmp bios_sdread ; 21e
-    jmp bios_sdwrite; 221
+    jmp setdma      ; 218
+    jmp setlba      ; 21b
+    jmp sdread      ; 21e
+    jmp sdwrite     ; 221
 
     jmp sn_beep     ; 224
     jmp sn_start    ; 227

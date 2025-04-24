@@ -1,5 +1,7 @@
 ; vim: set ft=asm_ca65 sw=4 ts=4 et:
 .include "io.inc"
+.include "bios.inc"
+
 .autoimport
 .code
 
@@ -49,6 +51,6 @@ irq_handler:
 
 .segment "VECTORS"
     .addr nmi_handler
-    .addr bios_boot
+    .addr bios_cboot
     .addr irq_handler
 

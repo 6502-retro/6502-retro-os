@@ -2,6 +2,7 @@
 .include "sfos.inc"
 .include "fcb.inc"
 .include "errors.inc"
+.include "bios.inc"
 
 .export main, prompt
 .autoimport
@@ -775,7 +776,6 @@ save:
     bne :-
 
     ; set attribute 
-    ;jsr debug_fcb
     lda #<fcb
     ldx #>fcb
     jsr d_close
@@ -928,33 +928,17 @@ set_user_drive:
     ldx #0
     jmp d_getsetdrive
 
-debug_fcb:
-    jsr printi
-    .byte 13,10,"FCB1: ",0
-    lda fcb
-    clc
-    adc #'A'-1
-    jsr acia_putc
-    lda #':'
-    jsr acia_putc
-    ldx #1
-:   lda fcb,x
-    jsr acia_putc
-    inx
-    cpx #sfcb::T3+1
-    bne :-
-
     jsr printi
     .byte 13,10,"FCB2: ",0
     lda fcb2
     clc
     adc #'A'-1
-    jsr acia_putc
+    jsr bios_conout
     lda #':'
-    jsr acia_putc
+    jsr bios_conout
     ldx #1
 :   lda fcb2,x
-    jsr acia_putc
+    jsr bios_conout
     inx
     cpx #sfcb::T3+1
     bne :-
@@ -1062,7 +1046,7 @@ printi:
     sta debug_ptr+1
     bra @primm3
 @primm2:
-    jsr acia_putc
+    jsr bios_conout
 @primm3:
     inc debug_ptr
     bne @primm4

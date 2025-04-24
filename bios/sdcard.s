@@ -354,35 +354,6 @@ sdcard_init:
         clc
         rts
 
-.if DEBUG
-debug_sector_lba:
-        pha
-        lda #13
-        jsr acia_putc
-        lda #10
-        jsr acia_putc
-        pla
-        bne :+
-        lda #'R'
-        bra :++
-:
-        lda #'W'
-:
-        jsr acia_putc
-        jsr bios_printlba
-        lda #'-'
-        jsr acia_putc
-        lda bdma_ptr + 1
-        jsr bios_prbyte
-        lda bdma_ptr + 0
-        jsr bios_prbyte
-        lda #13
-        jsr acia_putc
-        lda #10
-        jsr acia_putc
-        rts
-.endif
-
 ;-----------------------------------------------------------------------------
 ; sdcard_read_sector
 ; Set sector_lba prior to calling this function.
