@@ -1,3 +1,5 @@
+.include "sfos.inc"
+.include "bios.inc"
 ; vim: ft=asm_ca65 ts=4 sw=4 :
 ; contains additional commands for EH Basic
 basptr = $FA
@@ -13,10 +15,10 @@ retro_cls:
     jmp     LAB_18C3                ; print null terminated string
 
 retro_bye:
-    jmp     WBOOT
+    jmp     bios_wboot
 
 retro_beep:
-    jmp     CONBEEP
+    jmp     bios_sn_beep
 
 save:
     jsr create_fcb
@@ -25,7 +27,7 @@ save:
     lda #<FCB
     ldx #>FCB
     ldy #esfos::sfos_d_findfirst
-    jsr SFOS
+    jsr sfos_entry
     bcs @make
     ldx #$1E
     jmp LAB_XERR
@@ -34,7 +36,7 @@ save:
     lda #<FCB
     ldx #>FCB
     ldy #esfos::sfos_d_make
-    jsr SFOS
+    jsr sfos_entry
     bcc @save
     ldx #$26
     jmp LAB_XERR
@@ -43,7 +45,7 @@ save:
     lda #<SFOS_BUF
     ldx #>SFOS_BUF
     ldy #esfos::sfos_d_setdma
-    jsr SFOS
+    jsr sfos_entry
 
     jsr clear_buf
 
@@ -67,16 +69,16 @@ save:
     lda #<FCB
     ldx #>FCB
     ldy #esfos::sfos_d_close
-    jmp SFOS
+    jmp sfos_entry
 
 fwrite:
     phx
     phy
-    sta REGA
+    sta bios_rega
     lda #<FCB
     ldx #>FCB
     ldy #esfos::sfos_d_writeseqbyte
-    jsr SFOS
+    jsr sfos_entry
     ply
     plx
     rts
@@ -108,11 +110,11 @@ load:
     lda #<SFOS_BUF
     ldx #>SFOS_BUF
     ldy #esfos::sfos_d_setdma
-    jsr SFOS
+    jsr sfos_entry
     lda #<FCB
     ldx #>FCB
     ldy #esfos::sfos_d_readseqblock
-    jsr SFOS
+    jsr sfos_entry
 
     ; redirect STDIN
      ; save stack as NEW destroys it
@@ -152,7 +154,7 @@ fread:
     lda #<FCB
     ldx #>FCB
     ldy #esfos::sfos_d_readseqbyte
-    jsr SFOS
+    jsr sfos_entry
     ply
     plx
     bcs fread_error
@@ -164,7 +166,7 @@ nullout:
     rts
 
 fread_error:
-    lda ERROR_CODE
+    lda bios_error_code
     cmp #ERROR::FILE_EOF
     bne :+
     jsr reset_redirects
@@ -187,7 +189,7 @@ create_fcb:
     lda #<FCB
     ldx #>FCB
     ldy #esfos::sfos_d_setdma
-    jsr SFOS
+    jsr sfos_entry
 
     lda #4              ; ALL FILES ON D DRIVE ALLWAYS
     sta FCB
@@ -209,7 +211,7 @@ create_fcb:
     lda basptr + 0
     ldx basptr + 1
     ldy #esfos::sfos_d_parsefcb
-    jmp SFOS
+    jmp sfos_entry
 
 open_file:
     jsr create_fcb
@@ -217,7 +219,7 @@ open_file:
     lda #<FCB
     ldx #>FCB
     ldy #esfos::sfos_d_open
-    jmp SFOS
+    jmp sfos_entry
 
 reset_redirects:
     lda #<ACIAout
@@ -241,7 +243,7 @@ file_exit:
     jmp LAB_1319
 
 exit:
-    jmp WBOOT
+    jmp bios_wboot
 
 search_fcb:
     jsr clear_fcb
@@ -258,7 +260,7 @@ print_fcb:
     ldx #1
 :   lda FCB,x
     beq :+
-    jsr CONOUT
+    jsr bios_conout
     inx
     bra :-
 :   jmp LAB_CRLF
@@ -273,7 +275,7 @@ retro_dir:
     lda #<FCB
     ldx #>FCB
     ldy #esfos::sfos_d_findfirst
-    jsr SFOS
+    jsr sfos_entry
     bcs @exit
     jsr print_fcb
 @loop:
@@ -281,7 +283,7 @@ retro_dir:
     lda #<FCB
     ldx #>FCB
     ldy #esfos::sfos_d_findnext
-    jsr SFOS
+    jsr sfos_entry
     bcs @exit
     jsr print_fcb
     bra @loop
@@ -291,7 +293,7 @@ retro_dir:
 set_drive:
     lda FCB
     ldy #esfos::sfos_d_getsetdrive
-    jmp SFOS
+    jmp sfos_entry
 
 .bss
 active_drive:       .byte 0

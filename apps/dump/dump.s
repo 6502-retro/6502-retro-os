@@ -1,6 +1,6 @@
 ; vim: ft=asm_ca65 sw=4 ts=4 et
 .include "fcb.inc"
-.include "sfos.inc"
+
 .zeropage
 ptr:    .word 0
 addr:   .word 0
@@ -124,7 +124,7 @@ line_ascii_loop:
     jmp sector_loop
 exit:
     jsr restore_active_drive
-    jmp WBOOT
+    jmp bios_wboot
 
 
 line_add_16:

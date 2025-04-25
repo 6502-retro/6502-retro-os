@@ -983,7 +983,7 @@ internal_setdma:
     stx zpbufptr + 1
     jmp bios_setdma
 
-sfos:
+dispatch:
     sta param + 0
     stx param + 1
     lda sfos_jmp_tbl_hi,y

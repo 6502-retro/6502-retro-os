@@ -1,6 +1,5 @@
 ; vim: ft=asm_ca65 sw=4 ts=4 et
 .include "fcb.inc"
-.include "sfos.inc"
 
 SOH     =    $01        ; start block
 EOT     =    $04        ; end of text marker
@@ -79,7 +78,7 @@ GotByte:
     cmp #ESC             ; quitting?
     bne GotByte1         ; no
     jsr restore_active_drive
-    jmp WBOOT            ; YES - do BRK or change to RTS if desired
+    jmp bios_wboot            ; YES - do BRK or change to RTS if desired
 GotByte1:
     cmp #SOH             ; start of block?
     beq BegBlk           ; yes
@@ -106,7 +105,7 @@ GetBlk2:
     jsr Print_Err        ; Unexpected block number - abort
     jsr Flush            ; mismatched - flush buffer and then do BRK
     jsr restore_active_drive
-    jmp WBOOT
+    jmp bios_wboot
 GoodBlk1:
     eor #$ff             ; 1's comp of block #
     inx                  ;
@@ -115,7 +114,7 @@ GoodBlk1:
     jsr Print_Err        ; Unexpected block number - abort
     jsr Flush            ; mismatched - flush buffer and then do BRK
     jsr restore_active_drive
-    jmp WBOOT            ; bad 1's comp of block#
+    jmp bios_wboot            ; bad 1's comp of block#
 GoodBlk2:
     ldy #$02             ;
 CalcCrc:
@@ -183,7 +182,7 @@ CopyBlk3:
     bcc :+
     plx
     jsr restore_active_drive
-    jmp WBOOT
+    jmp bios_wboot
 :
     lda #<SFOS_BUF
     sta ptr+0
@@ -235,7 +234,7 @@ Done:
     jsr d_close
 
     jsr restore_active_drive
-    jmp WBOOT;
+    jmp bios_wboot;
 ;
 ;^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ;

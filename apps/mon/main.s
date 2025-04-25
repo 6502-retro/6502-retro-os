@@ -1,12 +1,11 @@
 ; vim: ft=asm_ca65 sw=4 ts=4 et
 .include "fcb.inc"
-.include "sfos.inc"
 .include "io.inc"
 
 
 IN      = wozmon_buf
-acia_putc = CONOUT
-acia_getc_nw = CONST
+acia_putc = bios_conout
+acia_getc_nw = bios_const
 
 .bss
 wozmon_buf:     .res $7F
@@ -133,7 +132,7 @@ NOTHEX:
         JMP ESCAPE      ;Yes, generate ESC sequence.
 
 EXIT:
-        JMP WBOOT
+        JMP bios_wboot
 
 RUN:
         JSR ACTRUN      ;* JSR to the Address we want to run.

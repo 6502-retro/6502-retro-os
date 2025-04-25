@@ -9,31 +9,6 @@
 
 .globalzp ptr1
 
-; vim: set ft=asm_ca65 et ts=4 sw=4
-SFOS        = $200
-REBOOT      = SFOS      + 3
-WBOOT       = REBOOT    + 3
-CONOUT      = WBOOT     + 3
-CONIN       = CONOUT    + 3
-CONST       = CONIN     + 3
-CONPUTS     = CONST     + 3
-CONBYTE     = CONPUTS   + 3
-CONBEEP     = CONBYTE   + 3
-SN_START    = CONBEEP   + 3
-SN_SILENCE  = SN_START  + 3
-SN_STOP     = SN_SILENCE + 3
-SN_SEND     = SN_STOP   + 3
-LED_ON      = SN_SEND   + 3
-LED_OFF     = LED_ON    + 3
-GET_BUTTON  = LED_OFF   + 3
-ERROR_CODE  = GET_BUTTON + 3
-
-RSTFAR      = $231
-
-REGA        = $241
-REGX        = REGA   + 1
-REGY        = REGX   + 1
-;
 .zeropage
 debug_ptr:  .word 0
 sfcpcmd:    .word 0
@@ -342,7 +317,7 @@ bank:
     bcs @parse_error
     sec
     sbc #'0'
-    jmp RSTFAR
+    jmp bios_rstfar
 @parse_error:
     jsr printi
     .byte 10,13,"INVALID BANK",0
@@ -800,64 +775,64 @@ quit:
 ; ---- Helper functions ------------------------------------------------------
 s_reset:
     ldy #esfos::sfos_s_reset
-    jmp SFOS
+    jmp sfos_entry
 d_getsetdrive:
     ldy #esfos::sfos_d_getsetdrive
-    jmp SFOS
+    jmp sfos_entry
 c_write:
     ldy #esfos::sfos_c_write
-    jmp SFOS
+    jmp sfos_entry
 c_read:
     ldy #esfos::sfos_c_read
-    jmp SFOS
+    jmp sfos_entry
 c_printstr:
     ldy #esfos::sfos_c_printstr
-    jmp SFOS
+    jmp sfos_entry
 c_readstr:
     ldy #esfos::sfos_c_readstr
-    jmp SFOS
+    jmp sfos_entry
 d_setdma:
     ldy #esfos::sfos_d_setdma
-    jmp SFOS
+    jmp sfos_entry
 d_parsefcb:
     ldy #esfos::sfos_d_parsefcb
-    jmp SFOS
+    jmp sfos_entry
 d_findfirst:
     ldy #esfos::sfos_d_findfirst
-    jmp SFOS
+    jmp sfos_entry
 d_findnext:
     ldy #esfos::sfos_d_findnext
-    jmp SFOS
+    jmp sfos_entry
 d_open:
     ldy #esfos::sfos_d_open
-    jmp SFOS
+    jmp sfos_entry
 d_close:
     ldy #esfos::sfos_d_close
-    jmp SFOS
+    jmp sfos_entry
 d_readseqblock:
     ldy #esfos::sfos_d_readseqblock
-    jmp SFOS
+    jmp sfos_entry
 d_writeseqblock:
     ldy #esfos::sfos_d_writeseqblock
-    jmp SFOS
+    jmp sfos_entry
 d_make:
     ldy #esfos::sfos_d_make
-    jmp SFOS
+    jmp sfos_entry
 d_setlba:
     ldy #esfos::sfos_d_setlba
-    jmp SFOS
+    jmp sfos_entry
 d_readrawblock:
     ldy #esfos::sfos_d_readrawblock
-    jmp SFOS
+    jmp sfos_entry
 d_writerawblock:
     ldy #esfos::sfos_d_writerawblock
-    jmp SFOS
+    jmp sfos_entry
 s_settpa:
     ldy #esfos::sfos_s_settpa
-    jmp SFOS
+    jmp sfos_entry
 s_gettpa:
     ldy #esfos::sfos_s_gettpa
-    jmp SFOS
+    jmp sfos_entry
 
 
 

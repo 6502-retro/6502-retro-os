@@ -1,11 +1,10 @@
 ; vim: ft=asm_ca65 sw=4 ts=4 et
 .include "fcb.inc"
-.include "sfos.inc"
 .include "io.inc"
 
 
-acia_putc = CONOUT
-acia_getc_nw = CONST
+acia_putc = bios_conout
+acia_getc_nw = bios_const
 
 .bss
 
@@ -16,39 +15,39 @@ oldnmi: .res 2
 .code
     cli
 
-    lda USERNMIVEC + 0
+    lda bios_usernmi_vec + 0
     sta oldnmi + 0
-    lda USERNMIVEC + 1
+    lda bios_usernmi_vec + 1
     sta oldnmi + 1
 
     lda #<nmi
-    sta USERNMIVEC + 0
+    sta bios_usernmi_vec + 0
     lda #>nmi
-    sta USERNMIVEC + 1
+    sta bios_usernmi_vec + 1
 
     lda #<welcome
     ldx #>welcome
     jsr c_printstr
 
 main:
-    jsr CONST
+    jsr bios_const
     bcc main
     ;
     ; restore old nmi
     lda oldnmi + 0
-    sta USERNMIVEC + 0
+    sta bios_usernmi_vec + 0
     lda oldnmi + 1
-    sta USERNMIVEC + 1
+    sta bios_usernmi_vec+ 1
 
     lda #<exitmessage
     ldx #>exitmessage
     jsr c_printstr
 
-    jmp WBOOT
+    jmp bios_wboot
 
 nmi:
     lda #'@'
-    jsr acia_putc
+    jsr bios_conout
     rts
 
 

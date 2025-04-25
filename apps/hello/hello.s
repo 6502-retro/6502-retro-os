@@ -1,6 +1,5 @@
 ; vim: ft=asm_ca65 sw=4 ts=4 et
 .include "fcb.inc"
-.include "sfos.inc"
 
 .zeropage
 ptr:    .word 0
@@ -15,7 +14,7 @@ main:
     lda #<str_message
     ldx #>str_message
     jsr c_printstr
-    jmp WBOOT
+    jmp bios_wboot
 
 .include "../app.inc"
 

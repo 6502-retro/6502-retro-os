@@ -51,6 +51,6 @@ irq_handler:
 
 .segment "VECTORS"
     .addr nmi_handler
-    .addr bios_cboot
+    .addr cboot 
     .addr irq_handler
 

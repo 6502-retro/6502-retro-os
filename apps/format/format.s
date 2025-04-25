@@ -1,6 +1,5 @@
 ; vim: ft=asm_ca65 sw=4 ts=4 et
 .include "fcb.inc"
-.include "sfos.inc"
 
 .zeropage
 bufptr: .word 0
@@ -191,7 +190,7 @@ set_drive:
 
 exit:
     jsr restore_active_drive
-    jmp WBOOT
+    jmp bios_wboot
 
 .include "../app.inc"
 

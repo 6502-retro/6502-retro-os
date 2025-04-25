@@ -5,9 +5,7 @@
 .autoimport
 .globalzp ptr1, bdma_ptr
 
-;.export bios_boot, bios_wboot, bios_conin, bios_conout, bios_const
-;.export bios_setdma, bios_setlba, bios_sdread, bios_sdwrite, bios_puts
-;.export bios_prbyte
+.export cboot
 .export _vdp_sync, _vdp_status, _ticks
 .export error_code, rega, regx, regy
 .export user_nmi_vector, user_irq_vector

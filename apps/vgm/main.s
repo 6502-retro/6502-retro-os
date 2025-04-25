@@ -1,6 +1,5 @@
 ; vim: ft=asm_ca65 sw=4 ts=4 et
 .include "fcb.inc"
-.include "sfos.inc"
 .include "io.inc"
 
 .zeropage
@@ -15,7 +14,7 @@ page:   .byte 0
 .code
 
 main:
-    jsr SN_START
+    jsr bios_sn_start
 
     lda #<str_message
     ldx #>str_message
@@ -57,7 +56,7 @@ vgm_play:
     cmp #$70
     beq @n1
 
-    jsr CONBYTE
+    jsr bios_prbyte
     lda #'!'
     jsr c_write
     jmp exit
@@ -99,7 +98,7 @@ incvgmptrh:
     nop                 ; need these extra cycles.
 
     lda rambank        ; show the new rambank to the user.
-    jsr CONBYTE
+    jsr bios_prbyte
 
     lda #<str_newline
     ldx #>str_newline
@@ -115,7 +114,7 @@ command:
     bne :+
     jsr incvgmptrh
 :   lda (vgmptr),y
-    jsr SN_SEND
+    jsr bios_sn_send
     jmp vgm_next
 
 wait:                   ; get the next two bytes taking care to account
@@ -222,7 +221,7 @@ vgm_load:
     jsr c_printstr
 
     lda FCB2 + sfcb::SC
-    jsr CONBYTE
+    jsr bios_prbyte
 
     lda #<str_sectors
     ldx #>str_sectors
@@ -239,8 +238,8 @@ exit:
     sta rambankreg
     sta rambank
 
-    jsr SN_STOP
-    jmp WBOOT
+    jsr bios_sn_stop
+    jmp bios_wboot
 
 .include "../app.inc"
 

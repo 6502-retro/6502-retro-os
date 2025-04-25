@@ -1,5 +1,5 @@
 ; vim: ft=asm_ca65
-dispatch        = $200
+sfos_entry      = $200
 bios_cboot      = $203
 bios_wboot      = $206
 bios_conout     = $209
@@ -13,12 +13,24 @@ bios_setlba     = $21b
 bios_sdread     = $21e
 bios_sdwrite    = $221
 
-sn_beep         = $224
-sn_start        = $227
-sn_silence      = $22a
-sn_stop         = $22d
-sn_send         = $230
-led_on          = $233
-led_off         = $236
-get_button      = $239
+bios_sn_beep    = $224
+bios_sn_start   = $227
+bios_sn_silence = $22a
+bios_sn_stop    = $22d
+bios_sn_send    = $230
+bios_led_on     = $233
+bios_led_off    = $236
+bios_get_button = $239
 
+bios_error_code = $23c
+
+bios_rstfar     = $23d
+
+bios_rega       = $24d
+bios_regx       = bios_rega   + 1
+bios_regy       = bios_regx   + 1
+
+bios_userirq_vec = $250
+bios_usernmi_vec = $252
+
+bios_ticks      = $65F    ; 32bit value holding number of 60hz periods since boot

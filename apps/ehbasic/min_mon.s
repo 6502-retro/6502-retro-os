@@ -6,10 +6,8 @@
 ; To run EhBASIC on the simulator load and assemble [F7] this file, start the simulator
 ; running [F6] then start the code with the RESET [CTRL][SHIFT]R. Just selecting RUN
 ; will do nothing, you'll still have to do a reset to run the code.
-.include "../../inc/sfos.inc"
 .include "../../inc/fcb.inc"
 .include "../../inc/errors.inc"
-.include "../lib/asminc.inc"
 
 .include "basic.s"
 ;
@@ -45,9 +43,9 @@ LAB_signon
       INY                     ; increment index
       BNE   LAB_signon        ; loop, branch always
 
-        lda USERNMIVEC + 0
+        lda bios_usernmi_vec+ 0
         sta NMI_vec + 0
-        lda USERNMIVEC + 1
+        lda bios_usernmi_vec+ 1
         sta NMI_vec + 1
 
 
@@ -57,10 +55,10 @@ LAB_signon
 ; using acai routines from rom bank 0
 
 ACIAout
-        jmp CONOUT
+        jmp bios_conout
 
 ACIAin
-        jmp CONST
+        jmp bios_const
 ;
 ; vector tables
 

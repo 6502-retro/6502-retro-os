@@ -1,7 +1,7 @@
 ; vim: set ft=asm_ca65 et ts=4 sw=4
 ;
 .include "sfos.inc"
-.include "asminc.inc"
+.include "bios.inc"
 
 .autoimport
 .globalzp ptr1
@@ -17,4 +17,4 @@ _sfos_c_readstr:
     lda ptr1+0
     ldx ptr1+1
     ldy #esfos::sfos_c_readstr
-    jmp SFOS
+    jmp sfos_entry
