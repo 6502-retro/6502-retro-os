@@ -8,7 +8,7 @@
 .export _ticks              := bios_ticks
 
 .export _sfos_entry         := sfos_entry
-.export _bios_boot          := bios_boot
+.export _bios_cboot         := bios_cboot
 .export _bios_wboot         := bios_wboot
 .export _bios_conout        := bios_conout
 .export _bios_conin         := bios_conin

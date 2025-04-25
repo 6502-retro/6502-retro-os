@@ -67,3 +67,6 @@ lines:
 
 burn:
 	sudo dd if=$(BUILD_DIR)/rom.raw seek=1 bs=512 count=16 of=$(SDDEVICE)
+
+sdcard:
+	cd apps && ./makeall.sh && cd ../py_sfs_v2 && ./make_sdcard.sh && cd ..
