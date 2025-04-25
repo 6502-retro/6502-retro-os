@@ -89,7 +89,7 @@ void main(void) {
     uint16_t dstbufidx;
     sys = 0;
 
-    (&fcb)->DRIVE=0;
+    (&fcb)->DRIVE=1;
     strcpy((char*)(&fcb)->NAME, "$$$     ");
     strcpy((char*)(&fcb)->EXT, "SUB");
 
