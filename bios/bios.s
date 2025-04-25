@@ -43,6 +43,7 @@ cboot:
     dex
     bne @L1
 
+cboot_emu:
     ; copy SYSTEM code into RUN area
     ldx #<__SYSTEM_SIZE__
 @L2:
