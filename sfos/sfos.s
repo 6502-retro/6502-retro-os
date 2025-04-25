@@ -599,7 +599,7 @@ sfos_d_close:
     ldx #>sfos_buf
     jsr bios_setdma
     jsr bios_sdread         ; not calling internal_readblock because we don't
-    bcc @error              ; want the LBA incremented here.
+    bcs @error              ; want the LBA incremented here.
     ; now insert the fcb into the sector
     ldy #sfcb::FN
     lda (param),y
@@ -639,11 +639,10 @@ sfos_d_close:
     ldx #>lba
     jsr bios_setlba
     jsr bios_sdwrite
-    bcs @exit
+    bcc @exit
 @error:
     lda #ERROR::DRIVE_ERROR
     sta error_code
-    sec
     rts
 @exit:
     lda #$FF                ; force drive scan
@@ -769,13 +768,11 @@ internal_readblock:
     ldx #>lba
     jsr bios_setlba
     jsr bios_sdread
-    bcs :+
+    bcc :+
     lda #ERROR::DRIVE_ERROR
     sta error_code
-    sec
     rts
 :   inc lba + 0
-    clc
     rts
 
 ; Given the FCB passed in param, the LBA is determined from the DRIVE + CR
@@ -784,20 +781,19 @@ internal_readblock:
 sfos_d_readseqblock:
     jsr set_fcb_lba
     jsr bios_sdread
-    bcc sd_op_fail
+    bcs sd_op_fail
 
     jmp increment_fcb_cr
 
 sd_op_fail:
     lda #ERROR::DRIVE_ERROR
     sta error_code
-    sec
     rts
 
 sfos_d_writeseqblock:
     jsr set_fcb_lba
     jsr bios_sdwrite
-    bcc sd_op_fail
+    bcs sd_op_fail
     jmp increment_fcb_cr   ; carry is set if rollover
 
 set_fcb_lba:
@@ -942,20 +938,10 @@ sfos_d_writeseqbyte:
 ; DMA is set already, LBA is set already, do not increment LBA
 ; Convert carry to clear on success, set on failure
 sfos_d_writerawblock:
-    jsr bios_sdwrite
-    bcc :+
-    clc
-    rts
-:   sec
-    rts
+    jmp bios_sdwrite
 
 sfos_d_readrawblock:
-    jsr bios_sdread
-    bcc :+
-    clc
-    rts
-:   sec
-    rts
+    jmp bios_sdread
 
 ; given the number of pages in A, set tpa to first free block
 ; of ram.  - this will be called by sfcp when it's done loading

@@ -168,12 +168,12 @@ send_cmd:
 
         ; Success
         jsr sdcmd_end
-        sec
+        clc
         rts
 
 @error: ; Error
         jsr sdcmd_end
-        clc
+        sec
         rts
 
 ;-----------------------------------------------------------------------------
@@ -345,13 +345,13 @@ sdcard_init:
 
         ; Success
         deselect
-        sec
+        clc
         rts
 
 @error:
         ; Error
         deselect
-        clc
+        sec
         rts
 
 ;-----------------------------------------------------------------------------
@@ -360,10 +360,6 @@ sdcard_init:
 ; result: C=0 -> error, C=1 -> success
 ;-----------------------------------------------------------------------------
 sdcard_read_sector:
-.if DEBUG=1
-        lda #0
-        jsr debug_sector_lba
-.endif
         jsr sdcmd_start
         ; Send READ_SINGLE_BLOCK command
         lda #($40 | 17)
@@ -387,7 +383,7 @@ sdcard_read_sector:
         ; Timeout error
         jsr sdcmd_end
         deselect
-        clc
+        sec
         rts
 
 @start: ; Read 512 bytes of sector data
@@ -421,10 +417,6 @@ sdcard_read_sector:
 ; result: C=0 -> error, C=1 -> success
 ;-----------------------------------------------------------------------------
 sdcard_write_sector:
-.if DEBUG=1
-        lda #1
-        jsr debug_sector_lba
-.endif
         jsr sdcmd_start
         ; Send WRITE_BLOCK command
         lda #($40 | 24)
@@ -476,79 +468,12 @@ sdcard_write_sector:
         ; Success
         jsr sdcmd_end
         deselect
-        sec
+        clc
         rts
 
 @error: ; Error
         jsr sdcmd_end
         deselect
-        clc
-        rts
-
-;-----------------------------------------------------------------------------
-; sdcard_check_alive
-;
-; Check whether the current SD card is still present, or whether it has been
-; removed or replaced with a different card.
-;
-; Out:  c  =1: SD card is alive
-;          =0: SD card has been removed, or replaced with a different card
-;
-; The SEND_STATUS command (CMD13) sends 16 error bits:
-;  byte 0: 7  always 0
-;          6  parameter error
-;          5  address error
-;          4  erase sequence error
-;          3  com crc error
-;          2  illegal command
-;          1  erase reset
-;          0  in idle state
-;  byte 1: 7  out of range | csd overwrite
-;          6  erase param
-;          5  wp violation
-;          4  card ecc failed
-;          3  CC error
-;          2  error
-;          1  wp erase skip | lock/unlock cmd failed
-;          0  Card is locked
-; Under normal circumstances, all 16 bits should be zero.
-; This command is not legal before the SD card has been initialized.
-; Tests on several cards have shown that this gets respected in practice;
-; the test cards all returned $1F, $FF if sent before CMD0.
-; So we use CMD13 to detect whether we are still talking to the same SD
-; card, or a new card has been attached.
-;-----------------------------------------------------------------------------
-sdcard_check_alive:
-        ; save sector
-        jsr sdcmd_start
-        ldx #0
-@1:     lda sector_lba, x
-        pha
-        inx
-        cpx #4
-        bne @1
-
-        send_cmd_inline 13, 0 ; CMD13: SEND_STATUS
-        bcc @no ; card did not react -> no card
-        tax
-        bne @no ; first byte not $00 -> different card
-        jsr spi_read
-        tax
-        bne @no ; second byte not $00 -> different card
         sec
-        bra @yes
-
-@no:    clc
-
-@yes:   ; restore sector
-        ; (this code preserves the C flag!)
-        ldx #3
-@2:     pla
-        sta sector_lba, x
-        dex
-        bpl @2
-
-        jsr sdcmd_end
-        php
-        plp
         rts
+

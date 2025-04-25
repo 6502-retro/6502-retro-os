@@ -106,13 +106,11 @@ setlba:
 
 sdread:
     jsr set_sdbuf_ptr
-    jsr sdcard_read_sector
-    rts
+    jmp sdcard_read_sector
 
 sdwrite:
     jsr set_sdbuf_ptr
-    jsr sdcard_write_sector
-    rts
+    jmp sdcard_write_sector
 
 puts:
     sta ptr1 + 0
