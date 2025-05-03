@@ -26,6 +26,7 @@ for file in *.bas; do ../cli.py cp -i ../6502-retro-sdcard.img -s $file -d d://$
 ../cli.py cp -i ../6502-retro-sdcard.img -s submit.com  -d a://submit.com
 ../cli.py cp -i ../6502-retro-sdcard.img -s sfmvi.com   -d a://vi.com
 ../cli.py cp -i ../6502-retro-sdcard.img -s mon.com     -d a://woz.com
+../cli.py cp -i ../6502-retro-sdcard.img -s xm.com      -d a://xm.com
 
 
 cd ../
