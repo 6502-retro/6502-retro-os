@@ -429,7 +429,7 @@ sdcard_write_sector:
 
         ; Wait for card to be ready
         jsr wait_ready
-        bcc @error
+        bcs @error
 
         ; Send start of data token
         lda #$FE
@@ -463,7 +463,7 @@ sdcard_write_sector:
 
         ; wait for it to be idle
         jsr wait_ready
-        bcc @error
+        bcs @error
 
         ; Success
         jsr sdcmd_end
