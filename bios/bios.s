@@ -150,14 +150,20 @@ echo:
 delay_ms:
     phx
     phy
-    tay
+    sta ptr1
 @l1:
-    ldx #0
+    ldy #16
 @l2:
+    ldx #250    ; 16 * 250 = 4000 = 1ms give or take
+@l3:
     dex
-    bne @l2
+    bne @l3
     dey
+    bne @l2
+    dec ptr1
+    lda ptr1
     bne @l1
+@done:
     ply
     plx
     rts
