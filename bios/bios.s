@@ -146,6 +146,22 @@ echo:
     pla             ;*Restore A
     rts             ;*Done, over and out...
 
+; a is number of ms to delay
+delay_ms:
+    phx
+    phy
+    tay
+@l1:
+    ldx #0
+@l2:
+    dex
+    bne @l2
+    dey
+    bne @l1
+    ply
+    plx
+    rts
+
 ;---- Helper functions -------------------------------------------------------
 set_sdbuf_ptr:
     lda bdma + 1
@@ -217,6 +233,8 @@ user_nmi_vector:
     .lobytes stub_user_nmi_handler
     .hibytes stub_user_nmi_handler
 .assert * = $254, error, "via_irq_handler at 244"
+
+    jmp delay_ms    ; 254
 
 .bss
 bdma:       .word 0
