@@ -1,5 +1,6 @@
 ; vim: ft=asm_ca65
 .include "io.inc"
+.include "bios.inc"
 .autoimport
 .globalzp ptr1
 .export acia_init, acia_getc, acia_getc_nw, acia_putc
@@ -25,12 +26,11 @@ acia_init:
     sta acia_control
     rts
 
+; changed this to use bios_const so that the emulator
+; doesn't hang while waiting for user input.
 acia_getc:
-@wait_rxd_full:
-    lda acia_status
-    and #$08
-    beq @wait_rxd_full
-    lda acia_data
+    jsr bios_const
+    beq acia_getc
     rts
 
 acia_getc_nw:
