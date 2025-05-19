@@ -11,12 +11,7 @@
 .include "io.inc"
 .autoimport
 .globalzp bdma_ptr
-.export sector_lba, sdcard_init, sdcard_read_sector, sdcard_write_sector
-
-SD_SCK          = %00000001
-SD_CS           = %00000010
-SN_WE           = %00000100
-SD_MOSI         = %10000000
+.export sector_lba, sdcard_read_sector, sdcard_write_sector
 
 .macro deselect
         lda     #(SD_CS|SD_MOSI|SN_WE)        ; deselect sdcard
@@ -228,8 +223,6 @@ sdcmd_start:
         php
         pha
         phx
-        lda #(SD_MOSI|SN_WE)
-        sta via_porta
         jsr sdcmd_nothingbyte
         jsr sdcmd_nothingbyte
         lda #$ff
@@ -263,95 +256,6 @@ sdcmd_end:
         plx
         pla
         plp
-        rts
-
-;-----------------------------------------------------------------------------
-; sdcard_init
-; result: C=0 -> error, C=1 -> success
-;-----------------------------------------------------------------------------
-sdcard_init:
-        ; init shift register and port b for SPI use
-        ; SR shift in, External clock on CB1
-        lda #%00001100
-        sta via_acr
-        ; sta via_ier
-        ; Port a bits 7, 2, 1, 0 are output, rest are high impedence
-        ;lda #%10000111
-        ;sta via_ddra
-
-        lda     #(SD_CS|SD_MOSI|SN_WE)        ; toggle clock 160 times
-        ldx     #160
-@clockloop:
-        eor     #SD_SCK
-        sta     via_porta
-        dex
-        bne     @clockloop
-
-        ; Enter idle state
-        jsr sdcmd_start
-        send_cmd_inline 0, 0
-        jsr sdcmd_end
-        bcc @2
-        jmp @error
-@2:
-        cmp #1  ; In idle state?
-        beq @3
-        jmp @error
-@3:
-        ; SDv2? (SDHC/SDXC)
-        jsr sdcmd_start
-        send_cmd_inline 8, $1AA
-        jsr sdcmd_end
-        bcc @4
-        jmp @error
-@4:
-        cmp #1  ; No error?
-        beq @5
-        jmp @error
-@5:
-@sdv2:  ; Receive remaining 4 bytes of R7 response
-        jsr spi_read
-        jsr spi_read
-        jsr spi_read
-        jsr spi_read
-
-        ; Wait for card to leave idle state
-@6:     jsr sdcmd_start
-        send_cmd_inline 55, 0
-        jsr sdcmd_end
-        bcc @7
-        bra @error
-@7:
-        jsr sdcmd_start
-        send_cmd_inline 41, $40000000
-        jsr sdcmd_end
-        bcc @8
-        bra @error
-@8:
-        cmp #0
-        bne @6
-
-        ; ; Check CCS bit in OCR register
-        jsr sdcmd_start
-        send_cmd_inline 58, 0
-        jsr sdcmd_end
-        cmp #0
-        jsr spi_read
-        and #$40        ; Check if this card supports block addressing mode
-        beq @error
-        jsr spi_read
-        jsr spi_read
-        jsr spi_read
-
-        ; Success
-        deselect
-        clc
-        rts
-
-@error:
-        ; Error
-        deselect
-        sec
         rts
 
 ;-----------------------------------------------------------------------------

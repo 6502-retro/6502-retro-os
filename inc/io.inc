@@ -25,3 +25,15 @@ via_ier         = $BF2E
 
 vdp_ram         = $BF30
 vdp_reg         = $BF31
+
+SD_SCK          = %00000001
+SD_CS           = %00000010
+SN_WE           = %00000100
+SN_READY        = %00001000
+ROMSW           = %01000000
+SD_MOSI         = %10000000
+LED_ON          = %00010000 ; ORA
+LED_OFF         = %11101111 ; AND
+BUTTON          = %00100000 ; MASK
+ROM_SWITCH_ON   = %01000000 ; ORA
+ROM_SWITCH_OFF  = %10111111 ; AND

@@ -35,14 +35,6 @@ cboot:
     lda #%11010111
     sta via_ddra
 
-    ldx #3
-@L1:
-    phx
-    jsr sdcard_init
-    plx
-    dex
-    bne @L1
-
 cboot_emu:
     ; copy SYSTEM code into RUN area
     ldx #<__SYSTEM_SIZE__

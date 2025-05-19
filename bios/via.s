@@ -4,13 +4,6 @@
 .autoimport
 
 .export via_init, led_on, led_off, get_button
-
-LED_ON          = %00010000 ; ORA
-LED_OFF         = %11101111 ; AND
-BUTTON          = %00100000 ; MASK
-ROM_SWITCH_ON   = %01000000 ; ORA
-ROM_SWITCH_OFF  = %10111111 ; AND
-
 .code
 
 via_init:
