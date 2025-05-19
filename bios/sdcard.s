@@ -171,54 +171,6 @@ send_cmd:
         sec
         rts
 
-;-----------------------------------------------------------------------------
-; send_cmd_inline - send command with specified argument
-;-----------------------------------------------------------------------------
-.macro send_cmd_inline cmd, arg
-        lda #(cmd | $40)
-        sta cmd_idx
-
-.if .hibyte(.hiword(arg)) = 0
-        stz cmd_arg + 3
-.else
-        lda #(.hibyte(.hiword(arg)))
-        sta cmd_arg + 3
-.endif
-
-.if ^arg = 0
-        stz cmd_arg + 2
-.else
-        lda #^arg
-        sta cmd_arg + 2
-.endif
-
-.if >arg = 0
-        stz cmd_arg + 1
-.else
-        lda #>arg
-        sta cmd_arg + 1
-.endif
-
-.if <arg = 0
-        stz cmd_arg + 0
-.else
-        lda #<arg
-        sta cmd_arg + 0
-.endif
-
-.if cmd = 0
-        lda #$95
-.else
-.if cmd = 8
-        lda #$87
-.else
-        lda #1
-.endif
-.endif
-        sta cmd_crc
-        jsr send_cmd
-.endmacro
-
 sdcmd_start:
         php
         pha
