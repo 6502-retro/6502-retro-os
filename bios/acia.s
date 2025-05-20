@@ -38,7 +38,10 @@ acia_getc_nw:
     and #$08
     beq @done
     lda acia_data
-    sec
+    cmp #$7F
+    bne :+
+    lda #$08
+:   sec
     rts
 @done:
     clc
