@@ -376,7 +376,7 @@ vdp_g2_inits:
         .byte $00        ; Pattern Table Address = Hex 0000 to Hex 0800
         .byte $76        ; Address of Sprite Attribute Table in VRAM = Hex 3BOO
         .byte $03        ; Address of Sprite Pattern Table in VRAM = 1800
-        .byte $2b        ; white on black
+        .byte $2a        ; white on black
 
 font_start:
         .include "font.s"

@@ -36,5 +36,6 @@ for file in *.bas; do ../cli.py cp -i ../6502-retro-sdcard.img -s $file -d d://$
 
 cd ../
 ./cli.py cp -i 6502-retro-sdcard.img -s ../apps/submit/test.sub -d a://test.sub
+./cli.py cp -i 6502-retro-sdcard.img -s ../../6502-retro-jumpingjack/build/jj.com -d g://jj.com
 ./cli.py installos -i 6502-retro-sdcard.img -o ../build/rom.raw
 
