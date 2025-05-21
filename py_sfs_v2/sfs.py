@@ -74,8 +74,9 @@ class SFS(object):
 
         idx = Index(
             block[
-                (self.idx_file_num % 16)
-                * INDEX_SIZE : ((self.idx_file_num % 16) * INDEX_SIZE)
+                (self.idx_file_num % 16) * INDEX_SIZE : (
+                    (self.idx_file_num % 16) * INDEX_SIZE
+                )
                 + INDEX_SIZE
             ]
         )

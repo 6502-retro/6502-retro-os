@@ -216,6 +216,35 @@ def ls(image, drive="A"):
     "-i", "--image", type=str, help="Path to local SDCARD image.", required=True
 )
 @click.option(
+    "-d",
+    "--destination",
+    type=str,
+    help="The file to delete. <d>://<filename>",
+    required=True,
+)
+def rm(image, destination):
+    if destination[1:].startswith("://"):
+        drive = ord(destination[0]) - 0x41
+    else:
+        print("ERROR: invalid format")
+        return
+
+    print(f"DELETING {destination}")
+
+    sfs = SFS(image)
+    sfs_filename = os.path.basename(destination)
+    if sfs.find(drive, sfs_filename):
+        sfs.idx.file_attr = 0x5E
+        sfs.idx.flush(sfs.fd)
+    else:
+        print(f"ERROR: Could not find {sfs_filename}")
+
+
+@cli.command()
+@click.option(
+    "-i", "--image", type=str, help="Path to local SDCARD image.", required=True
+)
+@click.option(
     "-o",
     "--os",
     type=str,

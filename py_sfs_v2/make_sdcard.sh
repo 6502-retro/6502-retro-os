@@ -17,6 +17,7 @@ for file in *.bas; do ../cli.py cp -i ../6502-retro-sdcard.img -s $file -d d://$
 ../cli.py cp -i ../6502-retro-sdcard.img -s asm.com     -d a://asm.com
 ../cli.py cp -i ../6502-retro-sdcard.img -s bankmon.com -d a://bmon.com
 ../cli.py cp -i ../6502-retro-sdcard.img -s basic.com   -d a://basic.com
+../cli.py cp -i ../6502-retro-sdcard.img -s cat.com     -d a://cat.com
 ../cli.py cp -i ../6502-retro-sdcard.img -s cls.com     -d a://cls.com
 ../cli.py cp -i ../6502-retro-sdcard.img -s copy.com    -d a://copy.com
 ../cli.py cp -i ../6502-retro-sdcard.img -s dump.com    -d a://dump.com
@@ -36,6 +37,6 @@ for file in *.bas; do ../cli.py cp -i ../6502-retro-sdcard.img -s $file -d d://$
 
 cd ../
 ./cli.py cp -i 6502-retro-sdcard.img -s ../apps/submit/test.sub -d a://test.sub
-./cli.py cp -i 6502-retro-sdcard.img -s ../../6502-retro-jumpingjack/build/jj.com -d g://jj.com
+#./cli.py cp -i 6502-retro-sdcard.img -s ../../6502-retro-jumpingjack/build/jj.com -d g://jj.com
 ./cli.py installos -i 6502-retro-sdcard.img -o ../build/rom.raw
 
