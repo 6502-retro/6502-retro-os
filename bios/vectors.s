@@ -34,13 +34,6 @@ irq_handler:
     sta _vdp_status
     lda #$80
     sta _vdp_sync
-    inc _ticks+0
-    bne @exit
-    inc _ticks+1
-    bne @exit
-    inc _ticks+2
-    bne @exit
-    inc _ticks+3
 @user_irq:
     jsr user_irq_jumper
 @exit

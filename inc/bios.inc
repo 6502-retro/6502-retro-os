@@ -34,4 +34,3 @@ bios_userirq_vec = $250
 bios_usernmi_vec = $252
 bios_delay_ms   = $254
 
-bios_ticks      = $65F    ; 32bit value holding number of 60hz periods since boot

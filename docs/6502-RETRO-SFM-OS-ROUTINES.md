@@ -211,19 +211,7 @@ Returns 1 if button is pressed.  Note the user button is pulled high through a
 routine inverts the value read by the VIA so that a `1` means pressed and a `0`
 means released.
 
-### Tick Counter
-
-The Pico9918 interrupts 60 times a second.  The 32bit _tick variable is used to
-record the number of ticks since the last reset.  It's not an exact science but
-it should give an approximation of time.  The number of elapsed ticks can be
-used to measure a second of time for example.  Just wait until (long) ticks has
-increased by 60.
-
-This is by no means accurate.
-
-The bios sets up the pico9918 to trigger the interrupts.
-
-### Other drive hardware routines
+## Other drive hardware routines
 
 You are free to impliment any other routines you like in your bios.  A
 convenient jump table is provided at the SYSTEM Memory address space starting at

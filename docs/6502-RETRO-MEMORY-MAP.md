@@ -77,7 +77,6 @@ is created by the build scripts.
 | 600       | SFOS_BUF_END (WASTED BYTE)   | READONLY
 | 65D       | VDP_STATUS                   | READONLY
 | 65E       | VDP_SYNC                     | READONLY
-| 65F       | VDP_TICKS                    | READONLY
 |**USER**   |                              |.
 | 800       | TPA                          | YES
 | BEFF      | TPA END                      | YES

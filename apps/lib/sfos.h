@@ -82,6 +82,5 @@ extern uint16_t             sfos_s_gettpa();
 extern void sfos_s_warmboot();
 extern void sfos_s_reboot();
 
-extern uint32_t ticks;
 
 #endif
