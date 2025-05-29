@@ -97,8 +97,8 @@ class SFS(object):
 
     def find(self, drive: int, filename: str):
         self.idx_first_flag = True
-        fname = bytes(filename.split(".")[0], encoding="ascii")
-        fext = bytes(filename.split(".")[1], encoding="ascii")
+        fname = filename.split(".")[0]
+        fext = filename.split(".")[1]
         while 1:
             idx = self.read_index(drive)
             if idx:

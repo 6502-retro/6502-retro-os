@@ -70,8 +70,6 @@ def cli():
 def format(image):
     """
     Formats an existing SDCARD image.
-
-    <-i|--image> Path to new SDCARD Image file.
     """
 
     sfs = SFS(image)
@@ -99,10 +97,6 @@ def format(image):
 def cp(image, source, destination):
     """
     Copies a file from SOURCE to DESTINATION.
-
-    <-i|--image> Path to new SDCARD Image file.
-    <-s|--source> Source file to copy
-    <-d|--destination> Destination of copy
 
     PATHS on the SFS Volume must be prefixed with c://hello.com
     LOCAL PATHS must be either full or relative paths.  Relies on python open() to access.
@@ -173,8 +167,6 @@ def cp(image, source, destination):
 def new(image):
     """
     Creates a new SFS Disk <IMAGE> and formats it.
-
-    <-i|--image> Path to new SDCARD Image file.
     """
     with open(image, "wb") as fd:
         fd.write(b"\0" * 0x90000 * 0x200)
@@ -190,11 +182,11 @@ def new(image):
 def ls(image, drive="A"):
     """
     List files on SDCARD image in provided drive letter.
-
-    <-i|--image> Path to new SDCARD Image file.
-    <drive=?> Drive letter to list files from.
     """
-    _drive = ord(drive) - 0x41
+    _drive = ord(drive)
+    if _drive > 0x41 + 8:
+        _drive -= 0x20
+    _drive -= 0x41
     sfs = SFS(image)
     while True:
         idx = sfs.read_index(_drive)
@@ -203,8 +195,8 @@ def ls(image, drive="A"):
         if idx.file_attr == 0xE5:
             break
 
-        fname = str(idx.fname, encoding="ascii")
-        fext = str(idx.fext, encoding="ascii")
+        fname = idx.fname
+        fext = idx.fext
         filename = f"{fname}.{fext}"
         print(f" {chr(idx.drive + 0x40)}:{filename:<11} {idx.file_size:>7} bytes")
 
@@ -223,18 +215,23 @@ def ls(image, drive="A"):
     required=True,
 )
 def rm(image, destination):
+    """
+    Delete a file from SDCARD given by destination.
+    """
     if destination[1:].startswith("://"):
-        drive = ord(destination[0]) - 0x41
+        drive = ord(destination[0])
+        if drive > 0x41 + 8:
+            drive -= 0x20
+        drive -= 0x41
     else:
         print("ERROR: invalid format")
         return
 
-    print(f"DELETING {destination}")
-
     sfs = SFS(image)
     sfs_filename = os.path.basename(destination)
-    if sfs.find(drive, sfs_filename):
-        sfs.idx.file_attr = 0x5E
+    if sfs.find(drive, sfs_filename.upper()):
+        print(f"DELETING {destination}")
+        sfs.idx.file_attr = 0xE5
         sfs.idx.flush(sfs.fd)
     else:
         print(f"ERROR: Could not find {sfs_filename}")
@@ -254,9 +251,6 @@ def rm(image, destination):
 def installos(image, os):
     """
     Copy 8kb of OS Binary into SDCARD image immediately after the superblock.
-
-    <-i|--image> Path to new SDCARD Image file.
-    <-o|--os> Path to the rom image.  Expects image to be 16kb as per OS Makefiles.
     """
     print(f"Installing OS [{os}] into SDCARD Image [{image}]...")
     sfs = SFS(image)
