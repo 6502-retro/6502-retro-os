@@ -360,13 +360,13 @@ scry:           .res 1
 .rodata
 vdp_inits:
         .byte $00        ; r0
-        .byte $F0        ; r1 16kb ram + M1, interrupts enabled, text mode
+        .byte $E0        ; r1 16kb ram + M1, interrupts enabled
         .byte $05        ; r2 name table at 0x1400
         .byte $80        ; r3 color start 0x2000
         .byte $01        ; r4 pattern generator start at 0x800
         .byte $20        ; r5 Sprite attriutes start at 0x1000
         .byte $00        ; r6 Sprite pattern table at 0x0000
-        .byte $E1        ; r7 Set forground and background color (grey on black)
+        .byte $2a        ; r7 Set forground and background color (grey on black)
 
 vdp_g2_inits:
         .byte $02        ; Graphics II Mode,No External Video

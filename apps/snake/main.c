@@ -19,6 +19,7 @@ uint8_t key;
 typedef struct SnakeSegment {
     uint8_t x;
     uint8_t y;
+    uint8_t pattern;
     struct SnakeSegment *next;
 } SnakeSegment;
 
@@ -29,7 +30,7 @@ typedef enum Direction {
     RIGHT
 } Direction;
 
-SnakeSegment* create_segment(uint8_t x, uint8_t y) {
+SnakeSegment* create_segment(uint8_t x, uint8_t y, Direction dir) {
     SnakeSegment *new_segment = (SnakeSegment *)malloc(sizeof(SnakeSegment));
     if (new_segment == NULL) {
         perror("Failed to allocate memory for snake segment");
@@ -38,12 +39,19 @@ SnakeSegment* create_segment(uint8_t x, uint8_t y) {
     new_segment->x = x;
     new_segment->y = y;
     new_segment->next = NULL;
+    switch (dir) {
+        case RIGHT: new_segment->pattern = 8;break;
+        case LEFT:  new_segment->pattern = 9;break;
+        case UP:    new_segment->pattern = 10;break;
+        case DOWN:  new_segment->pattern = 11;break;
+    }
     return new_segment;
 }
 // Function to add a new head to the snake (for movement)
-void add_new_head(SnakeSegment **head, uint8_t new_x, uint8_t new_y) {
-    SnakeSegment *new_head = create_segment(new_x, new_y);
+void add_new_head(SnakeSegment **head, uint8_t new_x, uint8_t new_y, Direction dir) {
+    SnakeSegment *new_head = create_segment(new_x, new_y, dir);
     new_head->next = *head;
+    new_head->next->pattern = 0x01;
     *head = new_head;
 }
 
@@ -106,6 +114,7 @@ uint8_t is_on_snake(SnakeSegment *head, uint8_t check_x, uint8_t check_y, uint8_
         }
 
         if (check_x == current->x && check_y == current->y) {
+            current->pattern=0x10;
             return 1; // Collision detected
         }
         current = current->next;
@@ -149,7 +158,7 @@ void free_snake(SnakeSegment *head) {
 
 void draw_snake(struct SnakeSegment *seg)
 {
-    screen_buf[xy2scr(seg->x, seg->y)] = 0x6;
+    screen_buf[xy2scr(seg->x, seg->y)] = seg->pattern;
     if (seg->next != NULL)
         draw_snake(seg->next);
 
@@ -157,7 +166,7 @@ void draw_snake(struct SnakeSegment *seg)
 
 void draw_food(uint8_t x, uint8_t y)
 {
-    screen_buf[xy2scr(x, y)] = 0xf;
+    screen_buf[xy2scr(x, y)] = 0x2;
 }
 
 void print_at_xy(uint8_t x, uint8_t y, char * s) {
@@ -200,17 +209,17 @@ void main()
     int score = 0;
     uint8_t ticks = 1;
 
-    vdp_init_g2();
+    vdp_init();
     vdp_set_write_address(VDP_COLOR_TABLE);
-    for (i=0; i<(32*24); i++)
-    {
-        VRAM=0x51;
-    }
+    VRAM=0x41;
+    VRAM=0x51;
+    VRAM=0x61;
+
     srand(menu());
 
     // Initial snake setup
-    snake_head = create_segment(MAX_X / 2, MAX_Y / 2);
-    add_new_head(&snake_head, MAX_X / 2, (MAX_Y / 2) + 1); // Add a second segment for a visible body
+    snake_head = create_segment(MAX_X / 2, MAX_Y / 2, UP);
+    add_new_head(&snake_head, MAX_X / 2, (MAX_Y / 2) + 1, UP); // Add a second segment for a visible body
     current_direction = UP; // Initial direction
 
     // Food position
@@ -263,9 +272,11 @@ void main()
             if (!game_over)
             {
                 will_eat_food = (new_head_x==food_x && new_head_y == food_y);
-                if (is_on_snake(snake_head, new_head_x, new_head_y, !will_eat_food))
+                if (is_on_snake(snake_head, new_head_x, new_head_y, !will_eat_food)) {
                     game_over = 1;
-                add_new_head(&snake_head, new_head_x, new_head_y);
+                    draw_snake(snake_head);
+                }
+                add_new_head(&snake_head, new_head_x, new_head_y, current_direction);
 
                 if (snake_head->x == food_x && snake_head->y == food_y) {
                     score += 10;
@@ -282,6 +293,8 @@ void main()
             ticks++;
         }
     }
+    VREG=0x06;
+    VREG=0x87;
     sprintf(tb, "Game Over! Your score was: %d\n", score);
     sfos_c_printstr(tb);
     free_snake(snake_head);
