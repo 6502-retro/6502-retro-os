@@ -31,9 +31,5 @@ $(BUILD_DIR)/%.o: %.s
 	@mkdir -p $$(dirname $@)
 	$(AS) $(ASFLAGS) -l $(BUILD_DIR)/$*.lst $< -o $@
 
-$(BUILD_DIR)/$(APPNAME).raw: $(OBJS)
-	@mkdir -p $$(dirname $@)
-	$(LD) -C $(CFG) $^ -o $@ -m $(BUILD_DIR)/$(APPNAME).map -Ln $(BUILD_DIR)/$(APPNAME).sym
-
 $(BUILD_DIR)/$(APPNAME).com: $(BUILD_DIR)/$(APPNAME).raw
 	$(LOADTRIM) build/$(APPNAME).raw build/$(APPNAME).com $(LOAD_ADDR)

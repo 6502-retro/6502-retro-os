@@ -194,7 +194,10 @@ def ls(image, drive="A"):
     <-i|--image> Path to new SDCARD Image file.
     <drive=?> Drive letter to list files from.
     """
-    _drive = ord(drive) - 0x41
+    _drive = ord(drive)
+    if _drive > 0x41 + 8:
+        _drive -= 0x20
+    _drive -= 0x41
     sfs = SFS(image)
     while True:
         idx = sfs.read_index(_drive)
@@ -203,8 +206,8 @@ def ls(image, drive="A"):
         if idx.file_attr == 0xE5:
             break
 
-        fname = str(idx.fname, encoding="ascii")
-        fext = str(idx.fext, encoding="ascii")
+        fname = idx.fname
+        fext = idx.fext
         filename = f"{fname}.{fext}"
         print(f" {chr(idx.drive + 0x40)}:{filename:<11} {idx.file_size:>7} bytes")
 
@@ -224,7 +227,10 @@ def ls(image, drive="A"):
 )
 def rm(image, destination):
     if destination[1:].startswith("://"):
-        drive = ord(destination[0]) - 0x41
+        drive = ord(destination[0])
+        if drive > 0x41 + 8:
+            drive -= 0x20
+        drive -= 0x41
     else:
         print("ERROR: invalid format")
         return
@@ -232,9 +238,9 @@ def rm(image, destination):
     print(f"DELETING {destination}")
 
     sfs = SFS(image)
-    sfs_filename = os.path.basename(destination)
+    sfs_filename = os.path.basename(destination).upper()
     if sfs.find(drive, sfs_filename):
-        sfs.idx.file_attr = 0x5E
+        sfs.idx.file_attr = 0xE5
         sfs.idx.flush(sfs.fd)
     else:
         print(f"ERROR: Could not find {sfs_filename}")

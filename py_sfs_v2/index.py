@@ -24,8 +24,8 @@ class Index(object):
 
     def __init__(self, barray):
         self.drive = barray[0]
-        self.fname = barray[1:9].strip()
-        self.fext = barray[9:12].strip()
+        self.fname = barray[1:9].decode("ascii").strip()
+        self.fext = barray[9:12].decode("ascii").strip()
         self.laddr = int.from_bytes(barray[12:13], byteorder="little")
         self.sec_count = barray[14]
         self.file_num = barray[15]
