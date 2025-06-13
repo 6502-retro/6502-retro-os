@@ -7,4 +7,5 @@ SPRITEATTRIBUTETABLE    = $1000
 SPRITEPATTERNTABLE      = $0000
 
 VDP_SYNC                = $065E
+NOTE_CTR                = $065F
 

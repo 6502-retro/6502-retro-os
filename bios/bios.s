@@ -6,7 +6,7 @@
 .globalzp ptr1, bdma_ptr
 
 .export cboot
-.export _vdp_sync, _vdp_status, notectr
+.export _vdp_sync, _vdp_status, _notectr
 .export error_code, rega, regx, regy
 .export user_nmi_vector, user_irq_vector
 
@@ -233,7 +233,7 @@ user_nmi_vector:
 bdma:       .word 0
 _vdp_status:.res 1
 _vdp_sync:  .res 1
-notectr:    .res 1
+_notectr:   .res 1
 
 .segment "SYSTEM"
 .rodata
