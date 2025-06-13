@@ -14,6 +14,7 @@ page:   .byte 0
 .code
 
 main:
+    sei
     jsr bios_sn_start
 
     lda #<str_message
@@ -239,6 +240,7 @@ exit:
     sta rambank
 
     jsr bios_sn_stop
+    cli
     jmp bios_wboot
 
 .include "../app.inc"

@@ -26,12 +26,10 @@ sn_start:
     sta via_ddrb
 
     ; enable T1 Interupts
-    lda #%01000000
+    lda #%10100000
+    sta via_ier
+    lda #%00000000
     sta via_acr
-    lda #$4e ; every 50000 (25ms) on a 2mhz clock
-    sta via_t1cl
-    lda #$c3
-    sta via_t1ch
     jsr sn_silence
     rts
 

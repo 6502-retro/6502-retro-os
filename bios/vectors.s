@@ -27,6 +27,18 @@ irq_handler:
     phx
     phy
     cld
+@via_ifr:
+    lda #$20
+    bit via_ifr
+    beq @vdp_irq
+    dec notectr
+    lda notectr
+    bne :+
+    jsr sn_silence
+:   lda #$4e
+    sta via_t2cl
+    lda #$c3
+    sta via_t2ch
 @vdp_irq:
     bit vdp_reg
     bpl @user_irq
