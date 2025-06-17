@@ -30,6 +30,7 @@ for file in *.bas; do ../cli.py cp -i ../6502-retro-sdcard.img -s $file -d d://$
 ../cli.py cp -i ../6502-retro-sdcard.img -s xm.com      -d a://xm.com
 ../cli.py cp -i ../6502-retro-sdcard.img -s vgm.com     -d a://vgm.com
 ../cli.py cp -i ../6502-retro-sdcard.img -s conway.com  -d a://conway.com
+../cli.py cp -i ../6502-retro-sdcard.img -s snake.com   -d g://snake.com
 ../cli.py cp -i ../6502-retro-sdcard.img -s ../../../vgm/cancan2.vgm -d e://cancan.vgm
 ../cli.py cp -i ../6502-retro-sdcard.img -s ../../../vgm/frosty2.vgm -d e://frosty.vgm
 ../cli.py cp -i ../6502-retro-sdcard.img -s ../../../vgm/ghost2.vgm -d e://ghost.vgm

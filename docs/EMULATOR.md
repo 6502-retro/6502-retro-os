@@ -18,5 +18,5 @@ This is the image that you pass in as the SDCARD image to the emulator.
 For example:
 
 ```bash
-./6502retro -r <path to rom image> -S 6502-retro-sdcard.img
+./6502retro -r <path to rom image> -S 6502-retro-sdcard.img -T
 ```
