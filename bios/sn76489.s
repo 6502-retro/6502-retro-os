@@ -3,7 +3,8 @@
 
 .include "io.inc"
 .export sn_start, sn_stop, sn_silence, sn_beep, sn_play_note, sn_send
-
+.export sn_irq_handler
+.import _notectr
 FIRST   = %10000000
 SECOND  = %00000000
 CHAN_1  = %00000000
@@ -24,12 +25,6 @@ sn_start:
     ;sta via_ddra
     lda #$ff
     sta via_ddrb
-
-    ; enable T1 Interupts
-    lda #%10100000
-    sta via_ier
-    lda #%00000000
-    sta via_acr
     jsr sn_silence
     rts
 
@@ -92,3 +87,10 @@ sn_wait:
     bne sn_wait
     rts
 
+sn_irq_handler:
+    dec _notectr
+    bne @exit
+    lda #(FIRST|CHAN_1|VOL|15)
+    jsr sn_send
+@exit:
+    rts

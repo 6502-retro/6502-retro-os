@@ -27,26 +27,13 @@ irq_handler:
     phx
     phy
     cld
-@via_irq:
-    lda #$20        ; is interrupt from via Timer 2?
-    bit via_ifr
-    beq @vdp_irq    ; no? then check vdp
-    dec _notectr    ; have we finished with our 12.5ms delays?
-    lda _notectr
-    bne :+          ; no, reset the timer
-    jsr sn_silence  ; turn off audio
-    bra @vdp_irq    ; skip reset
-:   lda #$4e        ; reset timer
-    sta via_t2cl
-    lda #$c3
-    sta via_t2ch
 @vdp_irq:
-    bit vdp_reg
-    bpl @user_irq
     lda vdp_reg
+    bpl @user_irq
     sta _vdp_status
     lda #$80
     sta _vdp_sync
+    jsr sn_irq_handler
 @user_irq:
     jsr user_irq_jumper
 @exit
