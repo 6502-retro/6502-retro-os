@@ -7,9 +7,9 @@ extern uint8_t bios_conin();
 extern uint8_t bios_const();
 extern void __fastcall__ bios_puts(char* s);
 
-extern void led_on();
-extern void led_off();
-extern uint8_t get_button();
+extern void bios_led_on();
+extern void bios_led_off();
+extern uint8_t bios_get_button();
 
 
 #endif

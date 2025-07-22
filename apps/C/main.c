@@ -32,16 +32,16 @@ void main(void) {
            "\r\nPress Q to quit.");
     for (;;)
     {
-        btn = get_button();
+        btn = bios_get_button();
         if (btn == 1 && flag == 0)
         {
-            led_on();
+            bios_led_on();
             flag = 1;
             delay();
         }
         else if (btn == 1 && flag == 1)
         {
-            led_off();
+            bios_led_off();
             flag = 0;
             delay();
         }
