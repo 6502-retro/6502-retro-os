@@ -33,4 +33,4 @@ bios_regy       = bios_regx   + 1
 bios_userirq_vec = $250
 bios_usernmi_vec = $252
 bios_delay_ms    = $254
-
+notectr          = $257

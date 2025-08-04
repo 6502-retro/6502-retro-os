@@ -225,15 +225,15 @@ user_irq_vector:
 user_nmi_vector:
     .lobytes stub_user_nmi_handler
     .hibytes stub_user_nmi_handler
-.assert * = $254, error, "via_irq_handler at 244"
 
     jmp delay_ms    ; 254
+_notectr:   .res 1  ; 257
+.assert * = $258, error, "end of bios jumps should be at $258"
 
 .bss
 bdma:       .word 0
 _vdp_status:.res 1
 _vdp_sync:  .res 1
-_notectr:   .res 1
 
 .segment "SYSTEM"
 .rodata

@@ -28,3 +28,4 @@
 .export _bios_led_on        := bios_led_on
 .export _bios_led_off       := bios_led_off
 .export _bios_get_button    := bios_get_button
+.export _notectr            := notectr
