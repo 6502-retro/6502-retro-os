@@ -7,7 +7,7 @@ LOADTRIM = scripts/loadtrim.py
 TTY_DEVICE = /dev/ttyUSB0
 
 # Assembler flags
-ASFLAGS += -I inc -g --feature labels_without_colons --cpu 65C02 --feature string_escapes
+ASFLAGS += -I inc -g --feature labels_without_colons --cpu W65C02 --feature string_escapes
 
 # Set DEBUG=1 for debugging.
 DEBUG = -D DEBUG=0

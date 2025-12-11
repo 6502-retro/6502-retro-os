@@ -23,9 +23,9 @@ void parse_args(char* cmd) {
 
     while (p2 && argc < 7) {
         argv[argc++] = p2;
-        p2 = strtok('\0', " ");
+        p2 = strtok((char*)'\0', " ");
     }
-    argv[argc] = '\0';
+    *argv[argc] = '\0';
 }
 
 typedef struct {

@@ -1,0 +1,13 @@
+# Clang is no actually used to compile anything in this repo.
+# These settings are for when you are using clang for linting etc.
+
+-I
+include
+-I
+../lib/
+-I
+/home/davelatham/dave/thirdparty/cc65/include
+-nostdlib
+-fno-builtin
+-Wno-pointer-to-int-cast
+-Wno-main-return-type

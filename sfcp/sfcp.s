@@ -383,6 +383,8 @@ era:
     lda #0
     clc
     rts
+exit:
+    stp
 
 free:
     jsr printi
@@ -1068,6 +1070,7 @@ str_help: .byte 10,13
     .byte 10,13,"BANK <#> Enter a rom bank number from 1 to 3"
     .byte 10,13,"DIR [A:] Enter a drive number to list files"
     .byte 10,13,"ERA [A:]FILENAME Delete a file"
+    .byte 10,13,"EXIT Exit emulator (STP CPU)"
     .byte 10,13,"FREE Display memory information"
     .byte 10,13,"REN SRC DST Rename a file from SRC to DST in current drive"
     .byte 10,13,"SAVE FILENAME ## Save ## pages of memory starting at TPA to a file"
@@ -1083,6 +1086,9 @@ commands_tbl:
     .byte "ERA ",$80
     .lobytes era
     .hibytes era
+    .byte "EXIT",$80
+    .lobytes exit
+    .hibytes exit
     .byte "FREE",$80
     .lobytes free
     .hibytes free
