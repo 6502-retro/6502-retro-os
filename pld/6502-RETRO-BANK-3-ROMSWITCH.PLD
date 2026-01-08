@@ -1,6 +1,6 @@
-Name     6502-ROM-BANK-3-more-ram ;
+Name     6502-ROM-BANK-3-rom-switch-more-ram ;
 PartNo   00 ;
-Date     16/09/2024 ;
+Date     21/08/2023 ;
 Revision 01 ;
 Designer Engineer ;
 Company  productiondave ;
@@ -15,6 +15,7 @@ Pin [3..10]  = [A15..A8];
 Pin 11       = ACIAIRQB;
 Pin 13       = VIAIRQB;
 Pin 14       = F18AIRQB;
+Pin 21       = ROMSW;
 
 FIELD Address = [A15..A8];
 
@@ -29,10 +30,10 @@ Pin 23 = IRQB;
 
 /*  Logic */
 
-!ROMEN       = Address:[E000..FFFF];
+!ROMEN       = Address:[E000..FFFF] & ROMSW;
 !HIRAMEN     = Address:[C000..DFFF];
 !IOCS        = Address:[BF00..BFFF];
-!LOWRAMEN    = Address:[0000..BEFF];
+!LOWRAMEN    = Address:[0000..BEFF] # (!ROMSW & Address:[E000..FFFF]);
 
 !MEMWE    	= PHI2 & !RW;
 !MEMOE    	= PHI2 & RW;
