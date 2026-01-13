@@ -3,11 +3,10 @@ TOP=../..
 include $(TOP)/Make.default
 -include $(TOP)/Make.local
 
-INCLUDES = -I $(TOP)/inc
-NONE = ./none.lib
+INCLUDE = -I $(TOP)/inc
 
 # Assembler flags
-ASFLAGS += $(INCLUDES) -g --feature labels_without_colons --cpu 65C02 --feature string_escapes
+ASFLAGS += $(INCLUDE) -g --feature labels_without_colons --cpu 65C02 --feature string_escapes
 
 BUILD = build
 
@@ -54,5 +53,10 @@ clean:
 	$(AS) $(ASFLAGS) -l $(BUILD)/$*.lst $< -o $@
 
 $(BUILD)/sfoslib.lib: $(OBJS)
-	cp $(NONE) $@
+	@if [ ! -f "$(NONELIB)" ]; then \
+		echo "Error: CC65 library $(NONELIB) not found!  Configure path to none.lib in Make.local"; \
+		exit 1; \
+	fi
+	@echo "Found CC65 library: $(NONELIB). Copying..."
+	cp $(NONELIB) $@
 	$(AR) a $@ $(OBJS)
