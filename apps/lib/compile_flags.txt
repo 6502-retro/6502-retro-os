@@ -2,15 +2,11 @@
 # These settings are for when you are using clang for linting etc.
 
 -I
-include
--I
-../lib/
--I
+/home/davelatham/dave/thirdparty/cc65/include
 -D
 __fastcall__=
 -D
 __cdecl__=
-/home/davelatham/dave/thirdparty/cc65/include
 -nostdlib
 -fno-builtin
 -Wno-pointer-to-int-cast
