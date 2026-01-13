@@ -1,41 +1,48 @@
 ; vim: ft=asm_ca65
 IOPAGE          = $BF00  ; Edit this if your IO page is someplace else.
 
-rambankreg      = IOPAGE + $00
-rombankreg      = IOPAGE + $01
+IOBANK          = IOPAGE + $00
+IOACIA          = IOPAGE + $10
+IOVIA           = IOPAGE + $20
+IOVDP           = IOPAGE + $30
 
-acia_data       = IOPAGE + $10
-acia_status     = IOPAGE + $11
-acia_command    = IOPAGE + $12
-acia_control    = IOPAGE + $13
 
-via_portb       = IOPAGE + $20
-via_porta       = IOPAGE + $21
-via_ddrb        = IOPAGE + $22
-via_ddra        = IOPAGE + $23
-via_t1cl        = IOPAGE + $24
-via_t1ch        = IOPAGE + $25
-via_t1ll        = IOPAGE + $26
-via_t1lh        = IOPAGE + $27
-via_t2cl        = IOPAGE + $28
-via_t2ch        = IOPAGE + $29
-via_sr          = IOPAGE + $2A
-via_acr         = IOPAGE + $2B
-via_pcr         = IOPAGE + $2C
-via_ifr         = IOPAGE + $2D
-via_ier         = IOPAGE + $2E
+rambankreg      = IOBANK + $0
+rombankreg      = IOBANK + $1
 
-vdp_ram         = IOPAGE + $30
-vdp_reg         = IOPAGE + $31
+acia_data       = IOACIA + $0
+acia_status     = IOACIA + $1
+acia_command    = IOACIA + $2
+acia_control    = IOACIA + $3
 
-SD_SCK          = %00000001
-SD_CS           = %00000010
-SN_WE           = %00000100
-SN_READY        = %00001000
-ROMSW           = %01000000
-SD_MOSI         = %10000000
-LED_ON          = %00010000 ; ORA
-LED_OFF         = %11101111 ; AND
-BUTTON          = %00100000 ; MASK
-ROM_SWITCH_ON   = %01000000 ; ORA
-ROM_SWITCH_OFF  = %10111111 ; AND
+via_portb       = IOVIA + $0
+via_porta       = IOVIA + $1
+via_ddrb        = IOVIA + $2
+via_ddra        = IOVIA + $3
+via_t1cl        = IOVIA + $4
+via_t1ch        = IOVIA + $5
+via_t1ll        = IOVIA + $6
+via_t1lh        = IOVIA + $7
+via_t2cl        = IOVIA + $8
+via_t2ch        = IOVIA + $9
+via_sr          = IOVIA + $A
+via_acr         = IOVIA + $B
+via_pcr         = IOVIA + $C
+via_ifr         = IOVIA + $D
+via_ier         = IOVIA + $E
+
+vdp_ram         = IOVDP + $0
+vdp_reg         = IOVDP + $1
+
+SD_SCK          = 1 << 0  ;%00000001
+SD_CS           = 1 << 1  ;%00000010
+SN_WE           = 1 << 2  ;%00000100
+SN_READY        = 1 << 3  ;%00001000
+ROMSW           = 1 << 6  ;%01000000
+SD_MOSI         = 1 << 7  ;%10000000
+
+LED_ON          = 1 << 4  ; %00010000 ; ORA
+LED_OFF         = !LED_ON ; %11101111 ; AND
+BUTTON          = 1 << 5  ; %00100000 ; MASK
+ROM_SWITCH_ON   = ROMSW   ; %01000000 ; ORA
+ROM_SWITCH_OFF  = !ROMSW  ; %10111111 ; AND
