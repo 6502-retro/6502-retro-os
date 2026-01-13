@@ -21,40 +21,53 @@
 #
 #****************************************************************************
 
-TOP=.
-
-include Make.default
--include Make.local
-
-.PHONY: all clean os applications
-
-all:: os applications
-
-os:
-	$(MAKE) -f Makefile.os
-
-applications:
-	$(MAKE) -C apps/lib
-	$(MAKE) -C apps
-
-clean:: clean-os clean-apps clean-sdcard
-
-clean-os:
-	$(MAKE) -f Makefile.os clean
-
-clean-apps:
-	$(MAKE) -C apps clean
-
-clean-sdcard:
-	rm -fv $(TOP)/py_sfs_v2/6502-retro-sdcard.img
+SUBDIRS =   \
+	C         \
+	asm       \
+	bankmon   \
+	bytetst   \
+	cat       \
+	cls       \
+	conway    \
+	copy      \
+	dump      \
+	ehbasic   \
+	format    \
+	hello     \
+	irq       \
+	mon       \
+	msbasic   \
+	sfmvi     \
+	shadowrom \
+	statc     \
+	submit    \
+	uart      \
+	vgm       \
+	xm
 
 
-BUILD=build
-burn: sdcard
-	sudo dd if=$(BUILD)/rom.raw seek=1 bs=512 count=16 of=$(SDDEVICE)
+CLEAN_DIRS=$(SUBDIRS:%=clean-%)
+ALL_DIRS=$(SUBDIRS:%=all-%)
 
-sdcard: os applications
-	cd $(TOP)/py_sfs_v2 && ./make_sdcard.sh && cd $(TOP)
+.PHONY: all clean world $(CLEAN_DIRS) $(ALL_DIRS)
 
-world: clean all
+TOP=..
+include $(TOP)/Make.default
+-include $(TOP)/Make.local
+
+all:: $(ALL_DIRS)
+
+lib:
+	$(MAKE) -C lib
+
+$(ALL_DIRS):
+	$(MAKE) -C $(@:all-%=%) all
+
+$(CLEAN_DIRS):
+	$(MAKE) -C $(@:clean-%=%) clean
+
+clean:: $(CLEAN_DIRS)
+
+world:: clean all
+
 
