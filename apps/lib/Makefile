@@ -9,7 +9,7 @@ NONE = ./none.lib
 # Assembler flags
 ASFLAGS += $(INCLUDES) -g --feature labels_without_colons --cpu 65C02 --feature string_escapes
 
-BUILD_DIR = build
+BUILD = build
 
 SOURCES =                  \
 	  sfos_wrappers.s        \
@@ -41,16 +41,18 @@ SOURCES =                  \
 
 OBJS = $(SOURCES:.s=.o)
 
-all: $(BUILD_DIR)/sfoslib.lib
+all: build $(BUILD)/sfoslib.lib
+
+build:
+	@mkdir -p $(BUILD)
 
 clean:
-	rm -fr $(BUILD_DIR)/*
+	rm -fr $(BUILD)/*
 	find . -name "*.o" -exec rm -fv {} \;
 
 %.o: %.s
-	@mkdir -p $$(dirname $@)
-	$(AS) $(ASFLAGS) -l $(BUILD_DIR)/$*.lst $< -o $@
+	$(AS) $(ASFLAGS) -l $(BUILD)/$*.lst $< -o $@
 
-$(BUILD_DIR)/sfoslib.lib: $(OBJS)
+$(BUILD)/sfoslib.lib: $(OBJS)
 	cp $(NONE) $@
 	$(AR) a $@ $(OBJS)
