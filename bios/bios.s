@@ -10,10 +10,6 @@
 .export error_code, rega, regx, regy
 .export user_nmi_vector, user_irq_vector
 
-.if DEBUG=1
-.export bios_printlba
-.endif
-
 .zeropage
 
 ptr1:       .word 0
