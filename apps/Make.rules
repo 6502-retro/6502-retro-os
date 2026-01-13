@@ -35,6 +35,7 @@ all: $(BUILD_DIR)/$(APPNAME).com
 
 clean:
 	rm -fr $(BUILD_DIR)
+	find . -name "*.o" -exec rm -fv {} \;
 
 $(BUILD_DIR)/$(APPNAME).raw: $(SOURCES) $(C_SOURCES)
 	@mkdir -p $$(dirname $@)

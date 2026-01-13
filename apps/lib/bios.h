@@ -14,4 +14,8 @@ extern uint8_t bios_get_button();
 
 extern void setbank(uint8_t b);
 
+#define VDP_RAM 0xbf30
+#define VDP_REG 0xbf31
+
+
 #endif

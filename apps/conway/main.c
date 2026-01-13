@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include "sfos.h"
+#include "bios.h"
 #include "vdp.h"
 
 #define VDP_COLOR_TABLE        0x2000

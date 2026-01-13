@@ -1,6 +1,3 @@
-#define VDP_RAM 0xbf30
-#define VDP_REG 0xbf31
-
 extern void vdp_init();
 extern void vdp_init_g2();
 extern void __fastcall__ vdp_set_write_address(unsigned int addr);

@@ -61,12 +61,14 @@ lib:
 	$(MAKE) -C lib
 
 $(ALL_DIRS):
+	$(MAKE) -C lib
 	$(MAKE) -C $(@:all-%=%) all
 
 $(CLEAN_DIRS):
 	$(MAKE) -C $(@:clean-%=%) clean
 
 clean:: $(CLEAN_DIRS)
+	$(MAKE) -C lib clean
 
 world:: clean all
 

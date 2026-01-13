@@ -14,6 +14,7 @@
 ;extern unsigned char vdp_con_mode;
 ;extern unsigned char vdp_con_width;
 
+.include "io.inc"
 .autoimport
 
 ; C Level exports
@@ -32,8 +33,8 @@
 .export vdp_write_to_screen_xy
 .export vdp_read_from_screen_xy
 
-VDP_RAM         = $BF30
-VDP_REG         = $BF31
+VDP_RAM         = vdp_ram
+VDP_REG         = vdp_reg
 
 VDP_SPRITE_PATTERN_TABLE    = 0
 VDP_PATTERN_TABLE           = $800
