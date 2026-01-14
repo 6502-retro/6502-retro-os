@@ -2,14 +2,17 @@
 .include "fcb.inc"
 .include "io.inc"
 
+.globalzp ptr1
+
 .zeropage
-vgmptr: .byte 0
-vgmptrh: .byte 0
+vgmptr:   .byte 0
+vgmptrh:  .byte 0
 vgmwaitl: .byte 0
 vgmwaith: .byte 0
 
-rambank: .byte 0
-page:   .byte 0
+rambank:  .byte 0
+page:     .byte 0
+record:   .byte 0
 
 .code
 
@@ -192,8 +195,28 @@ vgm_load:
     ldx #>FCB2
     jsr d_open
 
+    lda #<FCB2
+    sta ptr1+0
+    lda #>FCB2
+    sta ptr1+1
+    ldy #sfcb::SC
+    lda (ptr1),y
+    inc
+    sta record
+    jsr bios_prbyte
+    lda #<str_newline
+    ldx #>str_newline
+    jsr c_printstr
+
 
 @loop:
+    lda #'R'
+    jsr c_write
+
+    dec record
+    lda record
+    beq :++
+
     inc page
     inc page
 
@@ -216,7 +239,7 @@ vgm_load:
     jsr d_readseqblock
 
     bcc @loop
-
+:
     lda #<str_loaded
     ldx #>str_loaded
     jsr c_printstr
