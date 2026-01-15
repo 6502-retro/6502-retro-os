@@ -2,7 +2,7 @@
 .include "fcb.inc"
 .include "io.inc"
 
-.globalzp ptr1
+.globalzp ptr1, tmp1
 
 .zeropage
 vgmptr:            .byte 0
@@ -54,6 +54,14 @@ print_ptr1_hex:
     bpl :-
     rts
 
+print_tag_name:
+    lda (vgmptr)
+    tay
+    lda gd3_tag_ptrs,y ; 2
+    iny
+    ldx gd3_tag_ptrs,y
+    jmp c_printstr
+
 vgm_display_tags:
 
     ; set up ptr1 to point to GD3 offset in header
@@ -90,9 +98,7 @@ vgm_display_tags:
     jsr print_32bit
 
     ; bigint now contains the offset into the whole file where the GD3 data
-    ; starts Find which bank thats in. shift bigint right by 13 bits. BUT I
-    ; never have to worry about the most significant byte because largest file
-    ; we can load is 128kb (0x2_00_00)
+    ; starts Find which bank thats in. shift bigint right by 13 bits.
 
     lda bigint+1
     and #$1F
@@ -149,6 +155,18 @@ vgm_display_tags:
     ; 0x00,0x01,0x00,0x00  - Version number
     ; 32-bit length of gd3 data in bytes
     ;   ascii + 0x00, ascii + 0x00, ..., 0x00 + 0x00 (null terminator)
+    ;
+    ;   "Track name (in English characters)\0"
+    ;   "Track name (in original (non-English) game language characters)\0"
+    ;   "Game name (in English characters)\0"
+    ;   "Game name (in original (non-English) game characters)\0"
+    ;   "System name (in English characters)\0"
+    ;   "System name (in original (non-English) game characters)\0"
+    ;   "Name of Original Track Author (in English characters)\0"
+    ;   "Name of Original Track Author (in original (non-English) game characters)\0"
+    ;   "Date of game's release written in the form yyyy/mm/dd, or just yyyy/mm or yyyy if month and day is not known\0"
+    ;   "Name of person who converted it to a VGM file.\0"
+    ;   "Notes\0"
 
     ; skip Gd3 header and the version number (ptr1 + 8)
     clc
@@ -175,39 +193,18 @@ vgm_display_tags:
     adc #0
     sta ptr1+1
 
+
     ; to be fair, I think the gd3 data probably is never going to be more than
     ; 65535 chars long. 16 bits aught to be enough.
+    ; I used the zp vgmptr as a pointer to the status table.
+    lda #<gd3_tag_state
+    sta vgmptr+0
+    lda #>gd3_tag_state
+    sta vgmptr+1
+
+    jsr print_tag_name
+
 @tagloop:
-    ; TODO: Skip non english sections of GD3 data.
-    lda (ptr1)
-    bne :+
-
-    lda #<str_newline
-    ldx #>str_newline
-    jsr c_printstr
-    bra :++ ; don't write the 00
-:
-    jsr c_write ; emit the characater
-:
-    ; add 2 to ptr1 (skip 0 that follows every ascii)
-    clc
-    lda ptr1+0
-    adc #2
-    sta ptr1+0
-    lda ptr1+1
-    adc #0
-    sta ptr1+1
-    cmp #$E0
-    bne :+
-
-    inc rambank
-    lda rambank
-    sta rambankreg
-    nop
-    nop
-    lda #$C0
-    sta ptr1+1
-:
     ; now decrement size of data by 2
     sec
     lda bigint+0
@@ -220,12 +217,56 @@ vgm_display_tags:
     ; have we reached zero?
     lda bigint+0
     ora bigint+1
-    bne @tagloop  ; no ? loop
+    bne :+
+    jmp @exit
+:
 
+    lda (ptr1)
+    sta tmp1
+    bne @emittagchar
+    ; end of tag encoutnered, increase vgmptr to get to next tag state
+    inc vgmptr+0
+    bne :+
+    inc vgmptr+1
+:
+    ; and emit newline
+    lda (vgmptr)
+    beq @nexttagchar ; don't print a new line if the tag wasn't being printed.
     lda #<str_newline
     ldx #>str_newline
-    jsr c_write
+    jsr c_printstr
+    jsr print_tag_name
+    bra @nexttagchar ; don't write the 00
+@emittagchar:
+    lda (vgmptr)      ; if the current tag state is 0, don't print anything.
+    beq @nexttagchar
+    lda tmp1
+    jsr c_write ; emit the characater
+@nexttagchar:
+    ; add 2 to ptr1 (skip 0 that follows every ascii)
+    clc
+    lda ptr1+0
+    adc #2
+    sta ptr1+0
+    lda ptr1+1
+    adc #0
+    sta ptr1+1
+    cmp #$E0
+    bne @tagloop
+    ; we have crossed the bank boundary, load the next bank.
+    inc rambank
+    lda rambank
+    sta rambankreg
+    nop
+    nop
+    lda #$C0
+    sta ptr1+1
 
+    jmp @tagloop
+@exit:
+    lda #<str_newline
+    ldx #>str_newline
+    jsr c_printstr
     rts
 
 vgm_setup:
@@ -487,3 +528,28 @@ str_sectors: .byte " sectors",10,13,10,13,0
 str_offset:  .byte 10,13,"GD3 offset: 0x",0
 str_banknum: .byte 10,13,"GD3 bank number: 0x",0
 str_offset_in_bank: .byte 10,13,"GD3 offset in bank: 0x",0
+; The gd3 tags contain non english content sometimes.  As the tag data is
+; parsed, check this table and if it's a 1, print it, else skip it.
+; The values here are offsets into the gd3_tag_ptrs table.  If 0 then skip.
+; use the tag pointers to find the string of the tag name to print.
+gd3_tag_state: .byte 2,0,6,0,10,0,14,0,18,20,0
+gd3_tag_ptrs:
+    .word 0                         ; 0
+    .addr gd3_tag_spec_track_name   ; 2
+    .word 0                         ; 4
+    .addr gd3_tag_spec_game_name    ; 6
+    .word 0                         ; 8
+    .addr gd3_tag_spec_sys_name     ; 10
+    .word 0                         ; 12
+    .addr gd3_tag_spec_author_name  ; 14
+    .word 0                         ; 16
+    .addr gd3_tag_spec_date         ; 18
+    .addr gd3_tag_spec_conv         ; 20
+    .word 0                         ; 22
+
+gd3_tag_spec_track_name:  .byte "Track:        ",0
+gd3_tag_spec_game_name:   .byte "Game:         ",0
+gd3_tag_spec_sys_name:    .byte "System:       ",0
+gd3_tag_spec_author_name: .byte "Author:       ",0
+gd3_tag_spec_date:        .byte "Date:         ",0
+gd3_tag_spec_conv:        .byte "Converted By: ",0
