@@ -88,7 +88,6 @@ vgm_display_tags:
     ldx #>str_offset
     jsr c_printstr
     jsr print_32bit
-    jsr c_printstr
 
     ; bigint now contains the offset into the whole file where the GD3 data
     ; starts Find which bank thats in. shift bigint right by 13 bits. BUT I
@@ -119,7 +118,6 @@ vgm_display_tags:
     pla
     pha
     jsr bios_prbyte
-    jsr c_printstr
     pla
 
     sta rambankreg
@@ -168,9 +166,19 @@ vgm_display_tags:
     dey
     bpl :-
 
+    ; move ptr to after the size.
+    clc
+    lda ptr1+0
+    adc #4
+    sta ptr1+0
+    lda ptr1+1
+    adc #0
+    sta ptr1+1
+
     ; to be fair, I think the gd3 data probably is never going to be more than
     ; 65535 chars long. 16 bits aught to be enough.
 @tagloop:
+    ; TODO: Skip non english sections of GD3 data.
     lda (ptr1)
     bne :+
 
@@ -471,11 +479,11 @@ exit:
 .bss
 
 .rodata
+str_newline: .byte 10,13,0
 str_message: .byte 10,13,"6502-Retro! VGM Player",0
 str_loading: .byte 10,13,"Loading file...",0
 str_loaded:  .byte 10,13,"Loaded 0x",0
 str_sectors: .byte " sectors",10,13,10,13,0
-str_newline: .byte 10,13,0
 str_offset:  .byte 10,13,"GD3 offset: 0x",0
 str_banknum: .byte 10,13,"GD3 bank number: 0x",0
 str_offset_in_bank: .byte 10,13,"GD3 offset in bank: 0x",0
