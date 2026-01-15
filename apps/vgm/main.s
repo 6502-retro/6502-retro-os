@@ -5,14 +5,18 @@
 .globalzp ptr1
 
 .zeropage
-vgmptr:   .byte 0
-vgmptrh:  .byte 0
-vgmwaitl: .byte 0
-vgmwaith: .byte 0
+vgmptr:            .byte 0
+vgmptrh:           .byte 0
+vgmwaitl:          .byte 0
+vgmwaith:          .byte 0
 
-rambank:  .byte 0
-page:     .byte 0
-record:   .byte 0
+rambank:           .byte 0
+gd3bank:           .byte 0
+gd3offset_in_bank: .word 0
+
+page:              .byte 0
+record:            .byte 0
+bigint:            .dword 0   ; variable to hold 32 bit integers.
 
 .code
 
@@ -29,11 +33,207 @@ main:
     jsr c_printstr
 
     jsr vgm_load
+    jsr vgm_display_tags
     jsr vgm_setup
     jsr vgm_play
     jmp exit
 
+print_32bit:
+    ldy #3
+:   lda bigint,y
+    jsr bios_prbyte
+    dey
+    bpl :-
+    rts
+
+print_ptr1_hex:
+    ldy #1
+:   lda ptr1,y
+    jsr bios_prbyte
+    dey
+    bpl :-
+    rts
+
+vgm_display_tags:
+
+    ; set up ptr1 to point to GD3 offset in header
+    lda #$14
+    sta ptr1+0
+    lda #$c0
+    sta ptr1+1
+
+    ; collect 32 bit bigint
+    ldy #3
+    clc
+:   lda (ptr1),y
+    sta bigint,y
+    dey
+    bpl :-
+
+    clc
+    lda #$14
+    adc bigint+0
+    sta bigint+0
+    lda bigint+1
+    adc #0
+    sta bigint+1
+    lda bigint+2
+    adc #0
+    sta bigint+2
+    lda bigint+3
+    adc #0
+    sta bigint+3
+
+    lda #<str_offset
+    ldx #>str_offset
+    jsr c_printstr
+    jsr print_32bit
+    jsr c_printstr
+
+    ; bigint now contains the offset into the whole file where the GD3 data
+    ; starts Find which bank thats in. shift bigint right by 13 bits. BUT I
+    ; never have to worry about the most significant byte because largest file
+    ; we can load is 128kb (0x2_00_00)
+
+    lda bigint+1
+    and #$1F
+    sta gd3offset_in_bank+1
+    lda bigint+0
+    sta gd3offset_in_bank+0
+
+    ldx #13
+:   lsr bigint+3
+    ror bigint+2
+    ror bigint+1
+    ror bigint+0
+    dex
+    bne :-
+
+    lda bigint+0
+    inc
+
+    pha
+    lda #<str_banknum
+    ldx #>str_banknum
+    jsr c_printstr
+    pla
+    pha
+    jsr bios_prbyte
+    jsr c_printstr
+    pla
+
+    sta rambankreg
+    sta rambank
+    nop
+    nop
+
+    lda gd3offset_in_bank + 0
+    sta ptr1+0
+    clc
+    lda gd3offset_in_bank + 1
+    adc #$C0
+    sta ptr1+1
+
+    lda #<str_offset_in_bank
+    ldx #>str_offset_in_bank
+    jsr c_printstr
+    jsr print_ptr1_hex
+    lda #<str_newline
+    ldx #>str_newline
+    jsr c_printstr
+    lda #<str_newline
+    ldx #>str_newline
+    jsr c_printstr
+
+
+    ; ptr1 is now pointing at the GD3 data.
+    ; "Gd3 "
+    ; 0x00,0x01,0x00,0x00  - Version number
+    ; 32-bit length of gd3 data in bytes
+    ;   ascii + 0x00, ascii + 0x00, ..., 0x00 + 0x00 (null terminator)
+
+    ; skip Gd3 header and the version number (ptr1 + 8)
+    clc
+    lda ptr1+0
+    adc #8
+    sta ptr1+0
+    lda ptr1+1
+    adc #0
+    sta ptr1+1
+
+    ; read in size of header data.  Re-use bigint.
+    ldy #3
+:   lda (ptr1),y
+    sta bigint,y
+    dey
+    bpl :-
+
+    ; to be fair, I think the gd3 data probably is never going to be more than
+    ; 65535 chars long. 16 bits aught to be enough.
+@tagloop:
+    lda (ptr1)
+    bne :+
+
+    lda #<str_newline
+    ldx #>str_newline
+    jsr c_printstr
+    bra :++ ; don't write the 00
+:
+    jsr c_write ; emit the characater
+:
+    ; add 2 to ptr1 (skip 0 that follows every ascii)
+    clc
+    lda ptr1+0
+    adc #2
+    sta ptr1+0
+    lda ptr1+1
+    adc #0
+    sta ptr1+1
+    cmp #$E0
+    bne :+
+
+    inc rambank
+    lda rambank
+    sta rambankreg
+    nop
+    nop
+    lda #$C0
+    sta ptr1+1
+:
+    ; now decrement size of data by 2
+    sec
+    lda bigint+0
+    sbc #2
+    sta bigint+0
+    lda bigint+1
+    sbc #0
+    sta bigint+1
+
+    ; have we reached zero?
+    lda bigint+0
+    ora bigint+1
+    bne @tagloop  ; no ? loop
+
+    lda #<str_newline
+    ldx #>str_newline
+    jsr c_write
+
+    rts
+
 vgm_setup:
+    lda #<str_newline
+    ldx #>str_newline
+    jsr c_printstr
+    lda #<str_newline
+    ldx #>str_newline
+    jsr c_printstr
+
+    lda #1
+    sta rambank
+    sta rambankreg
+    nop
+    nop
+
     stz vgmptr+0
     lda #$C0
     sta vgmptr+1
@@ -203,7 +403,6 @@ vgm_load:
     lda (ptr1),y
     inc
     sta record
-    jsr bios_prbyte
     lda #<str_newline
     ldx #>str_newline
     jsr c_printstr
@@ -266,6 +465,7 @@ exit:
     cli
     jmp bios_wboot
 
+
 .include "../app.inc"
 
 .bss
@@ -274,5 +474,8 @@ exit:
 str_message: .byte 10,13,"6502-Retro! VGM Player",0
 str_loading: .byte 10,13,"Loading file...",0
 str_loaded:  .byte 10,13,"Loaded 0x",0
-str_sectors: .byte " sectors",10,13,0
+str_sectors: .byte " sectors",10,13,10,13,0
 str_newline: .byte 10,13,0
+str_offset:  .byte 10,13,"GD3 offset: 0x",0
+str_banknum: .byte 10,13,"GD3 bank number: 0x",0
+str_offset_in_bank: .byte 10,13,"GD3 offset in bank: 0x",0
