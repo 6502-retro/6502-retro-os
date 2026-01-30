@@ -4,6 +4,7 @@
 ;
 
 .include "io.inc"
+.include "bios.inc"
 .export         _setbank
 .export         _bank = $C000
 
@@ -11,6 +12,7 @@
 
     and $3F       ; 6502-retro! supports only 64 banks.
     sta rambankreg
+    sta bios_ramlatch
     nop
     nop
 

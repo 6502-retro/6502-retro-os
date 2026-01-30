@@ -196,24 +196,26 @@ jmptable:
     jmp sn_send     ; 230
     jmp led_on      ; 233
     jmp led_off     ; 236
-    jmp get_button  ; 239
-error_code: .byte 0 ; 23c
+ramlatch:   .byte 0 ; 239
+error_code: .byte 0 ; 23a
 
-.assert * = $23d, error, "rstfar should be at $23d"
+.assert * = $23b, error, "rstfar should be at $23b"
 rstfar:
-    pha
-    lda via_ddra
-    and #%10111111
-    sta via_ddra
-    pla
-    sta rombankreg
+    ; A is either 0 or 1 for which rom bank to select.
+    beq @rombank0
+    lda #%01000000 ; disable rom switch, select rom bank 1
+    bra @jump
+@rombank0:
+    lda #$0
+@jump:
+    sta rambankreg
     jmp ($FFFC)
 
-.assert * = $24d, error, "REG A should be at $24d"
+.assert * = $249, error, "REG A should be at $249"
 rega:       .res 1
 regx:       .res 1
 regy:       .res 1
-.assert * = $250, error, "end of system should be at $250"
+.assert * = $24c, error, "end of system should be at $24c"
 
 user_irq_vector:
     .lobytes stub_user_irq_handler
@@ -222,9 +224,9 @@ user_nmi_vector:
     .lobytes stub_user_nmi_handler
     .hibytes stub_user_nmi_handler
 
-    jmp delay_ms    ; 254
-_notectr:   .res 1  ; 257
-.assert * = $258, error, "end of bios jumps should be at $258"
+    jmp delay_ms    ; 250
+_notectr:   .res 1  ; 253
+.assert * = $254, error, "end of bios jumps should be at $254"
 
 .bss
 bdma:       .word 0

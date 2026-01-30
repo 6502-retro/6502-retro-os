@@ -3,7 +3,7 @@
 
 .autoimport
 
-.export via_init, led_on, led_off, get_button
+.export via_init, led_on, led_off
 .code
 
 via_init:
@@ -23,15 +23,5 @@ led_off:
     lda via_porta
     and #LED_OFF
     sta via_porta
-    rts
-
-; returns 1 when pressed.
-get_button:
-    lda via_porta
-    and #BUTTON
-    beq :+
-    lda #0
-    rts
-:   lda #1
     rts
 

@@ -80,6 +80,6 @@ SN_STOP                 = SN_SILENCE + 3
 SN_SEND                 = SN_STOP + 3
 LED_ON                  = SN_SEND + 3
 LED_OFF                 = LED_ON + 3
-GET_BUTTON              = LED_OFF + 3
+RAMLATCH                = LED_ON + 3
 
 
