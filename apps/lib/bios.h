@@ -10,7 +10,6 @@ extern void __fastcall__ bios_puts(char* s);
 
 extern void bios_led_on();
 extern void bios_led_off();
-extern uint8_t bios_get_button();
 
 extern void setbank(uint8_t b);
 

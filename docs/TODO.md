@@ -11,6 +11,6 @@
 + [x] Push to github
 + [x] BIOS routines for LED and button management.
 + [x] Setup NMI routine.  Uses user nmi (and IRQ) vectors. Default NMI is warmboot.
-+ [ ] Get flow control working on serial adapter - only rearly and issue
++ [ ] Get flow control working on serial adapter - only rearly an issue
       and complicates the design quite significantly. May not do in the end.
       Hardware supports it, and there are jumpers to ignore it.

@@ -1,0 +1,42 @@
+Name     6502-ROM-BANK-3-rom-switch-more-ram ;
+PartNo   00 ;
+Date     21/08/2023 ;
+Revision 01 ;
+Designer Engineer ;
+Company  productiondave ;
+Assembly None ;
+Location  ;
+Device   g22v10 ;
+
+/* Input */
+Pin 1        = PHI2;
+Pin 2        = RW;
+Pin [3..10]  = [A15..A8];
+Pin 11       = ACIAIRQB;
+Pin 13       = VIA1IRQB;
+Pin 14       = VIA2IRQB;
+Pin 15       = F18AIRQB;
+Pin 22       = ROMSW;
+
+FIELD Address = [A15..A8];
+
+/* Output */
+Pin 16 = MEMWE;
+Pin 17 = MEMOE;
+Pin 18 = IOCS;
+Pin 19 = LOWRAMEN;
+Pin 20 = HIRAMEN;
+Pin 21 = ROMEN;
+Pin 23 = IRQB;
+
+/*  Logic */
+
+!ROMEN       = Address:[E000..FFFF] & ROMSW;
+!HIRAMEN     = Address:[C000..DFFF];
+!IOCS        = Address:[BF00..BFFF];
+!LOWRAMEN    = Address:[0000..BEFF] # (!ROMSW & Address:[E000..FFFF]);
+
+!MEMWE    	= PHI2 & !RW;
+!MEMOE    	= PHI2 & RW;
+
+IRQB          = ACIAIRQB & VIA1IRQB & & VIA2IRQB & F18AIRQB;
