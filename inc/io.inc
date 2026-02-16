@@ -59,9 +59,18 @@ ROMSW           = 1 << 7
 ROM_SWITCH_ON   = ROMSW   ; ORA
 ROM_SWITCH_OFF  = !ROMSW  ; AND
 
-JOY_UP          = $7F
+JOY_UP          = $7F     ; RAW IO VALUES FROM THE HARDWARE
 JOY_DOWN        = $BF
 JOY_LEFT        = $FB
 JOY_RIGHT       = $DF
 JOY_FIRE        = $FE
+JOY_RELEASED    = $FF
+;
+; JOYSTICK VALUE XOR 0xFF THEN AND WITH THESE
+;
+JOY_MAP_LEFT    = 1 << 2 ; %00000100 
+JOY_MAP_DOWN    = 1 << 6 ; %01000000
+JOY_MAP_RIGHT   = 1 << 5 ; %00100000
+JOY_MAP_UP      = 1 << 7 ; %10000000
+JOY_MAP_FIRE    = 1 << 0 ; %00000001
 

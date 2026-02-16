@@ -1,9 +1,6 @@
 ; vim: ft=asm_ca65 sw=4 ts=4 et
 .include "io.inc"
 
-.zeropage
-state: .byte 0
-
 .code
 
 main:
@@ -17,45 +14,51 @@ loop:
     bne exit
 
     lda IOJOY
-    cmp state
+    eor #$FF
+    cmp joystate
     beq loop
-    sta state
+
+    sta joystate
+
     jsr bios_prbyte
     lda #'-'
     jsr c_write
-    lda state
 
-    cmp #JOY_FIRE
-    bne :+
+    lda joystate
+    and #JOY_MAP_FIRE
+    beq :+
     lda #<str_fire
     ldx #>str_fire
     jsr c_printstr
     bra pressed
-:   cmp #JOY_UP
-    bne :+
+:   lda joystate
+    and #JOY_MAP_UP
+    beq :+
     lda #<str_up
     ldx #>str_up
     jsr c_printstr
     bra pressed
-:   cmp #JOY_DOWN
-    bne :+
+:   lda joystate
+    and #JOY_MAP_DOWN
+    beq :+
     lda #<str_down
     ldx #>str_down
     jsr c_printstr
     bra pressed
-:   cmp #JOY_LEFT
-    bne :+
+:   lda joystate
+    and #JOY_MAP_LEFT
+    beq :+
     lda #<str_left
     ldx #>str_left
     jsr c_printstr
     bra pressed
-:   cmp #JOY_RIGHT
-    bne released
+:   lda joystate
+    and #JOY_MAP_RIGHT
+    beq released
     lda #<str_right
     ldx #>str_right
     jsr c_printstr
     bra pressed
-
 
 released:
     lda #<str_released
@@ -80,6 +83,7 @@ crlf:
 
 .include "../app.inc"
 
+joystate: .byte 0
 
 .rodata
 str_message: .byte 10,13,"Joystick Tester (v0.1)",10,13,0
