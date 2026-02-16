@@ -19,7 +19,7 @@ layout.
 - F18A or Pico9918 (tms9918a emulator)
 - TMS76489 Sound Generator
 
-Schematic is available [here.](./docs/6502-retro-v4.1.pdf)
+Schematic is available [here.](./docs/6502-retro-v4.3.pdf)
 
 ## Boot Loader
 
