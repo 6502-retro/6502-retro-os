@@ -18,6 +18,7 @@ for file in *.bas; do ../cli.py cp -i ../6502-retro-sdcard.img -s $file -d d://$
 ../cli.py cp -i ../6502-retro-sdcard.img -s bankmon.com -d a://bmon.com
 ../cli.py cp -i ../6502-retro-sdcard.img -s basic.com   -d a://basic.com
 ../cli.py cp -i ../6502-retro-sdcard.img -s cat.com     -d a://cat.com
+../cli.py cp -i ../6502-retro-sdcard.img -s joytest.com -d a://joytest.com
 ../cli.py cp -i ../6502-retro-sdcard.img -s cls.com     -d a://cls.com
 ../cli.py cp -i ../6502-retro-sdcard.img -s copy.com    -d a://copy.com
 ../cli.py cp -i ../6502-retro-sdcard.img -s dump.com    -d a://dump.com

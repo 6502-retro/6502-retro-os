@@ -421,7 +421,7 @@ vgmwait:                    ; (6) Cycles to prep and execute the jsr
 @wait_samples_1:
     dec vgmwaitl            ; (5) zeropage decrement
     ; kill some cycles between loops.  Adjust as required.
-    .repeat 30
+    .repeat 40
         nop                 ; (2 * 30 = 60)
     .endrepeat
     jmp vgmwait             ; (3)   loop = 29 cycles

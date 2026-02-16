@@ -6,6 +6,10 @@ IOACIA          = IOPAGE + $10
 IOVIA1          = IOPAGE + $20
 IOVIA2          = IOPAGE + $30
 IOVDP           = IOPAGE + $40
+IOJOY           = IOPAGE + $50
+IOEXP1          = IOPAGE + $60
+IOEXP2          = IOPAGE + $70
+IOCSH           = IOPAGE + $80 ; $80 - $FF
 
 
 rambankreg      = IOBANK + $0
@@ -54,3 +58,10 @@ ROMSW           = 1 << 7
 
 ROM_SWITCH_ON   = ROMSW   ; ORA
 ROM_SWITCH_OFF  = !ROMSW  ; AND
+
+JOY_UP          = $7F
+JOY_DOWN        = $BF
+JOY_LEFT        = $FB
+JOY_RIGHT       = $DF
+JOY_FIRE        = $FE
+

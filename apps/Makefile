@@ -34,6 +34,7 @@ SUBDIRS =   \
 	ehbasic   \
 	format    \
 	hello     \
+	joytest   \
 	irq       \
 	mon       \
 	msbasic   \
