@@ -1,0 +1,63 @@
+Name     6502-RETRO-MEM;
+PartNo   00 ;
+Date     21/08/2023 ;
+Revision 01 ;
+Designer Engineer ;
+Company  productiondave ;
+Assembly None ;
+Location  ;
+Device   P22V10;
+
+
+/* Input */
+Pin 1        = PHI2;
+Pin 2        = RW;
+Pin [3..11]  = [A15..A7];
+Pin 22       = ROMSW;
+
+
+FIELD Address = [A15..A7];
+
+/* Output */
+Pin 15 = MEMWE;
+Pin 16 = MEMOE;
+Pin 17 = IOCSL;
+Pin 18 = LOWRAMEN;
+Pin 19 = HIRAMEN;
+Pin 20 = ROMEN;
+
+
+/*  Logic */
+!MEMWE    = PHI2 & !RW;
+!MEMOE    = PHI2 & RW;
+
+
+/* COMMENT / UNCOMMENT THE ROM BANK SCHEME YOU WANT */
+
+/* DEFAULT ROM = 8K MAP */
+!ROMEN       = Address:[E000..FFFF] & ROMSW;
+!HIRAMEN     = Address:[C000..DFFF];
+!IOCSL       = Address:[BF00..BF7F];
+!IOCSH       = Address:[BF80..BFFF];
+!LOWRAMEN    = Address:[0000..BEFF] # (!ROMSW & Address: [E000..FFFF]);
+
+
+/* OPTIONAL ROM = 16K MAP */
+
+/*
+!ROMEN       = Address:[C000..FFFF] & ROMSW;
+!HIRAMEN     = Address:[A000..BFFF];
+!IOCSL       = Address:[9F00..9F7F];
+!IOCSH       = Address:[9F80..9FFF];
+!LOWRAMEN    = Address:[0000..9EFF] # (!ROMSW & Address: [C000..FFFF]);
+*/
+
+
+/* OPTIONAL ROM = 32K MAP */
+/*
+!ROMEN       = Address:[8000..FFFF] & ROMSW;
+!HIRAMEN     = Address:[6000..7FFF];
+!IOCSL       = Address:[5F00..5F7F];
+!IOCSH       = Address:[5F80..5FFF];
+!LOWRAMEN    = Address:[0000..5EFF] # (!ROMSW & Address: [8000..FFFF]);
+*/
