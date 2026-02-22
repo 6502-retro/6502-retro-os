@@ -48,7 +48,7 @@ your own operating system during development for example.
 
 ## Operating System
 
-The OS is a CP/M like enviornment taylored specifically for the 6502-Retro!.
+The OS is a CP/M like enviornment tailored specifically for the 6502-Retro!.
 The filesystem features are limited and simple to understand and yet provide
 enough capability to run programs, upload new programs into the filesystem, copy
 and erase files, and generally manage your data.

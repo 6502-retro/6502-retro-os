@@ -4,7 +4,8 @@ include $(TOP)/Make.default
 -include $(TOP)/Make.local
 
 INCLUDES :=-I$(TOP)/inc
-ASFLAGS  +=$(INCLUDES) --feature labels_without_colons --cpu $(CPU) --feature string_escapes
+DEBUG    =-D DEBUG=0
+ASFLAGS  +=$(INCLUDES) $(DEBUG) --feature labels_without_colons --cpu $(CPU) --feature string_escapes
 
 BUILD    =build
 
