@@ -1,4 +1,11 @@
 ; vim: set ft=asm_ca65:
+; #############################################################################
+; This driver is based heavily on the work done by John Winans on the Z80-Retro!
+; project - https://github.com/z80-retro/2063-z80-cpm/lib/sdcard.asm
+;
+; I have ported that code to here and optimised and changed it where appropriate
+; for the 65C02. - David Latham - 02/2026
+; #############################################################################
 
 .include "io.inc"
 .autoimport
