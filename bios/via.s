@@ -7,9 +7,9 @@
 .code
 
 via_init:
-    lda #%11000111          ; LED OFF, ROM SWITCH ON - other active lows are disabled
+    lda #%10101111          ; LED OFF
     sta via_porta
-    lda #%11010111          ; PA5 and PA3 are inputs
+    lda #%10111111          ; PA6 is input
     sta via_ddra
     rts
 

@@ -1,26 +1,44 @@
 ; vim: set ft=asm_ca65:
-
+; #############################################################################
+; This driver is based heavily on the work done by John Winans on the Z80-Retro!
+; project - https://github.com/z80-retro/2063-z80-cpm/lib/sdcard.asm
+;
+; I have ported that code to here and optimised and changed it where appropriate
+; for the 65C02. - David Latham - 02/2026
+; #############################################################################
 .include "io.inc"
 .autoimport
 
 .export sdcard_init, sdcard_read_sector, sdcard_write_sector, sector_lba
 
-SD_CMD17_R1_NOTOK                 = 1
-SD_CMD17_DATA_TOKEN_TIMEOUT       = 2
-SD_CMD17_INVALID_RESP_TOKEN       = 3
-SD_CMD24_R1_NOTOK                 = 4
-SD_CMD24_COMPLETION_STATUS_TIMEOUT= 5
-SD_CMD24_COMPLETION_STATUS_NOT_5  = 6
+.enum sd_error
+SD_OK                               ; 0
+SD_NOT_IDLE                         ; 1
+SD_R1_TIMEOUT                       ; 2
+SD_CMD0_NOT_OK                      ; 3
+SD_CMD8_NOT_OK                      ; 4
+SD_ACMD41_NOT_OK                    ; 5
+SD_CMD58_NOT_OK                     ; 6
+SD_CMD17_R1_NOT_OK                  ; 7
+SD_CMD17_DATA_TOKEN_TIMEOUT         ; 8
+SD_CMD17_INVALID_RESP_TOKEN         ; 9
+SD_CMD24_R1_NOT_OK                  ; 10
+SD_CMD24_COMPLETION_STATUS_TIMEOUT  ; 11
+SD_CMD24_COMPLETION_STATUS_NOT_5    ; 12
+.endenum
 
+; TODO: INCLUDE OTHER SPI CS LINES IN V4.3
 .macro deselect
-lda     #(SD_CS|SPI_CS2|SPI_CS3|SD_MOSI|SN_WE)        ; deselect sdcard
+lda     #(SD_CS|SPI_CS2|SPI_CS3|SD_MOSI|SN_WE)      ; SD_CS is high
 sta     via_porta
 .endmacro
 
+; TODO: INCLUDE OTHER SPI CS LINES IN V4.3
 .macro select
-  lda     #(SPI_CS2|SPI_CS3|SD_MOSI|SN_WE)
+  lda     #(SPI_CS2|SPI_CS3|SD_MOSI|SN_WE)          ; SD_CS is low
   sta     via_porta
 .endmacro
+
 
 cmd_idx = sdcard_param
 cmd_arg = sdcard_param + 1
@@ -45,33 +63,36 @@ spi_sr:
 
 .code
 
-; TODO: INCLUDE OTHER SPI CS LINES
 sd_cmd_start:
   jsr spi_read  ; 8 clocks without selecting SDCS
   select
   ; wait in case busy
-  ldx #0
-  @loop:
-  jsr spi_read
-  cmp #$ff
-  beq @done
-  dex
-  bne @loop
-@done:
+   ldx #$80
+ @loop:
+   jsr spi_read
+   cmp #$ff
+   beq @done
+   dex
+   bne @loop
+   lda #sd_error::SD_NOT_IDLE
+   sec           ; carry set on error.
    rts
+ @done:
+  clc           ; carry clear if OK
+  rts
 
-; TODO: INCLUDE OTHER SPI CS LINES
 sd_cmd_stop:
-  pha
+  pha           ; we save A in case we need it after cmd_stop
   jsr spi_read  ; 8 clocks with SDCS selected
   deselect
   jsr spi_read  ; 16 clocks without SDCS selected
   jsr spi_read
-  pla
+  pla           ; restore A
   rts
 
 sd_send_cmd:
-  ; Send the 6 cmdbuf bytes
+  ; Send the 6 cmdbuf bytes.  CMD followed by the 32 bit paramater in 
+  ; BIG ENDIAN format, followed by the CRC
   lda cmd_idx
   jsr spi_write
   lda cmd_arg + 3
@@ -87,26 +108,46 @@ sd_send_cmd:
   rts
 
 sd_read_r1:
-  ldx #$f0
+  ldx #$f0    ; we will try 240 times
 @loop:
   jsr spi_read
-  bit #$80  ; if MSB=0 then we have received our response.
+.if DEBUG=1
+  pha
+  lda #'R'
+  jsr acia_putc
+  pla
+  pha
+  jsr bios_prbyte
+  pla
+.endif
+  bit #$80
   beq @done
   dex
   bne @loop
+  lda #sd_error::SD_R1_TIMEOUT
+  sec
+  rts
 @done:
+  clc
   rts       ; r1 result in A
 
+; sends a command and reads the r1 response
 sd_cmd_r1:
-  jsr sd_cmd_start
-  jsr sd_send_cmd
-  jsr sd_read_r1
-  jsr sd_cmd_stop
-  rts
+  jsr sd_cmd_start    ; fail if sdcard not idle
+  bcc :+
+  jmp error
+: jsr sd_send_cmd
+  jsr sd_read_r1      ; fail if r1 timeout
+  bcc :+
+  jmp error
+: jsr sd_cmd_stop     ; stop preserves A
+  rts                 ; result of R1 in A
 
-sd_read_r7:
-  jsr sd_read_r1
-  sta sd_cmd_result + 0
+sd_read_r7:           ; similar to R1 except we read in 5 bytes response
+  jsr sd_read_r1      ; and save it into the sd_cmd_result variable
+  bcc :+
+  jmp error           ; r1 timeout.
+: sta sd_cmd_result + 0
   jsr spi_read
   sta sd_cmd_result + 1
   jsr spi_read
@@ -117,12 +158,18 @@ sd_read_r7:
   sta sd_cmd_result + 4
   rts
 
+; sends the command and reads the r7 response.
+; r3 and r7 responses are the same format.
 sd_cmd_r7:
-  jsr sd_cmd_start
-  jsr sd_send_cmd
-  jsr sd_read_r7
-  jsr sd_cmd_stop
-  rts
+  jsr sd_cmd_start    ; fail if not idle
+  bcc :+
+  jmp error
+: jsr sd_send_cmd
+  jsr sd_read_r7      ; fail if timeout on the R1 part of read_r7
+  bcc :+
+  jmp error
+: jsr sd_cmd_stop     ; A is preserved.
+  rts                 ; returns with result of last byte of R7 in A
 
 
 error:
@@ -140,7 +187,7 @@ error:
   deselect
   pla
   plp
-  sec
+  sec                 ; carry remains set on error and return to caller
   rts
 
 
@@ -156,6 +203,13 @@ sd_boot:
   rts
 
 sd_cmd0:
+.if DEBUG=1
+  lda #'.'
+  jsr acia_putc
+  lda #0
+  jsr bios_prbyte
+.endif
+
   lda #(0|$40)
   sta cmd_idx
   lda #0
@@ -165,9 +219,16 @@ sd_cmd0:
   sta cmd_arg+0
   lda #$95
   sta cmd_crc
-  jmp sd_cmd_r1
+  jmp sd_cmd_r1   ; tail call result of R1 response in A
 
 sd_cmd8:
+.if DEBUG=1
+  lda #'.'
+  jsr acia_putc
+  lda #$08
+  jsr bios_prbyte
+.endif
+
   lda #(8|$40)
   sta cmd_idx
   lda #0
@@ -179,9 +240,16 @@ sd_cmd8:
   sta cmd_arg+0
   lda #$87
   sta cmd_crc
-  jmp sd_cmd_r7
+  jmp sd_cmd_r7   ; tail call - result of last byte of R7 response in A
 
 sd_cmd58:
+.if DEBUG=1
+  lda #'.'
+  jsr acia_putc
+  lda #$58
+  jsr bios_prbyte
+.endif
+
   lda #(58|$40)
   sta cmd_idx
   lda #0
@@ -190,10 +258,17 @@ sd_cmd58:
   sta cmd_arg+1
   sta cmd_arg+0
   lda #$01
-  sta cmd_crc
-  jmp sd_cmd_r7   ; same as sd_cmd_r3
+  sta cmd_crc     ; sd_cmd_r7 is same as r3 so we use it instead.
+  jmp sd_cmd_r7   ; tail call - result of last byte of R7 response in A
 
 sd_cmd55:
+.if DEBUG=1
+  lda #'.'
+  jsr acia_putc
+  lda #$55
+  jsr bios_prbyte
+.endif
+
   lda #(55|$40)
   sta cmd_idx
   lda #0
@@ -203,10 +278,17 @@ sd_cmd55:
   sta cmd_arg+0
   lda #$01
   sta cmd_crc
-  jmp sd_cmd_r1
+  jmp sd_cmd_r1   ; tail call - result of R1 response in A
 
-sd_acmd41:
+sd_acmd41:        ; application command ("a" command)
   jsr sd_cmd55    ; all "a" commands must follow a cmd55
+
+.if DEBUG=1
+  lda #'.'
+  jsr acia_putc
+  lda #$41
+  jsr bios_prbyte
+.endif
 
   lda #(41|$40)
   sta cmd_idx
@@ -218,17 +300,10 @@ sd_acmd41:
   sta cmd_arg+0
   lda #$01
   sta cmd_crc
-  jmp sd_cmd_r1
+  jmp sd_cmd_r1   ; tail call - result of R1 response in A
 
-; A hack to just supply clock for a while.
-sd_clk_delay:
-  ldx #$80
-@loop:
-  jsr spi_read
-  dex
-  bne @loop
-  rts
-
+; external function to initialise the SDCard using the above low level
+; routnes.
 sdcard_init:
   php
   sei
@@ -236,70 +311,63 @@ sdcard_init:
   ; SR shift in, External clock on CB1
   lda #%00001100
   sta via_acr
-; Beginning of SDCARD INITIALISATION
-  jsr sd_boot
-  jsr sd_cmd0           ; CMD0
-  cmp #$01
-  beq boot_sd_1
-  lda #1
-  jmp error
 
-boot_sd_1:
 .if DEBUG=1
-  lda #'a'
+  lda #'B'
   jsr acia_putc
 .endif
+  jsr sd_boot           ; at least 74 clock cycles with SD_CS HIGH
+  jsr sd_cmd0           ; CMD0
+  cmp #$01              ; CMD0 must return a 0x01.
+  beq boot_cmd8
+  lda #sd_error::SD_CMD0_NOT_OK
+  jmp error
 
-  jsr sd_cmd8           ; CMD8
+boot_cmd8:
+  jsr sd_cmd8
   lda sd_cmd_result+0
   cmp #$01
-  beq boot_sd_2
-  lda #2
+  beq boot_acmd41
+  lda #sd_error::SD_CMD8_NOT_OK
   jmp error
-boot_sd_2:
-.if DEBUG=1
-  lda #'b'
-  jsr acia_putc
-.endif
-  ldx #$80
+
+boot_acmd41:
+  ldx #$80            ; attempt 128 times.
 ac41_loop:
   jsr sd_acmd41       ; ACMD41 (includes CMD55)
-  beq ac41_done
-  phx
-  ldx #0
-  ldy #16
+  ; If the R1 response for acmd41 was TIMEOUT, then we already in error.
+  beq ac41_done       ; received $00 from ACMD41 - OKAY
+
+  phx                 ; else save the loop counter
+  ldx #$00            ; delay for 0x1000 loops
+  ldy #$01
 ac41_dly_loop:
+  dex
+  bne ac41_dly_loop
   dey
   bne ac41_dly_loop
-  dex
-  bne ac41_dly_loop
-  plx
-  dex
-  bne ac41_loop
-  lda #3
+  plx                 ; restore the loop counter
+  dex                 ; decrement loop counter
+  bne ac41_loop       ; if not zero - try ACMD41 again
+  lda #sd_error::SD_ACMD41_NOT_OK
   jmp error
-ac41_done:
-.if DEBUG=1
-  lda #'c'
-  jsr acia_putc
-.endif
 
+ac41_done:
   jsr sd_cmd58        ; CMD58
   lda sd_cmd_result + 1
   and #$40
   bne boot_hcxc_ok
-  lda #4
+  lda #sd_error::SD_CMD58_NOT_OK
   jmp error
 boot_hcxc_ok:
-  ; END OF SDCARD INITIALISATION
 .if DEBUG=1
-  lda #'d'
+  lda #'/'            ; something to show it worked.
   jsr acia_putc
 .endif
   deselect
-  lda #0
+  lda #sd_error::SD_OK
   plp
-  sec
+  clc                 ; CLEAR CARRY MEANS SUCCESS
   rts
 
 
@@ -316,29 +384,19 @@ boot_hcxc_ok:
 ; - read data CRC
 ; - set SSEL = false
 sdcard_read_sector:
-.if DEBUG=1
-  lda cmd_arg+3
-  jsr bios_prbyte
-  lda cmd_arg+2
-  jsr bios_prbyte
-  lda cmd_arg+1
-  jsr bios_prbyte
-  lda cmd_arg+0
-  jsr bios_prbyte
-  lda #10
-  jsr acia_putc
-  lda #13
-  jsr acia_putc
-.endif
   lda #(17|$40)
   sta cmd_idx
   lda #$01
   sta cmd_crc
   jsr sd_cmd_start
-  jsr sd_send_cmd
+  bcc :+
+  jmp error
+: jsr sd_send_cmd
   jsr sd_read_r1
-  beq @sd_cmd17_r1ok
-  lda #SD_CMD17_R1_NOTOK
+  bcc :+
+  jmp error
+: beq @sd_cmd17_r1ok
+  lda #sd_error::SD_CMD17_R1_NOT_OK
   jmp error
 @sd_cmd17_r1ok:
   ; wait for data token
@@ -352,12 +410,12 @@ sdcard_read_sector:
   bne @wait_data_token_loop
   dey
   bne @wait_data_token_loop
-  lda #SD_CMD17_DATA_TOKEN_TIMEOUT
+  lda #sd_error::SD_CMD17_DATA_TOKEN_TIMEOUT
   jmp error
 @sd_cmd17_token:
   cmp #$FE
   beq @sd_cmd17_tokok
-  lda #SD_CMD17_INVALID_RESP_TOKEN
+  lda #sd_error::SD_CMD17_INVALID_RESP_TOKEN
   jmp error
 @sd_cmd17_tokok:
   ; read 512 bytes into buffer
@@ -380,9 +438,8 @@ sdcard_read_sector:
   jsr spi_read
   jsr spi_read
   jsr sd_cmd_stop
-  lda #0; return 0 for success
-  clc   ; with carry set in case someone wants that instead
-  ; NOTE:: THIS IS DIFFERENT TO HOW THE BOOT LOADER VERSION WORKS
+  lda #0  ; return 0 for success
+  clc     ; with carry set in case someone wants that instead
   rts
 
 ; CMD24 (READ_SINGLE_BLOCK)
@@ -407,10 +464,14 @@ sdcard_write_sector:
   lda #$01
   sta cmd_crc
   jsr sd_cmd_start
-  jsr sd_send_cmd
+  bcc :+
+  jmp error
+: jsr sd_send_cmd
   jsr sd_read_r1
-  beq @sd_cmd24_r1ok
-  lda #SD_CMD24_R1_NOTOK
+  bcc :+
+  jmp error
+: beq @sd_cmd24_r1ok
+  lda #sd_error::SD_CMD24_R1_NOT_OK
   jmp error
 @sd_cmd24_r1ok:
   ; give the SD card an extra 8 clocks before we send the start token
@@ -443,18 +504,17 @@ sdcard_write_sector:
   bne @sd_cmd24_wdr
   dey
   bne @sd_cmd24_wdr
-  lda #SD_CMD24_COMPLETION_STATUS_TIMEOUT
+  lda #sd_error::SD_CMD24_COMPLETION_STATUS_TIMEOUT
   jmp error
 @sd_cmd24_drc:
   ; Make sure the response is 0bxxx00101 else is an error
   and #$1f
   cmp #$05
   beq @sd_cmd24_ok
-  lda #SD_CMD24_COMPLETION_STATUS_NOT_5
+  lda #sd_error::SD_CMD24_COMPLETION_STATUS_NOT_5
   jmp error
 @sd_cmd24_ok:
   jsr sd_cmd_stop
   lda #0; return 0 for success
-  clc; with carry clear in case someone wants that instead
-  ; NOTE:: THIS IS DIFFERENT TO HOW THE BOOT LOADER VERSION WORKS
+  clc   ; with carry clear in case someone wants that instead
   rts

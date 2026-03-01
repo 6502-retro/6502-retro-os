@@ -21,8 +21,6 @@ VOL_MAX = %00000000
 .code
 
 sn_start:
-    ;lda #(SD_SCK | SD_CS | SD_MOSI | SN_WE)
-    ;sta via_ddra
     lda #$ff
     sta via_ddrb
     jsr sn_silence

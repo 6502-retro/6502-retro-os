@@ -28,11 +28,10 @@ cboot:
     cld
     sei
 
-    ;jsr via_init
     jsr acia_init
     jsr sn_start
 
-    lda #%11010111
+    lda #%10111111
     sta via_ddra
 
 cboot_emu:
@@ -237,5 +236,3 @@ bdma:       .word 0
 _vdp_status:.res 1
 _vdp_sync:  .res 1
 
-.segment "SYSTEM"
-.rodata
