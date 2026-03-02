@@ -3,13 +3,13 @@
 
 .autoimport
 
-.export via_init, led_on, led_off, get_button
+.export via_init, led_on, led_off
 .code
 
 via_init:
-    lda #%11000111          ; LED OFF, ROM SWITCH ON - other active lows are disabled
+    lda #%10101111          ; LED OFF
     sta via_porta
-    lda #%11010111          ; PA5 and PA3 are inputs
+    lda #%10111111          ; PA6 is input
     sta via_ddra
     rts
 
@@ -23,15 +23,5 @@ led_off:
     lda via_porta
     and #LED_OFF
     sta via_porta
-    rts
-
-; returns 1 when pressed.
-get_button:
-    lda via_porta
-    and #BUTTON
-    beq :+
-    lda #0
-    rts
-:   lda #1
     rts
 

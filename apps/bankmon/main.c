@@ -136,27 +136,25 @@ void main(void) {
             case 'R':
                 {
                     b = input[3];
-                    if ( 0 <= b <= 3 ) {
-                        /*
-                          A9 ??            lda b
-                          8D 01 BF         sta rombankreg
-                          6C FC FF         jmp ($FFFC)
-                        */
-                        // Doing it like this because I need this routine in RAM
-                        (*(uint8_t*)0x700) = 0xA9;
-                        (*(uint8_t*)0x701) = b-0x30;
-                        (*(uint8_t*)0x702) = 0x8D;
-                        (*(uint8_t*)0x703) = 0x01;
-                        (*(uint8_t*)0x704) = 0xBF;
-                        (*(uint8_t*)0x705) = 0x6C;
-                        (*(uint8_t*)0x706) = 0xFC;
-                        (*(uint8_t*)0x707) = 0xFF;
-                        sprintf(ascii, "Switching to ROM Bank %d...\r\n", b-0x30);
-                        sfos_c_printstr(ascii);
+                    if (b>1) break;
+                    sprintf(ascii, "Switching to ROM Bank %d...\r\n", b-0x30);
+                    sfos_c_printstr(ascii);
+                    // Doing it like this because I need this routine in RAM
+                    (*(uint8_t*)0x700) = 0xA9;
+                    if (b == 0) {
+                        (*(uint8_t*)0x701) = 0;
+                    } else if (b == 1) {
+                        (*(uint8_t*)0x701) = 1;
+                    }
+                    (*(uint8_t*)0x702) = 0x8D;
+                    (*(uint8_t*)0x703) = 0x00;
+                    (*(uint8_t*)0x704) = 0xBF;
+                    (*(uint8_t*)0x705) = 0x6C;
+                    (*(uint8_t*)0x706) = 0xFC;
+                    (*(uint8_t*)0x707) = 0xFF;
                         __asm__("jmp $700");
                     }
                     break;
-                }
             default:
                 break;
         }

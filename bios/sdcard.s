@@ -6,7 +6,6 @@
 ; I have ported that code to here and optimised and changed it where appropriate
 ; for the 65C02. - David Latham - 02/2026
 ; #############################################################################
-
 .include "io.inc"
 .autoimport
 
@@ -14,29 +13,31 @@
 
 .enum sd_error
 SD_OK                               ; 0
-SD_NOT_IDLE
-SD_R1_TIMEOUT
-SD_CMD0_NOT_OK
-SD_CMD8_NOT_OK
-SD_ACMD41_NOT_OK
-SD_CMD58_NOT_OK
-SD_CMD17_R1_NOT_OK
-SD_CMD17_DATA_TOKEN_TIMEOUT
-SD_CMD17_INVALID_RESP_TOKEN
-SD_CMD24_R1_NOT_OK
-SD_CMD24_COMPLETION_STATUS_TIMEOUT
-SD_CMD24_COMPLETION_STATUS_NOT_5
+SD_NOT_IDLE                         ; 1
+SD_R1_TIMEOUT                       ; 2
+SD_CMD0_NOT_OK                      ; 3
+SD_CMD8_NOT_OK                      ; 4
+SD_ACMD41_NOT_OK                    ; 5
+SD_CMD58_NOT_OK                     ; 6
+SD_CMD17_R1_NOT_OK                  ; 7
+SD_CMD17_DATA_TOKEN_TIMEOUT         ; 8
+SD_CMD17_INVALID_RESP_TOKEN         ; 9
+SD_CMD24_R1_NOT_OK                  ; 10
+SD_CMD24_COMPLETION_STATUS_TIMEOUT  ; 11
+SD_CMD24_COMPLETION_STATUS_NOT_5    ; 12
 .endenum
 
 ; TODO: INCLUDE OTHER SPI CS LINES IN V4.3
 .macro deselect
-lda     #(SD_CS|SD_MOSI|SN_WE)      ; SD_CS is high
+lda     via_porta
+and     #(LED|SD_CS|SPI_CS2|SPI_CS3|SD_MOSI|SN_WE)      ; SD_CS is high
 sta     via_porta
 .endmacro
 
 ; TODO: INCLUDE OTHER SPI CS LINES IN V4.3
 .macro select
-  lda     #(SD_MOSI|SN_WE)          ; SD_CS is low
+  lda     via_porta
+  and     #(LED|SPI_CS2|SPI_CS3|SD_MOSI|SN_WE)          ; SD_CS is low
   sta     via_porta
 .endmacro
 
@@ -68,17 +69,17 @@ sd_cmd_start:
   jsr spi_read  ; 8 clocks without selecting SDCS
   select
   ; wait in case busy
-  ldx #0
-  @loop:
-  jsr spi_read
-  cmp #$ff
-  beq @done
-  dex
-  bne @loop
-  lda #sd_error::SD_NOT_IDLE
-  sec           ; carry set on error.
-  rts
-@done:
+   ldx #$80
+ @loop:
+   jsr spi_read
+   cmp #$ff
+   beq @done
+   dex
+   bne @loop
+   lda #sd_error::SD_NOT_IDLE
+   sec           ; carry set on error.
+   rts
+ @done:
   clc           ; carry clear if OK
   rts
 
@@ -112,7 +113,16 @@ sd_read_r1:
   ldx #$f0    ; we will try 240 times
 @loop:
   jsr spi_read
-  bit #$80    ; if MSB=0 then we have received our response.
+.if DEBUG=1
+  pha
+  lda #'R'
+  jsr acia_putc
+  pla
+  pha
+  jsr bios_prbyte
+  pla
+.endif
+  bit #$80
   beq @done
   dex
   bne @loop
@@ -508,5 +518,5 @@ sdcard_write_sector:
 @sd_cmd24_ok:
   jsr sd_cmd_stop
   lda #0; return 0 for success
-  clc   ; with carry set in case someone wants that instead
+  clc   ; with carry clear in case someone wants that instead
   rts

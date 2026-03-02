@@ -125,7 +125,7 @@ vgm_display_tags:
     pha
     jsr bios_prbyte
     pla
-
+    ora #$80
     sta rambankreg
     sta rambank
     nop
@@ -277,7 +277,7 @@ vgm_setup:
     ldx #>str_newline
     jsr c_printstr
 
-    lda #1
+    lda #$81
     sta rambank
     sta rambankreg
     nop
@@ -421,7 +421,7 @@ vgmwait:                    ; (6) Cycles to prep and execute the jsr
 @wait_samples_1:
     dec vgmwaitl            ; (5) zeropage decrement
     ; kill some cycles between loops.  Adjust as required.
-    .repeat 30
+    .repeat 40
         nop                 ; (2 * 30 = 60)
     .endrepeat
     jmp vgmwait             ; (3)   loop = 29 cycles
@@ -434,7 +434,7 @@ vgm_load:
     ; so open it and load it into C000->DFFF incrementing bank as you go.
     ; Once loaded, reset the bank to bank 1
     ; and return
-    lda #1
+    lda #$81
     sta rambankreg
     sta rambank
     lda #$BE        ; $C0 -1 because we pre-increment it
@@ -499,14 +499,14 @@ vgm_load:
     ldx #>str_sectors
     jsr c_printstr
 
-    lda #1
+    lda #$81
     sta rambankreg
     sta rambank
 
     rts
 
 exit:
-    lda #0
+    lda #$80
     sta rambankreg
     sta rambank
 

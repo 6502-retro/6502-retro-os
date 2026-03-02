@@ -194,7 +194,7 @@ Read Sector SD Card operation.
 Sets the LBA address that will be used by the next call to a Write Sector or
 Read Sector SD Card operation.
 
-### LED and user button routines
+### LED routines
 
 #### LED on
 
@@ -203,13 +203,6 @@ Turns on the LED
 #### LED off
 
 Turns off the LED
-
-#### Get Button
-
-Returns 1 if button is pressed.  Note the user button is pulled high through a
-10kohm resistor while open and pressing the button connects it to ground.  This
-routine inverts the value read by the VIA so that a `1` means pressed and a `0`
-means released.
 
 ## Other drive hardware routines
 

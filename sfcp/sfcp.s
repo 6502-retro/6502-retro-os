@@ -303,6 +303,7 @@ load_transient:
     jsr s_settpa
 call:
     jsr restore_active_drive
+    jsr newline
     jmp (sfcpcmd)
 
 bank:

@@ -28,6 +28,7 @@ all: $(BUILD)/rom.raw
 $(BUILD)/rom.raw: $(OBJ_SFCP) $(OBJ_SFOS) $(OBJ_BIOS)
 	@mkdir -p $(BUILD)
 	$(LD) -C $(CFG) -m $(BUILD)/rom.map -Ln $(BUILD)/rom.sym -o $@ $^
+	python3 scripts/loadtrim.py build/rom.raw build/rom.img E000
 
 clean:
 	rm -frv $(BUILD)

@@ -20,17 +20,17 @@ bios_sn_stop    = $22d
 bios_sn_send    = $230
 bios_led_on     = $233
 bios_led_off    = $236
-bios_get_button = $239
 
-bios_error_code = $23c
+bios_ramlatch   = $239
+bios_error_code = $23a
 
-bios_rstfar     = $23d
+bios_rstfar     = $23b
 
-bios_rega       = $24d
+bios_rega       = $249
 bios_regx       = bios_rega   + 1
 bios_regy       = bios_regx   + 1
 
-bios_userirq_vec = $250
-bios_usernmi_vec = $252
-bios_delay_ms    = $254
-notectr          = $257
+bios_userirq_vec = $24c
+bios_usernmi_vec = $24e
+bios_delay_ms    = $250
+notectr          = $253

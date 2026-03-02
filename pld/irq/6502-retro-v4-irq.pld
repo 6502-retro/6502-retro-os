@@ -1,0 +1,27 @@
+Name     IRQ_16V8 ;
+PartNo   GAL16V8 ;
+Date     08/02/2026 ;
+Revision 01 ;
+Designer Engineer ;
+Company  productiondave ;
+Assembly None ;
+Location None ;
+Device   G16V8 ;
+
+/******************************************************************/
+/* Pins                                                           */
+/******************************************************************/
+
+/* Inputs */
+Pin 2  = ACIAIRQ;   /* 6551 ACIA UART IRQ (Active Low) */
+Pin 3  = VIA1IRQ;   /* 65C22 VIA1 IRQ (Active Low) */
+Pin 4  = VIA2IRQ;   /* 65C22 VIA2 IRQ (Active Low) */
+Pin 5  = VDPIRQ;    /* PICO9918A (VDP) IRQ (Active Low) */
+Pin 6  = IRQEXP1;   /* Expansion Slot 1 IRQ (Active Low) */
+Pin 7  = IRQEXP2;   /* Expansion Slot 2 IRQ (Active Low) */
+
+/* Combinatorial Output */
+Pin 19 = IRQB;       /* To W65C02S /IRQ Pin */
+
+/* Equations */
+IRQB = ACIAIRQ & VIA1IRQ & VIA2IRQ & VDPIRQ & IRQEXP1 & IRQEXP2;

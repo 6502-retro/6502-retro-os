@@ -35,7 +35,9 @@ SOURCES =                  \
 	  sfos_s_settpa.s        \
 	  sfos_s_gettpa.s        \
 	  write.s                \
-	  read.s
+	  read.s                 \
+		bank.s
+
 
 
 OBJS = $(SOURCES:.s=.o)
