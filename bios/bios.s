@@ -29,10 +29,13 @@ cboot:
     sei
 
     jsr acia_init
-    jsr sn_start
 
     lda #%10111111
     sta via_ddra
+    lda #%11111111
+    sta via_ddrb
+
+    jsr sn_start
 
 cboot_emu:
     ; copy SYSTEM code into RUN area

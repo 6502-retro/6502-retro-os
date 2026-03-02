@@ -29,13 +29,15 @@ SD_CMD24_COMPLETION_STATUS_NOT_5    ; 12
 
 ; TODO: INCLUDE OTHER SPI CS LINES IN V4.3
 .macro deselect
-lda     #(SD_CS|SPI_CS2|SPI_CS3|SD_MOSI|SN_WE)      ; SD_CS is high
+lda     via_porta
+and     #(LED|SD_CS|SPI_CS2|SPI_CS3|SD_MOSI|SN_WE)      ; SD_CS is high
 sta     via_porta
 .endmacro
 
 ; TODO: INCLUDE OTHER SPI CS LINES IN V4.3
 .macro select
-  lda     #(SPI_CS2|SPI_CS3|SD_MOSI|SN_WE)          ; SD_CS is low
+  lda     via_porta
+  and     #(LED|SPI_CS2|SPI_CS3|SD_MOSI|SN_WE)          ; SD_CS is low
   sta     via_porta
 .endmacro
 
