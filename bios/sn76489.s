@@ -73,13 +73,16 @@ sn_send:
     tax
     lda reverse_tbl,x
     sta via_portb
-    ldx #(SD_SCK|SD_CS|SPI_CS2|SPI_CS3|SD_MOSI|SN_WE)
-    stx via_porta
-    ldx #(SD_SCK|SD_CS|SPI_CS2|SPI_CS3|SD_MOSI)
-    stx via_porta
+    tax
+    lda via_porta
+    ora #SN_WE
+    sta via_porta
+    eor #SN_WE
+    sta via_porta
     jsr sn_wait
-    ldx #(SD_SCK|SD_CS|SD_MOSI|SPI_CS2|SPI_CS3|SN_WE)
-    stx via_porta
+    lda via_porta
+    ora #SN_WE
+    sta via_porta
     rts
 
 sn_wait:
