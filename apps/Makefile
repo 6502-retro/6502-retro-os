@@ -38,6 +38,7 @@ SUBDIRS =   \
 	irq       \
 	mon       \
 	msbasic   \
+	music     \
 	sfmvi     \
 	shadowrom \
 	statc     \
