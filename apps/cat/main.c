@@ -39,13 +39,6 @@ void print_fcb(volatile _fcb * f) {
             break;
         sfos_c_write(c);
     }
-    sfos_c_write('[');
-    sfos_c_write(f->SC + '0');
-    sfos_c_write(']');
-    sfos_c_write('[');
-    sfos_c_write(f->CR + '0');
-    sfos_c_write(']');
-
 }
 
 

@@ -41,5 +41,8 @@ for file in *.bas; do ../cli.py cp -i ../6502-retro-sdcard.img -s $file -d d://$
 cd ../
 ./cli.py cp -i 6502-retro-sdcard.img -s ../apps/submit/test.sub -d a://test.sub
 ./cli.py cp -i 6502-retro-sdcard.img -s ../../6502-retro-jumpingjack/build/jj.com -d g://jj.com
+./cli.py cp -i 6502-retro-sdcard.img -s ../../6502-retro-breakout/build/bo.com -d g://bo.com
+./cli.py cp -i 6502-retro-sdcard.img -s ../../6502-retro-tetris/build/tet.com -d g://tet.com
+./cli.py cp -i 6502-retro-sdcard.img -s ../../6502-retro-snake/build/snake.com -d g://snake.com
 ./cli.py installos -i 6502-retro-sdcard.img -o ../build/rom.raw
 

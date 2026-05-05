@@ -259,6 +259,14 @@ load_transient:
     ldx #>fcb
     jsr d_open
     bcc :+
+    ; change fcb to drive A and try again.
+    lda #1
+    sta  fcb+sfcb::DD
+    lda #<fcb
+    ldx #>fcb
+    jsr d_open
+    bcc :+
+    ; could not load.
     jsr newline
     lda #'?'
     jsr c_write
@@ -904,21 +912,21 @@ set_user_drive:
     ldx #0
     jmp d_getsetdrive
 
-    jsr printi
-    .byte 13,10,"FCB2: ",0
-    lda fcb2
-    clc
-    adc #'A'-1
-    jsr bios_conout
-    lda #':'
-    jsr bios_conout
-    ldx #1
-:   lda fcb2,x
-    jsr bios_conout
-    inx
-    cpx #sfcb::T3+1
-    bne :-
-    rts
+;     jsr printi
+;     .byte 13,10,"FCB2: ",0
+;     lda fcb2
+;     clc
+;     adc #'A'-1
+;     jsr bios_conout
+;     lda #':'
+;     jsr bios_conout
+;     ldx #1
+; :   lda fcb2,x
+;     jsr bios_conout
+;     inx
+;     cpx #sfcb::T3+1
+;     bne :-
+;     rts
 
 clear_commandline:
     ldx #0
