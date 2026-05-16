@@ -33,7 +33,14 @@ irq_handler:
     sta _vdp_status
     lda #$80
     sta _vdp_sync
-    jsr sn_irq_handler
+    inc _vdp_tick
+    bne :+
+    inc _vdp_tick+1
+    bne :+
+    inc _vdp_tick+2
+    bne :+
+    inc _vdp_tick+3
+:   jsr sn_irq_handler
 @user_irq:
     jsr user_irq_jumper
 @exit
